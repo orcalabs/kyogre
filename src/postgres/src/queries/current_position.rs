@@ -3,8 +3,8 @@ use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     AisPermission, AisVmsPosition, CurrentPosition, CurrentPositionVessel, CurrentPositionsUpdate,
-    FiskeridirVesselId, Mmsi, NavigationStatus, PositionType, TripPositionLayerId,
-    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    EarliestVmsUsedBy, FiskeridirVesselId, Mmsi, NavigationStatus, PositionType,
+    TripPositionLayerId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 use sqlx::Postgres;
@@ -43,7 +43,7 @@ WHERE
     AND (
         m.mmsi IS NULL
         OR (
-             CASE
+            CASE
                 WHEN $2 = 0 THEN TRUE
                 WHEN $2 = 1 THEN (
                     length >= $3
@@ -97,7 +97,7 @@ WHERE
     AND (
         m.mmsi IS NULL
         OR (
-             CASE
+            CASE
                 WHEN $2 = 0 THEN TRUE
                 WHEN $2 = 1 THEN (
                     length >= $3
@@ -128,26 +128,47 @@ ORDER BY
             CurrentPositionVessel,
             r#"
 SELECT
-    f.fiskeridir_vessel_id AS "id!: FiskeridirVesselId",
-    f.mmsi AS "mmsi: Mmsi",
-    f.call_sign AS "call_sign: CallSign",
-    -- Hacky fix because sqlx prepare/check flakes on nullability
-    COALESCE(t.departure_timestamp, NULL) AS current_trip_start,
+    q.fiskeridir_vessel_id AS "id!: FiskeridirVesselId",
+    q.mmsi AS "mmsi: Mmsi",
+    q.call_sign AS "call_sign: CallSign",
+    q.departure_timestamp AS "current_trip_start?",
+    CASE
+        WHEN q.latest_position IS NULL THEN NULL
+        ELSE LEAST(q.latest_position, q.earliest_vms_insertion)
+    END AS processing_start
+FROM
     (
         SELECT
-            MAX(p.timestamp)
+            f.fiskeridir_vessel_id,
+            f.mmsi,
+            f.call_sign,
+            t.departure_timestamp,
+            (
+                SELECT
+                    MAX(p.timestamp)
+                FROM
+                    current_trip_positions p
+                WHERE
+                    p.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+            ) AS latest_position,
+            (
+                SELECT
+                    v.timestamp
+                FROM
+                    earliest_vms_insertion v
+                WHERE
+                    v.call_sign = f.call_sign
+                    AND used_by = $1
+            ) AS earliest_vms_insertion
         FROM
-            current_trip_positions p
+            active_vessels f
+            LEFT JOIN current_trips t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
         WHERE
-            p.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-    ) AS latest_position
-FROM
-    active_vessels f
-    LEFT JOIN current_trips t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-WHERE
-    f.mmsi IS NOT NULL
-    OR f.call_sign IS NOT NULL
+            f.mmsi IS NOT NULL
+            OR f.call_sign IS NOT NULL
+    ) q
             "#,
+            EarliestVmsUsedBy::CurrentTripPositionsProcessor as i32,
         )
         .fetch_all(&self.pool)
         .await
@@ -275,26 +296,50 @@ SET
     ) -> Result<()> {
         let len = updates.len();
         let mut vessel_ids = Vec::with_capacity(len);
-        let mut delete_boundaries = Vec::with_capacity(len);
+        let mut call_signs = Vec::with_capacity(len);
+        let mut delete_boundaries_lower = Vec::with_capacity(len);
+        let mut delete_boundaries_upper = Vec::with_capacity(len);
 
         for v in updates {
             vessel_ids.push(v.id);
-            delete_boundaries.push(v.delete_boundary);
+            delete_boundaries_lower.push(v.delete_boundary_lower);
+            delete_boundaries_upper.push(v.delete_boundary_upper);
+            call_signs.push(v.call_sign.as_deref());
         }
 
         sqlx::query!(
             r#"
-DELETE FROM current_trip_positions p USING (
-    SELECT
-        UNNEST($1::BIGINT[]) AS vessel_id,
-        UNNEST($2::TIMESTAMPTZ[]) AS delete_boundary
-) q
+WITH
+    inputs AS (
+        SELECT
+            UNNEST($1::BIGINT[]) AS vessel_id,
+            UNNEST($2::TIMESTAMPTZ[]) AS delete_boundary_lower,
+            UNNEST($3::TIMESTAMPTZ[]) AS delete_boundary_upper,
+            UNNEST($4::TEXT[]) AS call_sign
+    ),
+    _ AS (
+        DELETE FROM current_trip_positions p USING inputs i
+        WHERE
+            p.fiskeridir_vessel_id = i.vessel_id
+            AND (
+                p.timestamp < i.delete_boundary_lower
+                OR p.timestamp > i.delete_boundary_upper
+            )
+    )
+DELETE FROM earliest_vms_insertion v USING inputs i
 WHERE
-    p.fiskeridir_vessel_id = q.vessel_id
-    AND p.timestamp < q.delete_boundary
+    v.call_sign = i.call_sign
+    AND v.used_by = $5
+    AND (
+        v.timestamp <= i.delete_boundary_lower
+        OR v.timestamp >= i.delete_boundary_upper
+    )
             "#,
             &vessel_ids as &[FiskeridirVesselId],
-            &delete_boundaries,
+            &delete_boundaries_lower,
+            &delete_boundaries_upper,
+            &call_signs as &[Option<&str>],
+            EarliestVmsUsedBy::CurrentTripPositionsProcessor as i32,
         )
         .execute(&mut **tx)
         .await?;

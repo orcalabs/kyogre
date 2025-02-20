@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM earliest_vms_insertion\nWHERE\n    used_by = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "472df8645c0fd49928c8b6483ea67dfb79beeb077a7c9a579b66a4c6832c29f6"
+}

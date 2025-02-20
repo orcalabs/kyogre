@@ -6,8 +6,9 @@ use crate::{
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{DateRange, ProcessingStatus};
+use kyogre_core::{DateRange, EarliestVmsUsedBy, ProcessingStatus};
 use std::collections::{hash_map::Entry, HashMap, HashSet};
+use strum::IntoEnumIterator;
 
 impl PostgresAdapter {
     pub(crate) fn vms_positions_impl(
@@ -74,7 +75,7 @@ ORDER BY
     pub(crate) async fn add_vms_impl(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<()> {
         let mut call_signs_unique = HashSet::new();
         let mut vms_unique: HashMap<(&str, DateTime<Utc>), NewVmsPosition<'_>> = HashMap::new();
-        let mut vms_earliest: HashMap<&str, EarliestVms<'_>> = HashMap::new();
+        let mut vms_earliest: HashMap<&str, DateTime<Utc>> = HashMap::new();
         let mut current_positions: HashMap<&str, NewVmsCurrentPosition<'_>> = HashMap::new();
 
         let speed_threshold = 0.001;
@@ -88,14 +89,11 @@ ORDER BY
             vms_earliest
                 .entry(call_sign)
                 .and_modify(|e| {
-                    if e.timestamp > v.timestamp {
-                        e.timestamp = v.timestamp;
+                    if *e > v.timestamp {
+                        *e = v.timestamp;
                     }
                 })
-                .or_insert(EarliestVms {
-                    call_sign,
-                    timestamp: v.timestamp,
-                });
+                .or_insert(v.timestamp);
 
             call_signs_unique.insert(call_sign);
 
@@ -145,11 +143,17 @@ ORDER BY
         }
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
+        let vms_earliest = vms_earliest.into_iter().flat_map(|(call_sign, timestamp)| {
+            EarliestVmsUsedBy::iter().map(move |used_by| EarliestVms {
+                call_sign,
+                timestamp,
+                used_by,
+            })
+        });
 
         let mut tx = self.pool.begin().await?;
 
-        self.unnest_insert(vms_earliest.into_values(), &mut *tx)
-            .await?;
+        self.unnest_insert(vms_earliest, &mut *tx).await?;
         self.unnest_insert(current_positions.into_values(), &mut *tx)
             .await?;
 

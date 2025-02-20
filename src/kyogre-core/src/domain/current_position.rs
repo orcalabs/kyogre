@@ -9,13 +9,15 @@ pub struct CurrentPositionVessel {
     pub mmsi: Option<Mmsi>,
     pub call_sign: Option<CallSign>,
     pub current_trip_start: Option<DateTime<Utc>>,
-    pub latest_position: Option<DateTime<Utc>>,
+    pub processing_start: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct CurrentPositionsUpdate {
     pub id: FiskeridirVesselId,
-    pub delete_boundary: DateTime<Utc>,
+    pub call_sign: Option<CallSign>,
+    pub delete_boundary_lower: DateTime<Utc>,
+    pub delete_boundary_upper: DateTime<Utc>,
     pub positions: Vec<CurrentPosition>,
 }
 

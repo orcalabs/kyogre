@@ -11,9 +11,9 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    Bound, DateRange, FiskeridirVesselId, HasTrack, Ordering, PrecisionOutcome, ProcessingStatus,
-    TripAssemblerId, TripId, TripPositionLayerOutput, TripSet, TripSorting, TripUpdate,
-    TripsConflictStrategy, TripsQuery, VesselEventType,
+    Bound, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack, Ordering, PrecisionOutcome,
+    ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput, TripSet, TripSorting,
+    TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use std::collections::{HashMap, HashSet};
@@ -235,8 +235,11 @@ WHERE
 
         sqlx::query!(
             r#"
-TRUNCATE earliest_vms_insertion
-            "#
+DELETE FROM earliest_vms_insertion
+WHERE
+    used_by = $1
+            "#,
+            EarliestVmsUsedBy::TripsState as i32,
         )
         .execute(&mut *tx)
         .await?;
