@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    q.fiskeridir_vessel_id AS \"id!: FiskeridirVesselId\",\n    q.mmsi AS \"mmsi: Mmsi\",\n    q.call_sign AS \"call_sign: CallSign\",\n    q.departure_timestamp AS \"current_trip_start?\",\n    CASE\n        WHEN q.latest_position IS NULL THEN NULL\n        ELSE LEAST(q.latest_position, q.earliest_vms_insertion)\n    END AS processing_start\nFROM\n    (\n        SELECT\n            f.fiskeridir_vessel_id,\n            f.mmsi,\n            f.call_sign,\n            t.departure_timestamp,\n            (\n                SELECT\n                    MAX(p.timestamp)\n                FROM\n                    current_trip_positions p\n                WHERE\n                    p.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n            ) AS latest_position,\n            (\n                SELECT\n                    v.timestamp\n                FROM\n                    earliest_vms_insertion v\n                WHERE\n                    v.call_sign = f.call_sign\n                    AND used_by = $1\n            ) AS earliest_vms_insertion\n        FROM\n            active_vessels f\n            LEFT JOIN current_trips t ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n        WHERE\n            f.mmsi IS NOT NULL\n            OR f.call_sign IS NOT NULL\n    ) q\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "mmsi: Mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "call_sign: CallSign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "current_trip_start?",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "processing_start",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "eb8dee1fbba5b8e1fba29eca2ed1e97fd2c10a393378854ed05b95334cac58c3"
+}

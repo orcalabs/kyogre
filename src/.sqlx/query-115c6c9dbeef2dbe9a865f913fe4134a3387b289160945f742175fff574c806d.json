@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    c.latitude,\n    c.longitude,\n    c.timestamp,\n    c.course_over_ground,\n    c.navigation_status_id AS \"navigational_status: NavigationStatus\",\n    c.rate_of_turn,\n    c.speed,\n    c.true_heading,\n    c.distance_to_shore,\n    c.position_type_id AS \"position_type!: PositionType\",\n    NULL AS \"pruned_by: TripPositionLayerId\",\n    NULL::DOUBLE PRECISION AS trip_cumulative_fuel_consumption_liter,\n    NULL::DOUBLE PRECISION AS trip_cumulative_cargo_weight\nFROM\n    current_trip_positions c\n    INNER JOIN active_vessels m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id\nWHERE\n    c.fiskeridir_vessel_id = $1::BIGINT\n    AND (\n        m.mmsi IS NULL\n        OR (\n             CASE\n                WHEN $2 = 0 THEN TRUE\n                WHEN $2 = 1 THEN (\n                    length >= $3\n                    AND (\n                        ship_type IS NOT NULL\n                        AND NOT (ship_type = ANY ($4::INT[]))\n                        OR length > $5\n                    )\n                )\n            END\n        )\n    )\nORDER BY\n    timestamp ASC\n            ",
+  "query": "\nSELECT\n    c.latitude,\n    c.longitude,\n    c.timestamp,\n    c.course_over_ground,\n    c.navigation_status_id AS \"navigational_status: NavigationStatus\",\n    c.rate_of_turn,\n    c.speed,\n    c.true_heading,\n    c.distance_to_shore,\n    c.position_type_id AS \"position_type!: PositionType\",\n    NULL AS \"pruned_by: TripPositionLayerId\",\n    NULL::DOUBLE PRECISION AS trip_cumulative_fuel_consumption_liter,\n    NULL::DOUBLE PRECISION AS trip_cumulative_cargo_weight\nFROM\n    current_trip_positions c\n    INNER JOIN active_vessels m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id\nWHERE\n    c.fiskeridir_vessel_id = $1::BIGINT\n    AND (\n        m.mmsi IS NULL\n        OR (\n            CASE\n                WHEN $2 = 0 THEN TRUE\n                WHEN $2 = 1 THEN (\n                    length >= $3\n                    AND (\n                        ship_type IS NOT NULL\n                        AND NOT (ship_type = ANY ($4::INT[]))\n                        OR length > $5\n                    )\n                )\n            END\n        )\n    )\nORDER BY\n    timestamp ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -94,5 +94,5 @@
       null
     ]
   },
-  "hash": "d1026798a0ecac2b4a70b7cff65c33189815d56889d22f71d21fba081cedbcdb"
+  "hash": "115c6c9dbeef2dbe9a865f913fe4134a3387b289160945f742175fff574c806d"
 }

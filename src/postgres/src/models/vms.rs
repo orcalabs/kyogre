@@ -1,7 +1,10 @@
-use crate::error::{Error, MissingValueSnafu};
+use crate::{
+    error::{Error, MissingValueSnafu},
+    queries::type_to_i32,
+};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::distance_to_shore;
+use kyogre_core::{distance_to_shore, EarliestVmsUsedBy};
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
@@ -75,13 +78,15 @@ pub struct NewVmsCurrentPosition<'a> {
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "earliest_vms_insertion",
-    conflict = "call_sign",
+    conflict = "call_sign,used_by",
     where_clause = "earliest_vms_insertion.timestamp > excluded.timestamp"
 )]
 pub struct EarliestVms<'a> {
     pub call_sign: &'a str,
     #[unnest_insert(update)]
     pub timestamp: DateTime<Utc>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub used_by: EarliestVmsUsedBy,
 }
 
 #[derive(Deserialize, Debug, Clone)]

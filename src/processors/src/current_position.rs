@@ -60,65 +60,81 @@ impl CurrentPositionProcessor {
         let mut updates = Vec::with_capacity(batch.len());
 
         for v in batch {
-            let now = Utc::now();
-            let start = v
-                .latest_position
-                .or(v.current_trip_start)
-                .unwrap_or_else(|| now - DEFAULT_CURRENT_POSITIONS_LIMIT);
-            let end = now + chrono::Duration::days(100);
-
-            let range = DateRange::new(start, end)?;
-
-            let positions = self
-                .adapter
-                .ais_vms_positions(v.mmsi, v.call_sign.as_ref(), &range)
-                .await?;
-
-            let len = positions.len();
-            let mut iter = positions.into_iter().peekable();
-
-            let mut positions = Vec::with_capacity(len);
-
-            while let Some(pos) = iter.next() {
-                if let Some(next) = iter.peek() {
-                    match self.ais_vms_conflict.should_prune(&pos, next) {
-                        ShouldPrune::No => {}
-                        ShouldPrune::Current(_) => {
-                            continue;
-                        }
-                        ShouldPrune::Next(_) => {
-                            let _ = iter.next();
-                        }
-                    }
-                }
-
-                if let Some(prev) = positions.last() {
-                    match estimated_speed_between_points(prev, &pos) {
-                        Ok(speed) => {
-                            if speed >= self.unrealistic_speed.knots_limit {
-                                continue;
-                            }
-                        }
-                        Err(e) => {
-                            error!("failed to calculate speed: {e:?}");
-                        }
-                    }
-                }
-
-                positions.push(CurrentPosition::from_ais_vms(v.id, pos));
-            }
-
-            updates.push(CurrentPositionsUpdate {
-                id: v.id,
-                delete_boundary: v
-                    .current_trip_start
-                    .unwrap_or_else(|| now - DEFAULT_CURRENT_POSITIONS_LIMIT),
-                positions,
-            });
+            let update = self.process_vessel(v).await?;
+            updates.push(update);
         }
 
         self.adapter.update_current_positions(updates).await?;
 
         Ok(())
+    }
+
+    async fn process_vessel(
+        &self,
+        vessel: &CurrentPositionVessel,
+    ) -> Result<CurrentPositionsUpdate> {
+        let now = Utc::now();
+
+        let current_trip_start = vessel
+            .current_trip_start
+            .unwrap_or_else(|| now - DEFAULT_CURRENT_POSITIONS_LIMIT);
+
+        let start = vessel
+            .processing_start
+            .map(|v| v.max(current_trip_start))
+            .unwrap_or(current_trip_start);
+
+        let end = now + chrono::Duration::days(100);
+
+        let range = DateRange::new(start, end)?;
+
+        let positions = self
+            .adapter
+            .ais_vms_positions(vessel.mmsi, vessel.call_sign.as_ref(), &range)
+            .await?;
+
+        let len = positions.len();
+        let mut iter = positions.into_iter().peekable();
+
+        let mut positions = Vec::with_capacity(len);
+
+        while let Some(pos) = iter.next() {
+            if let Some(next) = iter.peek() {
+                match self.ais_vms_conflict.should_prune(&pos, next) {
+                    ShouldPrune::No => {}
+                    ShouldPrune::Current(_) => {
+                        continue;
+                    }
+                    ShouldPrune::Next(_) => {
+                        let _ = iter.next();
+                    }
+                }
+            }
+
+            if let Some(prev) = positions.last() {
+                match estimated_speed_between_points(prev, &pos) {
+                    Ok(speed) => {
+                        if speed >= self.unrealistic_speed.knots_limit {
+                            continue;
+                        }
+                    }
+                    Err(e) => {
+                        error!("failed to calculate speed: {e:?}");
+                    }
+                }
+            }
+
+            positions.push(CurrentPosition::from_ais_vms(vessel.id, pos));
+        }
+
+        Ok(CurrentPositionsUpdate {
+            id: vessel.id,
+            call_sign: vessel.call_sign.clone(),
+            delete_boundary_lower: vessel
+                .current_trip_start
+                .unwrap_or_else(|| now - DEFAULT_CURRENT_POSITIONS_LIMIT),
+            delete_boundary_upper: start,
+            positions,
+        })
     }
 }
