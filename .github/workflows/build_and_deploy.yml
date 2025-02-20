@@ -6,14 +6,14 @@ concurrency:
 
 on:
   push:
-    branches:
-      - master
-    paths:
-      - src/**/*
-      - dockerfiles/**/*
+    # branches:
+    #   - master
+    # paths:
+    #   - src/**/*
+    #   - dockerfiles/**/*
 jobs:
   images:
-    uses: orcalabs/github-actions/.github/workflows/container-apps-deploy.yml@master
+    uses: orcalabs/github-actions/.github/workflows/container-apps-deploy.yml@docker-login
     secrets: inherit
     with:
       object: '{
