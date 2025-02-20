@@ -190,7 +190,7 @@ impl<'a> ErsDepSet<'a> {
         if let Some(code) = code {
             self.species_fiskeridir
                 .entry(code as i32)
-                .or_insert_with(|| NewSpeciesFiskeridir::new(code as i32, name.map(From::from)));
+                .or_insert_with(|| NewSpeciesFiskeridir::new(code as i32, name));
         }
     }
 
