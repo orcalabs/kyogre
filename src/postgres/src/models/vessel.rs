@@ -8,7 +8,7 @@ use fiskeridir_rs::{
     VesselType,
 };
 use kyogre_core::{
-    AisVessel, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month, TripAssemblerId,
+    AisVessel, Draught, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month, TripAssemblerId,
     VesselCurrentTrip, VesselSource,
 };
 use serde::Deserialize;
@@ -291,6 +291,9 @@ pub struct FiskeridirAisVesselCombination {
     pub ais_mmsi: Option<Mmsi>,
     pub ais_call_sign: Option<CallSign>,
     pub ais_name: Option<String>,
+    pub ais_length: Option<i32>,
+    pub ais_width: Option<i32>,
+    pub ais_draught: Option<Draught>,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub fiskeridir_length_group_id: VesselLengthGroup,
     pub fiskeridir_call_sign: Option<CallSign>,
@@ -325,6 +328,9 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             ais_mmsi,
             ais_call_sign,
             ais_name,
+            ais_length,
+            ais_width,
+            ais_draught,
             fiskeridir_vessel_id,
             fiskeridir_length_group_id,
             fiskeridir_call_sign,
@@ -336,18 +342,18 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             fiskeridir_engine_building_year,
             fiskeridir_engine_power,
             fiskeridir_building_year,
+            fiskeridir_auxiliary_engine_power,
+            fiskeridir_auxiliary_engine_building_year,
+            fiskeridir_boiler_engine_power,
+            fiskeridir_boiler_engine_building_year,
+            fiskeridir_engine_version,
+            fiskeridir_degree_of_electrification,
+            fiskeridir_service_speed,
             preferred_trip_assembler,
             gear_group_ids,
             species_group_ids,
             current_trip_departure_timestamp,
             current_trip_target_species_fiskeridir_id,
-            fiskeridir_boiler_engine_power,
-            fiskeridir_auxiliary_engine_power,
-            fiskeridir_auxiliary_engine_building_year,
-            fiskeridir_boiler_engine_building_year,
-            fiskeridir_engine_version,
-            fiskeridir_degree_of_electrification,
-            fiskeridir_service_speed,
             is_active,
         } = value;
 
@@ -355,6 +361,9 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             mmsi,
             call_sign: ais_call_sign,
             name: ais_name,
+            length: ais_length,
+            breadth: ais_width,
+            current_draught: ais_draught,
         });
 
         let fiskeridir = FiskeridirVessel {

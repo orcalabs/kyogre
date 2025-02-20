@@ -19,7 +19,7 @@ use kyogre_core::{
 use machine::StateMachine;
 use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
-use processors::{AisVmsConflict, UnrealisticSpeed};
+use processors::{AisVmsConflict, FuelMode, UnrealisticSpeed};
 use std::{
     collections::{HashMap, HashSet},
     sync::{
@@ -338,6 +338,7 @@ impl TestStateBuilder {
                 current_positions_batch_size: 10,
                 environment: orca_core::Environment::Test,
                 postgres: psql_settings.clone(),
+                fuel_estimation_mode: FuelMode::Normal,
             })
             .await,
         }

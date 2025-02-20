@@ -1,20 +1,42 @@
-use std::collections::HashMap;
-
-use chrono::{DateTime, Utc};
-use futures::{Stream, TryStreamExt};
-use kyogre_core::{
-    AisPermission, AisPosition, AisVesselMigrate, DateRange, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
-    LEISURE_VESSEL_SHIP_TYPES, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic,
-    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
-};
-
 use crate::{
     PostgresAdapter,
     error::Result,
     models::{self, NewAisCurrentPosition, NewAisVessel, NewAisVesselHistoric, NewAisVesselMmsi},
 };
+use chrono::{DateTime, NaiveDate, Utc};
+use futures::{Stream, TryStreamExt};
+use kyogre_core::{
+    AisPermission, AisPosition, AisVesselMigrate, DateRange, Draught,
+    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES, Mmsi, NavigationStatus,
+    NewAisPosition, NewAisStatic, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+};
+use std::collections::HashMap;
 
 impl PostgresAdapter {
+    pub(crate) async fn average_draught_impl(
+        &self,
+        mmsi: Mmsi,
+        date: NaiveDate,
+    ) -> Result<Option<Draught>> {
+        let range = DateRange::from_dates(date, date)?;
+        Ok(sqlx::query!(
+            r#"
+SELECT
+    AVG(draught) AS "draught: Draught"
+FROM
+    ais_vessels_historic
+WHERE
+    mmsi = $1
+    AND message_timestamp BETWEEN $2 AND $3
+            "#,
+            mmsi.into_inner(),
+            range.start(),
+            range.end(),
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .draught)
+    }
     pub(crate) fn ais_positions_impl(
         &self,
         mmsi: Mmsi,

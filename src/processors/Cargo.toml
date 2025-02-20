@@ -9,6 +9,7 @@ test = ["kyogre-core/test", "postgres/test"]
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
+fiskeridir-rs = { path = "../fiskeridir-rs" }
 
 orca-core = { workspace = true, features = ["telemetry"] }
 

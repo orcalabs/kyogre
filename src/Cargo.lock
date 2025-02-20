@@ -4313,6 +4313,7 @@ dependencies = [
  "async-channel",
  "chrono",
  "config",
+ "fiskeridir-rs",
  "geoutils",
  "kyogre-core",
  "orca-core",

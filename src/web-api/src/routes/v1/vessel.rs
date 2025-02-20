@@ -229,6 +229,9 @@ impl From<kyogre_core::AisVessel> for AisVessel {
             mmsi,
             call_sign,
             name,
+            length: _,
+            breadth: _,
+            current_draught: _,
         } = value;
 
         AisVessel {

@@ -595,6 +595,10 @@ impl FuelEstimation for PostgresAdapter {
                 .await?,
         )
     }
+
+    async fn average_draught(&self, mmsi: Mmsi, date: NaiveDate) -> CoreResult<Option<Draught>> {
+        Ok(retry(|| self.average_draught_impl(mmsi, date)).await?)
+    }
 }
 
 #[async_trait]

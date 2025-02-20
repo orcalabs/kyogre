@@ -78,18 +78,18 @@ ORDER BY
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // let (name, vessel_id, bytes) = (
-    //     "TUROVERSIKT EROS",
-    //     2013060592,
-    //     include_bytes!("../EROS oljeforbruk 2022 - 2024.xlsx"),
-    // );
-    let (name, vessel_id, bytes) = (
-        "HERØYFJORD",
-        2021117460,
-        include_bytes!("../Herøyfjord oljeforbruk 2022-24.xlsx"),
-    );
-    run_heroyfjord_eros(bytes, vessel_id, name).await
-    // run_nergard().await
+    //let (name, vessel_id, bytes) = (
+    //    "TUROVERSIKT EROS",
+    //    2013060592,
+    //    include_bytes!("../EROS oljeforbruk 2022 - 2024.xlsx"),
+    //);
+    //let (name, vessel_id, bytes) = (
+    //    "HERØYFJORD",
+    //    2021117460,
+    //    include_bytes!("../Herøyfjord oljeforbruk 2022-24.xlsx"),
+    //);
+    //run_heroyfjord_eros(bytes, vessel_id, name).await
+    run_nergard().await
 }
 
 async fn run_heroyfjord_eros(bytes: &[u8], vessel_id: i64, name: &str) -> Result<()> {
@@ -101,6 +101,9 @@ async fn run_heroyfjord_eros(bytes: &[u8], vessel_id: i64, name: &str) -> Result
     let mut stdout = stdout().lock();
 
     write_header(&mut stdout)?;
+
+    let mut total_trip_fuel = 0.;
+    let mut total_estimated_fuel = 0.;
 
     for trip in trips {
         if trip.entries.is_empty() {
@@ -128,11 +131,17 @@ async fn run_heroyfjord_eros(bytes: &[u8], vessel_id: i64, name: &str) -> Result
             distance_total,
         )?;
 
+        total_trip_fuel += total;
+        total_estimated_fuel += estimated_total;
+
         diffs.push(diff_percent.abs());
     }
 
     let n = diffs.len() as f64;
     let mean = diffs.iter().sum::<f64>() / n;
+
+    let total_diff = (total_trip_fuel - total_estimated_fuel).abs();
+    let total_diff_percent = 100.0 - (total_trip_fuel / total_estimated_fuel * 100.0);
 
     let sd = (diffs
         .iter()
@@ -144,6 +153,8 @@ async fn run_heroyfjord_eros(bytes: &[u8], vessel_id: i64, name: &str) -> Result
     println!();
     println!("Mean diff percent: {mean:.0}");
     println!("SD:                {sd:.2}");
+    println!("Total diff:            {total_diff:.2}");
+    println!("Total diff percent:    {total_diff_percent:.2}");
 
     Ok(())
 }
@@ -160,6 +171,9 @@ async fn run_nergard() -> Result<()> {
 
     write_header(&mut stdout)?;
 
+    let mut total_trip_fuel = 0.;
+    let mut total_estimated_fuel = 0.;
+
     for trip in trips {
         if trip.entries.is_empty() {
             continue;
@@ -185,6 +199,9 @@ async fn run_nergard() -> Result<()> {
             total,
             distance_total,
         )?;
+
+        total_trip_fuel += total;
+        total_estimated_fuel += estimated_total;
 
         diffs.push(diff_percent.abs());
 
@@ -219,6 +236,9 @@ async fn run_nergard() -> Result<()> {
     let n = diffs.len() as f64;
     let mean = diffs.iter().sum::<f64>() / n;
 
+    let total_diff = (total_trip_fuel - total_estimated_fuel).abs();
+    let total_diff_percent = 100.0 - (total_trip_fuel / total_estimated_fuel * 100.0);
+
     let sd = (diffs
         .iter()
         .map(|v| ((v - mean).abs().powf(2.)))
@@ -227,8 +247,10 @@ async fn run_nergard() -> Result<()> {
         .sqrt();
 
     println!();
-    println!("Mean diff percent: {mean:.0}");
-    println!("SD:                {sd:.2}");
+    println!("Mean diff percent:     {mean:.0}");
+    println!("SD:                    {sd:.2}");
+    println!("Total diff:            {total_diff:.2}");
+    println!("Total diff percent:    {total_diff_percent:.2}");
 
     Ok(())
 }
