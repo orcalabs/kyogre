@@ -1,14 +1,17 @@
-use crate::{Result, SpeedItem, UnrealisticSpeed, estimated_speed_between_points};
+use std::sync::Arc;
+
 use chrono::{DateTime, Duration, NaiveDate, Utc};
+use core::f64;
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation,
-    DIESEL_GRAM_TO_LITER, DateRange, EngineType, FuelEstimation, NewFuelDayEstimate, PositionType,
-    Vessel, VesselEngine,
+    AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation, DateRange,
+    EngineType, FiskeridirVesselId, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
+    VesselEngine, DIESEL_GRAM_TO_LITER,
 };
-use std::{sync::Arc, vec};
 use tokio::task::JoinSet;
 use tracing::{error, info, instrument, warn};
+
+use crate::{estimated_speed_between_points, Result, SpeedItem, UnrealisticSpeed};
 
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
@@ -18,6 +21,7 @@ static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
 static HAUL_LOAD_FACTOR: f64 = 1.75;
 static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
 
+#[derive(Debug)]
 pub struct FuelItem {
     pub speed: Option<f64>,
     pub latitude: f64,
@@ -46,13 +50,19 @@ impl std::ops::Deref for VesselToProcess {
 pub struct FuelEstimator {
     adapter: Arc<dyn FuelEstimation>,
     num_workers: u32,
+    local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
 }
 
 impl FuelEstimator {
-    pub fn new(num_workers: u32, adapter: Arc<dyn FuelEstimation>) -> Self {
+    pub fn new(
+        num_workers: u32,
+        local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
+        adapter: Arc<dyn FuelEstimation>,
+    ) -> Self {
         Self {
             adapter,
             num_workers,
+            local_processing_vessels,
         }
     }
 
@@ -66,9 +76,9 @@ impl FuelEstimator {
         let ais_vms = self
             .adapter
             .ais_vms_positions_with_haul(
-                vessel.fiskeridir.id,
+                vessel.id(),
                 vessel.mmsi(),
-                vessel.fiskeridir.call_sign.as_ref(),
+                vessel.fiskeridir_call_sign(),
                 &DateRange::new(start, end).unwrap(),
             )
             .await
@@ -84,17 +94,24 @@ impl FuelEstimator {
     }
 
     pub async fn run_continuous(self) -> Result<()> {
-        loop {
-            if let Some(last_run) = self.adapter.last_run().await? {
-                let diff = Utc::now() - last_run;
-                if diff >= RUN_INTERVAL {
-                    self.run_single(None).await?;
+        if let Some(vessels) = &self.local_processing_vessels {
+            loop {
+                self.run_local_fuel_estimation(vessels).await?;
+                tokio::time::sleep(std::time::Duration::from_secs(600)).await;
+            }
+        } else {
+            loop {
+                if let Some(last_run) = self.adapter.last_run().await? {
+                    let diff = Utc::now() - last_run;
+                    if diff >= RUN_INTERVAL {
+                        self.run_single(None).await?;
+                    } else {
+                        tokio::time::sleep((RUN_INTERVAL - diff).to_std().unwrap()).await;
+                        self.run_single(None).await?;
+                    }
                 } else {
-                    tokio::time::sleep((RUN_INTERVAL - diff).to_std().unwrap()).await;
                     self.run_single(None).await?;
                 }
-            } else {
-                self.run_single(None).await?;
             }
         }
     }
@@ -161,6 +178,99 @@ impl FuelEstimator {
 
         Ok(())
     }
+
+    #[instrument(skip_all)]
+    async fn run_local_fuel_estimation(&self, vessel_ids: &[FiskeridirVesselId]) -> Result<()> {
+        let vessels = self.adapter.vessels_with_trips(0).await?;
+
+        let end_date = Utc::now().naive_utc().date().pred_opt().unwrap();
+
+        for vessel in vessels {
+            let engines = vessel.engines();
+            if engines.is_empty() || !vessel_ids.contains(&vessel.id()) {
+                continue;
+            }
+
+            let dates_to_estimate = self
+                .adapter
+                .dates_to_estimate(
+                    vessel.id(),
+                    vessel.fiskeridir_call_sign(),
+                    vessel.mmsi(),
+                    end_date,
+                )
+                .await?;
+
+            if dates_to_estimate.is_empty() {
+                continue;
+            }
+
+            let len = dates_to_estimate.len();
+            info!("dates to process: {len}");
+
+            let vessel = Arc::new(VesselToProcess { vessel, engines });
+            let (worker_tx, worker_rx) = async_channel::bounded(len);
+            let (master_tx, master_rx) = async_channel::bounded(len);
+
+            let mut set = JoinSet::new();
+
+            for _ in 0..32.min(len) {
+                let vessel = vessel.clone();
+                let adapter = self.adapter.clone();
+                let worker_rx = worker_rx.clone();
+                let master_tx = master_tx.clone();
+
+                set.spawn(async move {
+                    while let Ok(next) = worker_rx.recv().await {
+                        let res = process_day(vessel.as_ref(), adapter.as_ref(), next).await;
+                        master_tx.send(res).await.unwrap();
+                    }
+                });
+            }
+
+            for d in dates_to_estimate {
+                worker_tx.try_send(d).unwrap();
+            }
+
+            drop(worker_rx);
+            drop(worker_tx);
+            drop(master_tx);
+
+            let mut estimates = Vec::with_capacity(len);
+
+            while let Ok(next) = master_rx.recv().await {
+                match next {
+                    Ok(v) => estimates.push(v),
+                    Err(e) => {
+                        error!("failed to process day: {e:?}");
+                    }
+                }
+
+                if estimates.len() % 100 == 0 {
+                    info!(
+                        "processed {}/{} ({:.2}%)",
+                        estimates.len(),
+                        len,
+                        estimates.len() as f64 * 100. / (len as f64),
+                    );
+                }
+            }
+
+            if !estimates.is_empty() {
+                self.adapter.add_fuel_estimates(&estimates).await?;
+            }
+
+            drop(master_rx);
+
+            set.join_all().await;
+
+            info!("processed vessel: {}", vessel.id());
+        }
+
+        info!("FUEL PROCESSING DONE!");
+
+        Ok(())
+    }
 }
 
 #[instrument(skip(receiver, adapter))]
@@ -179,7 +289,7 @@ async fn process_vessel(
     adapter: &dyn FuelEstimation,
     end_date: NaiveDate,
 ) {
-    let id = vessel.fiskeridir.id;
+    let id = vessel.id();
     if let Err(e) = process_vessel_impl(vessel, adapter, end_date).await {
         error!("failed to process vessel_id: '{id}' err: {e:?}");
     }
@@ -192,9 +302,9 @@ async fn process_vessel_impl(
 ) -> Result<()> {
     let dates_to_estimate = adapter
         .dates_to_estimate(
-            vessel.fiskeridir.id,
-            vessel.fiskeridir.call_sign.as_ref(),
-            vessel.ais.as_ref().map(|a| a.mmsi),
+            vessel.id(),
+            vessel.fiskeridir_call_sign(),
+            vessel.mmsi(),
             end_date,
         )
         .await?;
@@ -235,9 +345,9 @@ async fn process_day(
     let range = DateRange::from_dates(date, date.succ_opt().unwrap())?;
     let ais_vms = adapter
         .ais_vms_positions_with_haul(
-            vessel.fiskeridir.id,
+            vessel.id(),
             vessel.mmsi(),
-            vessel.fiskeridir.call_sign.as_ref(),
+            vessel.fiskeridir_call_sign(),
             &range,
         )
         .await?;
@@ -250,7 +360,7 @@ async fn process_day(
     );
 
     Ok(NewFuelDayEstimate {
-        vessel_id: vessel.fiskeridir.id,
+        vessel_id: vessel.id(),
         date,
         estimate_liter: estimate.fuel_liter,
         engine_version: vessel.vessel.fiskeridir.engine_version,
@@ -415,6 +525,11 @@ where
                 }
             }
         };
+
+        if speed < 0.1 {
+            state.prev = v;
+            return state;
+        }
 
         // TODO: Currently using surrogate value from:
         // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf

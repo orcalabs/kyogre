@@ -228,6 +228,9 @@ pub fn sfc(engine_building_year: u32) -> f64 {
 }
 
 impl Vessel {
+    pub fn id(&self) -> FiskeridirVesselId {
+        self.fiskeridir.id
+    }
     pub fn fiskeridir_call_sign(&self) -> Option<&CallSign> {
         self.fiskeridir.call_sign.as_ref()
     }
