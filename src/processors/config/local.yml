@@ -7,6 +7,6 @@ postgres:
   port: 5532
   username: postgres
   password: test123
-  max_connections: 10
+  max_connections: 64
   log_statements: Disable
   application_name: kyogre-processors
