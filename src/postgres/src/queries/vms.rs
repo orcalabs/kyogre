@@ -11,11 +11,11 @@ use std::collections::{hash_map::Entry, HashMap, HashSet};
 use strum::IntoEnumIterator;
 
 impl PostgresAdapter {
-    pub(crate) fn vms_positions_impl(
-        &self,
-        call_sign: &CallSign,
-        range: &DateRange,
-    ) -> impl Stream<Item = Result<VmsPosition>> + '_ {
+    pub(crate) fn vms_positions_impl<'a>(
+        &'a self,
+        call_sign: &'a CallSign,
+        range: &'a DateRange,
+    ) -> impl Stream<Item = Result<VmsPosition>> + 'a {
         self.vms_positions_inner(VmsPositionsArg::Filter { call_sign, range })
     }
 
