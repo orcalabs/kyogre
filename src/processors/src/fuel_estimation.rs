@@ -4,14 +4,14 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use core::f64;
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation, DateRange,
-    EngineType, FiskeridirVesselId, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
-    VesselEngine, DIESEL_GRAM_TO_LITER,
+    AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation,
+    DIESEL_GRAM_TO_LITER, DateRange, EngineType, FiskeridirVesselId, FuelEstimation,
+    NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
 };
 use tokio::task::JoinSet;
 use tracing::{error, info, instrument, warn};
 
-use crate::{estimated_speed_between_points, Result, SpeedItem, UnrealisticSpeed};
+use crate::{Result, SpeedItem, UnrealisticSpeed, estimated_speed_between_points};
 
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
@@ -95,10 +95,8 @@ impl FuelEstimator {
 
     pub async fn run_continuous(self) -> Result<()> {
         if let Some(vessels) = &self.local_processing_vessels {
-            loop {
-                self.run_local_fuel_estimation(vessels).await?;
-                tokio::time::sleep(std::time::Duration::from_secs(600)).await;
-            }
+            self.run_local_fuel_estimation(vessels).await?;
+            Ok(())
         } else {
             loop {
                 if let Some(last_run) = self.adapter.last_run().await? {
@@ -525,11 +523,6 @@ where
                 }
             }
         };
-
-        if speed < 0.1 {
-            state.prev = v;
-            return state;
-        }
 
         // TODO: Currently using surrogate value from:
         // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf

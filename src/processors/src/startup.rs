@@ -1,5 +1,5 @@
 use crate::{
-    current_position::CurrentPositionProcessor, FuelEstimator, LiveFuel, Result, Settings,
+    FuelEstimator, LiveFuel, Result, Settings, current_position::CurrentPositionProcessor,
 };
 use orca_core::Environment;
 use postgres::PostgresAdapter;

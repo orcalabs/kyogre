@@ -333,6 +333,7 @@ impl TestStateBuilder {
             call_sign_counter: 1,
             enabled_ml_models: vec![],
             processors: processors::App::build(&processors::Settings {
+                fuel_estimation_vessels: None,
                 num_fuel_estimation_workers: 1,
                 current_positions_batch_size: 10,
                 environment: orca_core::Environment::Test,
