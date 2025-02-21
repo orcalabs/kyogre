@@ -3,16 +3,16 @@ use fiskeridir_rs::{GearGroup, SpeciesGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     CatchLocationId, FishingSpotPrediction, FishingSpotTrainingData, FishingWeightPrediction,
-    HaulId, ModelId, TrainingHaul, WeatherData, SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT,
+    HaulId, ModelId, SPOT_PREDICTOR_SAMPLE_WEIGHT_LIMIT, TrainingHaul, WeatherData,
 };
 
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{
         MLTrainingLog, NewFishingSpotPrediction, NewFishingWeightPrediction,
         WeightPredictorTrainingData,
     },
-    PostgresAdapter,
 };
 
 impl PostgresAdapter {

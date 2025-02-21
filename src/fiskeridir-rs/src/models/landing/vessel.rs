@@ -14,7 +14,7 @@ use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
 
-use crate::{string_new_types::NonEmptyString, CallSign};
+use crate::{CallSign, string_new_types::NonEmptyString};
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize, FromPrimitive,

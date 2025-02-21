@@ -1,5 +1,5 @@
-use crate::range_error::{InvalidSnafu, ParseBoundSnafu};
 use crate::RangeError;
+use crate::range_error::{InvalidSnafu, ParseBoundSnafu};
 use serde::de;
 use serde::de::Visitor;
 use serde::{Deserialize, Serialize};
@@ -160,9 +160,9 @@ where
 #[cfg(feature = "sqlx")]
 mod _sqlx {
     use sqlx::{
-        encode::IsNull,
-        postgres::{types::PgRange, PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef},
         Decode, Encode, Postgres, Type,
+        encode::IsNull,
+        postgres::{PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef, types::PgRange},
     };
 
     use super::*;

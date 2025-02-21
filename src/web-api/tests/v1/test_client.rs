@@ -6,7 +6,7 @@ use kyogre_core::{
     DeleteFuelMeasurement, FiskeridirVesselId, FuelEntry, FuelMeasurement, LiveFuel, Mmsi, ModelId,
     OrgBenchmarks, UpdateVessel, VesselBenchmarks,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use web_api::{
     error::{ErrorDiscriminants, ErrorResponse},
     extractors::{BwPolicy, BwRole},
@@ -28,11 +28,11 @@ use web_api::{
             SpeciesMainGroupDetailed,
         },
         trip::{
+            CurrentTrip, Trip, TripsParameters,
             benchmarks::{
                 AverageEeoiParams, AverageTripBenchmarksParams, EeoiParams, TripBenchmarks,
                 TripBenchmarksParams,
             },
-            CurrentTrip, Trip, TripsParameters,
         },
         user::User,
         vessel::{FuelParams, LiveFuelParams, Vessel},

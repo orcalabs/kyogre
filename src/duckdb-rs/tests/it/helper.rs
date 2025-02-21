@@ -5,7 +5,7 @@ use duckdb_rs::{
     startup::App,
 };
 use futures::Future;
-use kyogre_core::{VerificationOutbound, POSTGRES_TEST_PORT};
+use kyogre_core::{POSTGRES_TEST_PORT, VerificationOutbound};
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{PostgresAdapter, TestDb};
 use std::panic;

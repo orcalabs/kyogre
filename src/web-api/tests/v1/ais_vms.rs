@@ -214,8 +214,8 @@ async fn test_ais_vms_returns_positions_of_leisure_vessels_under_45_meters_with_
 }
 
 #[tokio::test]
-async fn test_ais_vms_does_not_return_ais_positions_of_vessels_with_unknown_ship_type_under_45m_without_extended_access(
-) {
+async fn test_ais_vms_does_not_return_ais_positions_of_vessels_with_unknown_ship_type_under_45m_without_extended_access()
+ {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -248,8 +248,8 @@ async fn test_ais_vms_does_not_return_ais_positions_of_vessels_with_unknown_ship
     .await;
 }
 #[tokio::test]
-async fn test_ais_vms_returns_ais_positions_of_vessels_with_unknown_ship_type_under_45m_with_extended_access(
-) {
+async fn test_ais_vms_returns_ais_positions_of_vessels_with_unknown_ship_type_under_45m_with_extended_access()
+ {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -285,8 +285,8 @@ async fn test_ais_vms_returns_ais_positions_of_vessels_with_unknown_ship_type_un
 }
 
 #[tokio::test]
-async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_meters_without_extend_access(
-) {
+async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_meters_without_extend_access()
+ {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -467,8 +467,8 @@ async fn test_ais_vms_return_positions_for_vessels_under_15m_with_full_ais_permi
 }
 
 #[tokio::test]
-async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
-) {
+async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy()
+ {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -506,8 +506,8 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
 }
 
 #[tokio::test]
-async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
-) {
+async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role()
+ {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -588,8 +588,8 @@ async fn test_ais_vms_by_trip_returns_only_positions_within_trip() {
 }
 
 #[tokio::test]
-async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
-) {
+async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role()
+ {
     test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
@@ -622,8 +622,8 @@ async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_wi
 }
 
 #[tokio::test]
-async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
-) {
+async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy()
+ {
     test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
@@ -720,8 +720,8 @@ async fn test_ais_vms_by_trip_does_not_return_ais_positions_for_vessels_under_15
 }
 
 #[tokio::test]
-async fn test_ais_vms_by_trip_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check(
-) {
+async fn test_ais_vms_by_trip_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check()
+ {
     test(|helper, builder| async move {
         let state = builder
             .vessels(1)
@@ -1005,11 +1005,13 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
 
         assert_eq!(positions.len(), 3);
         assert!(positions[0].trip_cumulative_fuel_consumption.is_none());
-        assert!(positions
-            .iter()
-            .skip(1)
-            .map(|v| v.trip_cumulative_fuel_consumption.unwrap())
-            .is_sorted());
+        assert!(
+            positions
+                .iter()
+                .skip(1)
+                .map(|v| v.trip_cumulative_fuel_consumption.unwrap())
+                .is_sorted()
+        );
         assert!(approx_eq!(
             f64,
             positions
@@ -1052,11 +1054,13 @@ async fn test_ais_vms_by_trip_returns_cumulative_cargo_weight() {
 
         assert_eq!(positions.len(), 3);
         assert_eq!(positions[0].trip_cumulative_cargo_weight.unwrap(), 0.0);
-        assert!(positions
-            .iter()
-            .skip(1)
-            .map(|v| v.trip_cumulative_cargo_weight.unwrap())
-            .is_sorted());
+        assert!(
+            positions
+                .iter()
+                .skip(1)
+                .map(|v| v.trip_cumulative_cargo_weight.unwrap())
+                .is_sorted()
+        );
         assert!(approx_eq!(
             f64,
             positions
@@ -1193,11 +1197,13 @@ async fn tests_cumulative_cargo_weight_is_recomputed_with_new_data() {
 
         assert_eq!(positions.len(), 3);
         assert_eq!(positions[0].trip_cumulative_cargo_weight.unwrap(), 0.0);
-        assert!(positions
-            .iter()
-            .skip(1)
-            .map(|v| v.trip_cumulative_cargo_weight.unwrap())
-            .is_sorted());
+        assert!(
+            positions
+                .iter()
+                .skip(1)
+                .map(|v| v.trip_cumulative_cargo_weight.unwrap())
+                .is_sorted()
+        );
         assert!(approx_eq!(
             f64,
             positions
@@ -1333,11 +1339,13 @@ async fn tests_cumulative_cargo_weight_combines_hauls_and_departures() {
             .unwrap();
 
         assert_eq!(positions.len(), 5);
-        assert!(positions
-            .iter()
-            .skip(1)
-            .map(|v| v.trip_cumulative_cargo_weight.unwrap())
-            .is_sorted());
+        assert!(
+            positions
+                .iter()
+                .skip(1)
+                .map(|v| v.trip_cumulative_cargo_weight.unwrap())
+                .is_sorted()
+        );
         assert!(approx_eq!(
             f64,
             positions[0].trip_cumulative_cargo_weight.unwrap(),

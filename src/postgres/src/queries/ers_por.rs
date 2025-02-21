@@ -4,18 +4,18 @@ use std::{
 };
 
 use chrono::{DateTime, Utc};
-use futures::{future::ready, TryStreamExt};
+use futures::{TryStreamExt, future::ready};
 use kyogre_core::{
     Arrival, ArrivalFilter, BoxIterator, FiskeridirVesselId, TripAssemblerId, VesselEventType,
 };
 use tracing::error;
 
 use crate::{
+    PostgresAdapter,
     chunk::Chunks,
     error::Result,
     ers_por_set::ErsPorSet,
     models::{NewErsPor, NewTripAssemblerConflict},
-    PostgresAdapter,
 };
 
 static CHUNK_SIZE: usize = 10_000;

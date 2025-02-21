@@ -7,8 +7,8 @@ pub use ocean_climate_scraper::OceanClimateScraper;
 use snafu::ResultExt;
 
 use crate::error::{
-    timestamp_error::{InvalidFilenameSnafu, InvalidHourSnafu, InvalidYMDSnafu},
     TimestampError,
+    timestamp_error::{InvalidFilenameSnafu, InvalidHourSnafu, InvalidYMDSnafu},
 };
 
 pub(crate) fn angle_between_vectors(v1: (f64, f64), v2: (f64, f64)) -> f64 {

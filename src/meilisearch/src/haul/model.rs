@@ -1,9 +1,9 @@
 use super::filter::{HaulFilterDiscriminants, HaulSort};
 use crate::{
+    CacheIndex,
     error::{Error, Result},
     indexable::{Id, IdVersion, Indexable},
     utils::to_nanos,
-    CacheIndex,
 };
 use async_trait::async_trait;
 use chrono::{TimeZone, Utc};

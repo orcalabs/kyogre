@@ -1,9 +1,9 @@
 use actix_web::web;
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::Result, extractors::BwProfile, response::Response, Database};
+use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 
 #[oasgen(skip(db), tags("User"))]
 #[tracing::instrument(skip(db))]

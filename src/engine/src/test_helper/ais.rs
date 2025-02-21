@@ -1,4 +1,4 @@
-use super::{cycle::Cycle, vessel::VesselBuilder, VesselKey};
+use super::{VesselKey, cycle::Cycle, vessel::VesselBuilder};
 use crate::*;
 
 pub struct AisVesselBuilder {

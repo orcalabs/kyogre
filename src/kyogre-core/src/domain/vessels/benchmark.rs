@@ -4,7 +4,7 @@ use num_derive::FromPrimitive;
 use num_traits::Zero;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use strum::{AsRefStr, Display, EnumString};
 
 use crate::*;

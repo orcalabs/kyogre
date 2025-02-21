@@ -1,6 +1,6 @@
 use crate::{
-    error::{CallSignDoesNotExistSnafu, Result},
     PostgresAdapter,
+    error::{CallSignDoesNotExistSnafu, Result},
 };
 use fiskeridir_rs::{CallSign, OrgId};
 use kyogre_core::FiskeridirVesselId;

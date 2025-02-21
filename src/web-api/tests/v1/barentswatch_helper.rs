@@ -1,20 +1,19 @@
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use jsonwebtoken::{
-    decode, encode,
+    Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode,
     jwk::{AlgorithmParameters, CommonParameters, Jwk, JwkSet, KeyAlgorithm, RSAKeyParameters},
-    Algorithm, DecodingKey, EncodingKey, Header, Validation,
 };
 use kyogre_core::{BarentswatchUserId, TEST_SIGNED_IN_VESSEL_CALLSIGN};
 use rsa::{
-    pkcs1::EncodeRsaPrivateKey, pkcs8::LineEnding, traits::PublicKeyParts, RsaPrivateKey,
-    RsaPublicKey,
+    RsaPrivateKey, RsaPublicKey, pkcs1::EncodeRsaPrivateKey, pkcs8::LineEnding,
+    traits::PublicKeyParts,
 };
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 use web_api::extractors::{BwPolicy, BwProfile, BwRole, BwUser, BwVesselInfo};
 use wiremock::{
-    matchers::{method, path},
     Mock, MockServer, ResponseTemplate,
+    matchers::{method, path},
 };
 
 pub struct BarentswatchHelper {

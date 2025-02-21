@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use kyogre_core::Range;
 use std::{fmt::Display, ops::Bound};
 
-use crate::error::{time_stamp_error::ConversionSnafu, TimeStampError};
+use crate::error::{TimeStampError, time_stamp_error::ConversionSnafu};
 
 pub fn to_nanos(timestamp: DateTime<Utc>) -> Result<i64, TimeStampError> {
     timestamp

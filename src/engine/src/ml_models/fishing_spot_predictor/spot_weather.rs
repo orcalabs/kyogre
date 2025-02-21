@@ -1,12 +1,12 @@
-use crate::{ml_models::lunar_value, CatchLocationId, SpotPredictorSettings};
+use crate::{CatchLocationId, SpotPredictorSettings, ml_models::lunar_value};
 
 use async_trait::async_trait;
 use chrono::Datelike;
 use fiskeridir_rs::SpeciesGroup;
 use itertools::Itertools;
 use kyogre_core::{
-    CatchLocationWeather, CoreResult, MLModel, MLModelsInbound, MLModelsOutbound, ModelId,
-    TrainingOutput, WeatherData, EARLIEST_ERS_DATE,
+    CatchLocationWeather, CoreResult, EARLIEST_ERS_DATE, MLModel, MLModelsInbound,
+    MLModelsOutbound, ModelId, TrainingOutput, WeatherData,
 };
 use serde::{Serialize, Serializer};
 use std::collections::HashMap;

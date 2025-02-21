@@ -1,14 +1,14 @@
 use crate::{
     api::matrix_cache::LandingMatrix,
-    error::{error::RefreshCommunictionSnafu, Error, Result},
+    error::{Error, Result, error::RefreshCommunictionSnafu},
     filter::{HaulFilters, LandingFilters},
     refresher::{DuckdbRefresher, RefreshRequest},
 };
 use duckdb::DuckdbConnectionManager;
 use kyogre_core::{
-    calculate_haul_sum_area_table, calculate_landing_sum_area_table, HaulMatrixQueryOutput,
-    HaulMatrixXFeature, HaulMatrixYFeature, HaulsMatrix, HaulsMatrixQuery, LandingMatrixQuery,
-    LandingMatrixQueryOutput, LandingMatrixXFeature, LandingMatrixYFeature,
+    HaulMatrixQueryOutput, HaulMatrixXFeature, HaulMatrixYFeature, HaulsMatrix, HaulsMatrixQuery,
+    LandingMatrixQuery, LandingMatrixQueryOutput, LandingMatrixXFeature, LandingMatrixYFeature,
+    calculate_haul_sum_area_table, calculate_landing_sum_area_table,
 };
 use orca_core::PsqlSettings;
 use serde::Deserialize;

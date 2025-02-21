@@ -23,9 +23,9 @@ macro_rules! sqlx_str_impl {
         #[cfg(feature = "sqlx")]
         mod _sqlx {
             use sqlx::{
+                Decode, Encode, Postgres, Type,
                 encode::IsNull,
                 postgres::{PgArgumentBuffer, PgHasArrayType, PgTypeInfo, PgValueRef},
-                Decode, Encode, Postgres, Type,
             };
 
             use super::$ty;

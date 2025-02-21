@@ -8,9 +8,9 @@ use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
 use sqlx::{
+    ConnectOptions, PgPool,
     migrate::Migrator,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
-    ConnectOptions, PgPool,
 };
 use tracing::{error, info, instrument, warn};
 

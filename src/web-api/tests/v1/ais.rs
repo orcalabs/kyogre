@@ -181,8 +181,8 @@ async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified(
 }
 
 #[tokio::test]
-async fn test_ais_does_not_return_positions_of_leisure_vessels_under_45_meters_without_extend_access(
-) {
+async fn test_ais_does_not_return_positions_of_leisure_vessels_under_45_meters_without_extend_access()
+ {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -279,8 +279,8 @@ async fn test_ais_track_returns_positions_of_leisure_vessels_under_45_meters_wit
 }
 
 #[tokio::test]
-async fn test_ais_track_does_not_return_positions_of_vessels_with_unknown_ship_type_under_45m_without_extended_access(
-) {
+async fn test_ais_track_does_not_return_positions_of_vessels_with_unknown_ship_type_under_45m_without_extended_access()
+ {
     test(|helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -314,8 +314,8 @@ async fn test_ais_track_does_not_return_positions_of_vessels_with_unknown_ship_t
 }
 
 #[tokio::test]
-async fn test_ais_track_returns_positions_of_vessels_with_unknown_ship_type_under_45m_with_extended_access(
-) {
+async fn test_ais_track_returns_positions_of_vessels_with_unknown_ship_type_under_45m_with_extended_access()
+ {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -351,8 +351,8 @@ async fn test_ais_track_returns_positions_of_vessels_with_unknown_ship_type_unde
 }
 
 #[tokio::test]
-async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check(
-) {
+async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check()
+ {
     test(|helper, builder| async move {
         let state = builder
             .vessels(1)
@@ -450,8 +450,8 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
 }
 
 #[tokio::test]
-async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
-) {
+async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy()
+ {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
@@ -489,8 +489,8 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
 }
 
 #[tokio::test]
-async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
-) {
+async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role()
+ {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder

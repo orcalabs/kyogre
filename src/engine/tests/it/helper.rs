@@ -1,6 +1,6 @@
 use engine::*;
 use futures::Future;
-use kyogre_core::{VerificationOutbound, POSTGRES_TEST_PORT};
+use kyogre_core::{POSTGRES_TEST_PORT, VerificationOutbound};
 use orca_core::TestHelperBuilder;
 use orca_core::{PsqlLogStatements, PsqlSettings};
 use postgres::{PostgresAdapter, TestDb};

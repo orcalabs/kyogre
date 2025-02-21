@@ -6,20 +6,21 @@ use kyogre_core::{
     AisPermission, AisPosition, AisVmsParams, DateRange, FiskeridirVesselId, Mmsi,
     NavigationStatus, TripId, TripPositionLayerId, VmsPosition,
 };
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, skip_serializing_none, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as, skip_serializing_none};
 use snafu::ResultExt;
 
 use crate::{
+    Database,
     error::{
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
         Result,
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
     },
     extractors::{OptionAuth0Profile, OptionBwProfile},
-    response::{ais_unfold, StreamResponse},
-    stream_response, Database,
+    response::{StreamResponse, ais_unfold},
+    stream_response,
 };
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]

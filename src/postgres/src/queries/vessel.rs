@@ -1,9 +1,9 @@
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{
         FiskeridirAisVesselCombination, NewMunicipality, NewOrg, NewOrgVessel, NewRegisterVessel,
     },
-    PostgresAdapter,
 };
 use fiskeridir_rs::{CallSign, GearGroup, OrgId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};

@@ -1,7 +1,7 @@
 use chrono::Duration;
 use kyogre_core::{
-    track_coverage, AisVmsPosition, CoreResult, DateRange, PositionType, PrunedTripPosition,
-    TripPositionLayer, TripPositionLayerId, TripPositionLayerOutput,
+    AisVmsPosition, CoreResult, DateRange, PositionType, PrunedTripPosition, TripPositionLayer,
+    TripPositionLayerId, TripPositionLayerOutput, track_coverage,
 };
 use serde_json::json;
 

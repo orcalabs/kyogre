@@ -6,8 +6,8 @@ use engine::*;
 use enum_index::EnumIndex;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    haul_date_feature_matrix_index, ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature,
-    HaulMatrixYFeature, HaulMatrixes, NUM_CATCH_LOCATIONS,
+    ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature, HaulMatrixYFeature, HaulMatrixes,
+    NUM_CATCH_LOCATIONS, haul_date_feature_matrix_index,
 };
 use web_api::routes::{utils::datetime_to_month, v1::haul::HaulsMatrixParams};
 
@@ -669,8 +669,8 @@ async fn test_hauls_matrix_species_group_sum_area_table_is_correct() {
 }
 
 #[tokio::test]
-async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_newer_version_with_another_weight(
-) {
+async fn test_hauls_matrix_have_correct_totals_after_dca_message_is_replaced_by_newer_version_with_another_weight()
+ {
     test_with_matrix_cache(|helper, builder| async move {
         let filter = ActiveHaulsFilter::SpeciesGroup;
 

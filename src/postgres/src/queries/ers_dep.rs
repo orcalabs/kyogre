@@ -3,18 +3,18 @@ use std::{
     collections::{HashMap, HashSet},
 };
 
-use futures::{future::ready, TryStreamExt};
+use futures::{TryStreamExt, future::ready};
 use kyogre_core::{
     BoxIterator, DateRange, DepartureWeight, FiskeridirVesselId, TripAssemblerId, VesselEventType,
 };
 use tracing::error;
 
 use crate::{
+    PostgresAdapter,
     chunk::Chunks,
     error::Result,
     ers_dep_set::ErsDepSet,
     models::{NewErsDep, NewTripAssemblerConflict},
-    PostgresAdapter,
 };
 
 static CHUNK_SIZE: usize = 10_000;

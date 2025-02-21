@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{BearerToken, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::Deserialize;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use tracing::info;
 use uuid::Uuid;
 

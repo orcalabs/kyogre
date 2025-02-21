@@ -1,9 +1,9 @@
-use crate::oauth_error::ExchangeCredentialsSnafu;
 use crate::OauthError;
-use oauth2::reqwest;
+use crate::oauth_error::ExchangeCredentialsSnafu;
 use oauth2::AccessToken;
 use oauth2::TokenResponse;
-use oauth2::{basic::BasicClient, AuthUrl, ClientId, ClientSecret, Scope, TokenUrl};
+use oauth2::reqwest;
+use oauth2::{AuthUrl, ClientId, ClientSecret, Scope, TokenUrl, basic::BasicClient};
 use serde::Deserialize;
 use snafu::ResultExt;
 

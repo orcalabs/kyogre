@@ -1,8 +1,8 @@
 use actix_web::{
+    HttpResponse, ResponseError,
     body::BoxBody,
     error::QueryPayloadError,
-    http::{header::ToStrError, StatusCode},
-    HttpResponse, ResponseError,
+    http::{StatusCode, header::ToStrError},
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, OrgId, ParseStringError};
@@ -76,7 +76,9 @@ pub enum Error {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     },
-    #[snafu(display("Either both start and end must be specified or neither, start_given: '{start}', end_given: '{end}'"))]
+    #[snafu(display(
+        "Either both start and end must be specified or neither, start_given: '{start}', end_given: '{end}'"
+    ))]
     MissingDateRange {
         #[snafu(implicit)]
         location: Location,

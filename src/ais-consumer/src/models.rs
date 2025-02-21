@@ -1,11 +1,11 @@
 use crate::error::{
-    ais_message_error::{InvalidEtaSnafu, ParseEtaSnafu},
     AisMessageError,
+    ais_message_error::{InvalidEtaSnafu, ParseEtaSnafu},
 };
 use chrono::{DateTime, Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Timelike, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{
-    distance_to_shore, AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic,
+    AisClass, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic, distance_to_shore,
 };
 use serde::{Deserialize, Serialize};
 use snafu::ResultExt;
@@ -391,7 +391,7 @@ impl From<AisMessageType> for kyogre_core::AisMessageType {
 
 #[cfg(feature = "test")]
 mod test {
-    use rand::{random, Rng};
+    use rand::{Rng, random};
 
     use super::*;
 

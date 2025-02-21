@@ -1,6 +1,6 @@
 use kyogre_core::WeeklySale;
 
-use super::{cycle::Cycle, LandingBuilder, LandingTripBuilder, TestStateBuilder};
+use super::{LandingBuilder, LandingTripBuilder, TestStateBuilder, cycle::Cycle};
 
 pub struct WeeklySaleBuilder {
     pub state: TestStateBuilder,

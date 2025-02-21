@@ -1,7 +1,7 @@
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{CatchLocationId, WeatherLocationOverlap};
 
-use crate::{error::Result, models::CatchLocation, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models::CatchLocation};
 
 impl PostgresAdapter {
     pub(crate) fn catch_locations_impl(

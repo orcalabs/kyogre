@@ -1,6 +1,6 @@
-use crate::error::landing_id_error::{InvalidSnafu, LengthSnafu, ParseSnafu};
 use crate::error::LandingIdError;
-use crate::{sqlx_str_impl, DocumentType, SalesTeam};
+use crate::error::landing_id_error::{InvalidSnafu, LengthSnafu, ParseSnafu};
+use crate::{DocumentType, SalesTeam, sqlx_str_impl};
 use core::fmt;
 use num_traits::FromPrimitive;
 use serde::de::{self, Visitor};

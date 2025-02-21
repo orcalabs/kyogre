@@ -1,6 +1,6 @@
 use std::any::TypeId;
 
-use actix_web::{body::BoxBody, HttpRequest, HttpResponse, Responder};
+use actix_web::{HttpRequest, HttpResponse, Responder, body::BoxBody};
 use oasgen::{OaSchema, ObjectType, RefOr, Schema, SchemaData, SchemaKind, Type};
 use serde::{Deserialize, Serialize};
 

@@ -3,13 +3,13 @@ use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     AisPermission, AisVmsPosition, CurrentPosition, CurrentPositionVessel, CurrentPositionsUpdate,
-    EarliestVmsUsedBy, FiskeridirVesselId, Mmsi, NavigationStatus, PositionType,
-    TripPositionLayerId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
-    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    EarliestVmsUsedBy, FiskeridirVesselId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
+    LEISURE_VESSEL_SHIP_TYPES, Mmsi, NavigationStatus, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    PositionType, TripPositionLayerId,
 };
 use sqlx::Postgres;
 
-use crate::{error::Result, models, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models};
 
 impl PostgresAdapter {
     pub(crate) fn current_positions_impl(

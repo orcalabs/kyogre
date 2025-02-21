@@ -1,6 +1,6 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use chrono::{DateTime, NaiveDate, Utc};
-use duckdb_rs::{adapter, CacheStorage};
+use duckdb_rs::{CacheStorage, adapter};
 use engine::*;
 use futures::Future;
 use kyogre_core::*;
@@ -16,7 +16,7 @@ use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
 use web_api::{
     routes::v1::{haul, landing},
-    settings::{ApiSettings, BwSettings, Duckdb, Settings, BW_PROFILES_URL},
+    settings::{ApiSettings, BW_PROFILES_URL, BwSettings, Duckdb, Settings},
     startup::App,
 };
 

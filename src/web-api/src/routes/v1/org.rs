@@ -1,11 +1,11 @@
 use super::vessel::FuelParams;
 use crate::error::error::{MissingDateRangeSnafu, OrgNotFoundSnafu};
-use crate::{error::Result, extractors::BwProfile, response::Response, Database};
+use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::{CallSign, OrgId};
 use kyogre_core::{FuelEntry, OrgBenchmarkQuery, OrgBenchmarks};
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 

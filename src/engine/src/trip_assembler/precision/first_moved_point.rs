@@ -1,9 +1,9 @@
 use super::{
-    center_point_point_of_chunk, PrecisionDirection, PrecisionId, PrecisionStop, StartSearchPoint,
-    TripPrecision,
+    PrecisionDirection, PrecisionId, PrecisionStop, StartSearchPoint, TripPrecision,
+    center_point_point_of_chunk,
 };
-use crate::error::error::DistanceEstimationSnafu;
 use crate::error::Result;
+use crate::error::error::DistanceEstimationSnafu;
 use crate::trip_assembler::precision::PrecisionConfig;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};

@@ -1,5 +1,5 @@
 use super::FiskeridirSource;
-use crate::{utils::prefetch_and_scrape, DataSource, Processor, Result, ScraperId};
+use crate::{DataSource, Processor, Result, ScraperId, utils::prefetch_and_scrape};
 use async_trait::async_trait;
 use fiskeridir_rs::{FileSource, Landing, LandingRaw};
 use orca_core::Environment;

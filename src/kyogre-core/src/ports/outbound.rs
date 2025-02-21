@@ -376,7 +376,7 @@ pub trait TripPipelineOutbound: Send + Sync {
     ) -> CoreResult<Vec<Trip>>;
     async fn trips_without_distance(&self, vessel_id: FiskeridirVesselId) -> CoreResult<Vec<Trip>>;
     async fn trips_without_precision(&self, vessel_id: FiskeridirVesselId)
-        -> CoreResult<Vec<Trip>>;
+    -> CoreResult<Vec<Trip>>;
 }
 
 #[async_trait]

@@ -1,6 +1,6 @@
 use super::{
-    find_close_point, PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId,
-    PrecisionStop, TripPrecision,
+    PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId, PrecisionStop,
+    TripPrecision, find_close_point,
 };
 use crate::error::Result;
 use geoutils::Location;

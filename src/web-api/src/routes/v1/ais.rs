@@ -2,20 +2,21 @@ use actix_web::web::{self, Path};
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
 use kyogre_core::{AisPermission, DateRange, Mmsi, NavigationStatus};
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use snafu::ResultExt;
 
 use crate::{
+    Database,
     error::{
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
         Result,
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
     },
     extractors::{OptionAuth0Profile, OptionBwProfile},
-    response::{ais_unfold, StreamResponse},
-    stream_response, Database,
+    response::{StreamResponse, ais_unfold},
+    stream_response,
 };
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]

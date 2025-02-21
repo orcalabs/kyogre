@@ -7,7 +7,7 @@ use futures_util::StreamExt;
 use http_client::HttpClient;
 use serde::de::DeserializeOwned;
 
-use crate::{utils::hash_file, ApiDownloader, Result};
+use crate::{ApiDownloader, Result, utils::hash_file};
 
 #[derive(Debug, Clone)]
 pub struct DataDownloader {
@@ -108,9 +108,11 @@ impl FileSource {
                 Some(url) => url.clone(),
                 None => format!("https://register.fiskeridir.no/uttrekk/fangstdata_{year}.csv.zip"),
             },
-            Ers {year, url} => match url {
+            Ers { year, url } => match url {
                 Some(url) => url.clone(),
-                None => format!("https://register.fiskeridir.no/vms-ers/ERS/elektronisk-rapportering-ers-{year}.zip"),
+                None => format!(
+                    "https://register.fiskeridir.no/vms-ers/ERS/elektronisk-rapportering-ers-{year}.zip"
+                ),
             },
             Vms { url, .. } => url.clone(),
             AquaCultureRegister { url } => url.clone(),
