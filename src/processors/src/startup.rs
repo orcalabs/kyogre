@@ -23,7 +23,11 @@ impl App {
         }
 
         Self {
-            estimator: FuelEstimator::new(settings.num_fuel_estimation_workers, postgres.clone()),
+            estimator: FuelEstimator::new(
+                settings.num_fuel_estimation_workers,
+                settings.fuel_estimation_vessels.clone(),
+                postgres.clone(),
+            ),
             live_fuel: LiveFuel::new(postgres.clone()),
             current_position: CurrentPositionProcessor::new(
                 postgres,
