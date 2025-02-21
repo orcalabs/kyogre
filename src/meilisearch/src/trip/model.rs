@@ -9,10 +9,10 @@ use serde::{Deserialize, Serialize};
 
 use super::filter::{TripFilterDiscriminants, TripSort};
 use crate::{
+    CacheIndex,
     error::{Error, Result},
     indexable::{Id, IdVersion, Indexable},
     utils::to_nanos,
-    CacheIndex,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

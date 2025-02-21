@@ -1,7 +1,7 @@
 use fiskeridir_rs::{Gear, GearGroup, MainGearGroup};
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use strum::IntoEnumIterator;
 
 use crate::{error::Result, response::Response};

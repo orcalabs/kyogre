@@ -1,13 +1,13 @@
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{EarliestVms, NewVmsCurrentPosition, NewVmsPosition, VmsPosition},
-    PostgresAdapter,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{DateRange, EarliestVmsUsedBy, ProcessingStatus};
-use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::collections::{HashMap, HashSet, hash_map::Entry};
 use strum::IntoEnumIterator;
 
 impl PostgresAdapter {

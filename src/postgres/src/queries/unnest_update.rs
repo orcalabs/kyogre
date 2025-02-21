@@ -1,6 +1,6 @@
 use unnest_insert::UnnestUpdate;
 
-use crate::{error::Result, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result};
 
 impl PostgresAdapter {
     pub(crate) async fn unnest_update_from<T, I, O>(

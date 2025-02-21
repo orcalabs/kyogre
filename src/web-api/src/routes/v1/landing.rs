@@ -8,17 +8,18 @@ use kyogre_core::{
     ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, Landings,
     LandingsQuery, LandingsSorting, Ordering, Pagination, TripId,
 };
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use tracing::error;
 
 use crate::{
+    Cache, Database, Meilisearch,
     error::Result,
     response::{Response, ResponseOrStream, StreamResponse},
     routes::utils::*,
-    stream_response, Cache, Database, Meilisearch,
+    stream_response,
 };
 
 #[serde_as]
@@ -82,7 +83,7 @@ pub async fn landings<T: Database + Send + Sync + 'static, M: Meilisearch + 'sta
             Ok(v) => {
                 return Ok(
                     Response::new(v.into_iter().map(Landing::from).collect::<Vec<_>>()).into(),
-                )
+                );
             }
             Err(e) => {
                 error!("meilisearch cache returned error: {e:?}");

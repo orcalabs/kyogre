@@ -1,12 +1,12 @@
 use crate::error::Result;
 use crate::models::LandingMatrixQueryOutput;
-use crate::{models::LandingMatrixArgs, PostgresAdapter};
+use crate::{PostgresAdapter, models::LandingMatrixArgs};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    calculate_landing_sum_area_table, ActiveLandingFilter, CatchLocationId, EmptyVecToNone,
-    FiskeridirVesselId, LandingMatrix, LandingMatrixQuery, LandingMatrixXFeature,
-    LandingMatrixYFeature,
+    ActiveLandingFilter, CatchLocationId, EmptyVecToNone, FiskeridirVesselId, LandingMatrix,
+    LandingMatrixQuery, LandingMatrixXFeature, LandingMatrixYFeature,
+    calculate_landing_sum_area_table,
 };
 use sqlx::{Pool, Postgres};
 

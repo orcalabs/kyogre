@@ -1,7 +1,7 @@
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{UpdateTripPositionFuel, UpsertNewLiveFuel},
-    PostgresAdapter,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;

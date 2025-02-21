@@ -6,18 +6,19 @@ use kyogre_core::{
     FishingFacilities, FishingFacilitiesQuery, FishingFacilitiesSorting, FishingFacilityToolType,
     FiskeridirVesselId, Mmsi, Ordering, Pagination, Range,
 };
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 use uuid::Uuid;
 
 use crate::{
-    error::{error::InsufficientPermissionsSnafu, Result},
+    Database,
+    error::{Result, error::InsufficientPermissionsSnafu},
     extractors::{BwPolicy, BwProfile},
     response::StreamResponse,
-    stream_response, Database,
+    stream_response,
 };
 
 #[serde_as]

@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use http_client::HttpClient;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 use crate::Result;
 

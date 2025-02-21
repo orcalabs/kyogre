@@ -1,10 +1,10 @@
 use reqwest::{
-    header::{HeaderMap, HeaderName, HeaderValue},
     Body,
+    header::{HeaderMap, HeaderName, HeaderValue},
 };
 use serde::Serialize;
 
-use crate::{error::FailedRequestSnafu, Response, Result};
+use crate::{Response, Result, error::FailedRequestSnafu};
 
 #[derive(Debug)]
 pub struct RequestBuilder(pub(crate) reqwest_middleware::RequestBuilder);

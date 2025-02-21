@@ -1,4 +1,4 @@
-use crate::{models::Haul, PostgresAdapter};
+use crate::{PostgresAdapter, models::Haul};
 use chrono::{DateTime, Datelike, Duration, Utc};
 use fiskeridir_rs::DeliveryPointId;
 use fiskeridir_rs::{

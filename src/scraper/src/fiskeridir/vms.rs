@@ -1,6 +1,6 @@
 use super::FiskeridirSource;
 use crate::{
-    chunks::add_in_chunks, utils::prefetch_and_scrape, DataSource, Processor, Result, ScraperId,
+    DataSource, Processor, Result, ScraperId, chunks::add_in_chunks, utils::prefetch_and_scrape,
 };
 use async_trait::async_trait;
 use fiskeridir_rs::FileSource;

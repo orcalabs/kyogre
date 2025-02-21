@@ -1,6 +1,6 @@
 use crate::{
-    error::{Error, Result},
     PostgresAdapter,
+    error::{Error, Result},
 };
 use futures::{Stream, TryStreamExt};
 use unnest_insert::{UnnestInsert, UnnestInsertReturning};

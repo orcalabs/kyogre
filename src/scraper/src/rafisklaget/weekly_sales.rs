@@ -6,8 +6,8 @@ use fiskeridir_rs::{Condition, GearGroup, Quality, SalesTeam, VesselLengthGroup}
 use http_client::HttpClient;
 use kyogre_core::{BearerToken, WeeklySale, WeeklySaleId};
 use num_traits::FromPrimitive;
-use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
-use serde_with::{serde_as, DisplayFromStr};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de};
+use serde_with::{DisplayFromStr, serde_as};
 use tracing::info;
 
 use crate::{ApiClientConfig, DataSource, Error, Processor, ScraperId};

@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use error::Result;
 use indexable::Indexable;
 use kyogre_core::{
-    retry, CoreResult, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource,
-    TripDetailed, TripsQuery,
+    CoreResult, HaulsQuery, LandingsQuery, MeilisearchOutbound, MeilisearchSource, TripDetailed,
+    TripsQuery, retry,
 };
 use meilisearch_sdk::client::Client;
 use std::time::Duration;

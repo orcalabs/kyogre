@@ -4,12 +4,12 @@ use std::sync::Arc;
 
 use crate::SharedState;
 use crate::{
-    error::Result, DateRange, HaulWeatherOutput, HaulWeatherStatus, OceanClimateQuery, Vessel,
-    WeatherQuery,
+    DateRange, HaulWeatherOutput, HaulWeatherStatus, OceanClimateQuery, Vessel, WeatherQuery,
+    error::Result,
 };
 use async_channel::bounded;
 use async_trait::async_trait;
-use geo::{coord, Contains};
+use geo::{Contains, coord};
 use kyogre_core::{HaulWeatherOutbound, WeatherLocation};
 use machine::Schedule;
 use tokio::sync::mpsc::channel;

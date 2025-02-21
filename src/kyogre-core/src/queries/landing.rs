@@ -1,6 +1,6 @@
 use crate::{
-    matrix_index_error::ValueSnafu, CatchLocationId, FiskeridirVesselId, Landings,
-    MatrixIndexError, Ordering, Pagination, Range, LANDING_OLDEST_DATA_MONTHS, NUM_CATCH_LOCATIONS,
+    CatchLocationId, FiskeridirVesselId, LANDING_OLDEST_DATA_MONTHS, Landings, MatrixIndexError,
+    NUM_CATCH_LOCATIONS, Ordering, Pagination, Range, matrix_index_error::ValueSnafu,
 };
 use chrono::{DateTime, Datelike, Months, Utc};
 use enum_index::EnumIndex;

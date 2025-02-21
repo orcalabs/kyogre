@@ -4,7 +4,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{distance_to_shore, EarliestVmsUsedBy};
+use kyogre_core::{EarliestVmsUsedBy, distance_to_shore};
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 

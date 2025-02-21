@@ -1,5 +1,5 @@
 use crate::date_range_error::InvalidCalendarDateSnafu;
-use crate::{date_range_error::OrderingSnafu, DateRangeError};
+use crate::{DateRangeError, date_range_error::OrderingSnafu};
 use chrono::TimeZone;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 
@@ -142,12 +142,12 @@ impl Eq for DateRange {}
 #[cfg(feature = "sqlx")]
 mod _sqlx {
     use sqlx::{
-        postgres::{types::PgRange, PgValueRef},
         Postgres,
+        postgres::{PgValueRef, types::PgRange},
     };
 
     use super::*;
-    use crate::{date_range_error::UnboundedSnafu, DateRangeError};
+    use crate::{DateRangeError, date_range_error::UnboundedSnafu};
 
     impl From<&DateRange> for PgRange<DateTime<Utc>> {
         fn from(value: &DateRange) -> Self {

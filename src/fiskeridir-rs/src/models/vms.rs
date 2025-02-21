@@ -1,9 +1,9 @@
-use crate::{deserialize_utils::*, string_new_types::NonEmptyString, CallSign};
+use crate::{CallSign, deserialize_utils::*, string_new_types::NonEmptyString};
 use chrono::{DateTime, Utc};
 use serde_with::NoneAsEmptyString;
 
 use serde::Deserialize;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 #[serde_as]
 #[derive(Deserialize, Debug, Clone)]

@@ -4,7 +4,7 @@ use crate::error::Result;
 use crate::*;
 use async_channel::bounded;
 use async_trait::async_trait;
-use geo::{coord, Contains};
+use geo::{Contains, coord};
 use machine::Schedule;
 use tokio::sync::mpsc::channel;
 use tracing::error;

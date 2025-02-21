@@ -1,11 +1,11 @@
 use super::{spot_predict_impl, spot_train_impl};
-use crate::{ml_models::lunar_value, SpotPredictorSettings};
+use crate::{SpotPredictorSettings, ml_models::lunar_value};
 use async_trait::async_trait;
 use chrono::Datelike;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    CoreResult, MLModel, MLModelsInbound, MLModelsOutbound, ModelId, TrainingOutput, WeatherData,
-    EARLIEST_ERS_DATE,
+    CoreResult, EARLIEST_ERS_DATE, MLModel, MLModelsInbound, MLModelsOutbound, ModelId,
+    TrainingOutput, WeatherData,
 };
 use serde::Serialize;
 use tracing::instrument;

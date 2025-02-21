@@ -1,6 +1,6 @@
+use super::CallSign;
 use super::ers_common::ErsCatch;
 use super::ers_common::{ErsMessageInfo, ErsVesselInfo};
-use super::CallSign;
 use crate::deserialize_utils::*;
 use crate::string_new_types::NonEmptyString;
 use crate::utils::opt_timestamp_from_date_and_time;

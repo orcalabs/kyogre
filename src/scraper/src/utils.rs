@@ -138,7 +138,9 @@ where
                                 {
                                     Ok(()) => info!("successfully scraped {file} year: {year}"),
                                     Err(e) => {
-                                        error!("failed to store hash for {file} year {year}, err: {e:?}")
+                                        error!(
+                                            "failed to store hash for {file} year {year}, err: {e:?}"
+                                        )
                                     }
                                 },
                                 Err(e) => {

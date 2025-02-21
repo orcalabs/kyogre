@@ -2,9 +2,9 @@ use futures::{Stream, TryStreamExt};
 use kyogre_core::{PortDockPoint, TripId};
 
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{Port, TripDockPoints, TripPorts},
-    PostgresAdapter,
 };
 
 impl PostgresAdapter {

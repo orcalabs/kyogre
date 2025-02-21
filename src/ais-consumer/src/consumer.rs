@@ -1,5 +1,5 @@
 use crate::{
-    error::{error::StreamClosedSnafu, Result},
+    error::{Result, error::StreamClosedSnafu},
     models::{AisMessage, AisMessageType, AisPosition, AisStatic, MessageType},
 };
 use async_channel::Sender;

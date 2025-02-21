@@ -3,9 +3,8 @@ use std::{collections::HashMap, str::FromStr, sync::Arc};
 use chrono::{DateTime, Duration, Utc};
 use http_client::HttpClient;
 use jsonwebtoken::{
-    decode, decode_header,
+    Algorithm, DecodingKey, TokenData, Validation, decode, decode_header,
     jwk::{Jwk, JwkSet},
-    Algorithm, DecodingKey, TokenData, Validation,
 };
 use kyogre_core::BarentswatchUserId;
 use serde::de::DeserializeOwned;
@@ -13,8 +12,8 @@ use tokio::sync::RwLock;
 
 use crate::{
     error::{
-        jwt_decode_error::{DisabledSnafu, MissingValueSnafu},
         JWTDecodeError,
+        jwt_decode_error::{DisabledSnafu, MissingValueSnafu},
     },
     extractors::BwProfile,
     guards::BwGuard,

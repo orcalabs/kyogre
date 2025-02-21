@@ -2,7 +2,7 @@ use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumIter, EnumString};
 
-use crate::{string_new_types::NonEmptyString, NorthSouth62DegreesNorth};
+use crate::{NorthSouth62DegreesNorth, string_new_types::NonEmptyString};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CatchLocation {

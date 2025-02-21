@@ -8,8 +8,8 @@ use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use chrono_tz::Europe::Oslo;
 use num_traits::FromPrimitive;
 use serde::{
-    de::{Error, Visitor},
     Deserialize, Deserializer, Serialize, Serializer,
+    de::{Error, Visitor},
 };
 use serde_with::{DeserializeAs, SerializeAs};
 

@@ -1,10 +1,10 @@
 use super::ers_common::{ErsMessageInfo, ErsSpecies, ErsVesselInfo, Port};
-use crate::deserialize_utils::*;
-use crate::string_new_types::NonEmptyString;
-use crate::utils::opt_timestamp_from_date_and_time;
 use crate::Gear;
 use crate::GearGroup;
 use crate::MainGearGroup;
+use crate::deserialize_utils::*;
+use crate::string_new_types::NonEmptyString;
+use crate::utils::opt_timestamp_from_date_and_time;
 use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use num_derive::FromPrimitive;
 use serde::Deserialize;

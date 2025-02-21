@@ -1,7 +1,7 @@
 use futures::{Stream, TryStreamExt};
 use kyogre_core::SpeciesFao;
 
-use crate::{error::Result, models::*, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models::*};
 
 impl PostgresAdapter {
     pub(crate) fn species_fiskeridir_impl(

@@ -8,7 +8,7 @@ use table_extract::Table;
 use tracing::{error, info};
 
 use super::models::DeliveryPoint;
-use crate::{error::error::MissingValueSnafu, DataSource, Processor, Result, ScraperId};
+use crate::{DataSource, Processor, Result, ScraperId, error::error::MissingValueSnafu};
 
 /// Statically know location for a file served by Mattilsynet.
 pub static MATTILSYNET_FILE_URL_PATH: &str =

@@ -4,7 +4,7 @@ pub mod matrix_cache {
 
 use crate::{
     adapter::DuckdbAdapter,
-    error::{error::InvalidParametersSnafu, Error, Result},
+    error::{Error, Result, error::InvalidParametersSnafu},
 };
 use async_trait::async_trait;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};

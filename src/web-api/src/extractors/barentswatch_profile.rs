@@ -1,9 +1,9 @@
 use std::{collections::HashMap, ops::Deref, pin::Pin};
 
 use actix_web::{
+    FromRequest,
     http::header::ToStrError,
     web::{self, Data},
-    FromRequest,
 };
 use fiskeridir_rs::CallSign;
 use futures::Future;
@@ -14,15 +14,15 @@ use oasgen::{
     ParameterSchemaOrContent, RefOr,
 };
 use serde::{Deserialize, Serialize};
-use snafu::{location, ResultExt};
+use snafu::{ResultExt, location};
 use strum::EnumIter;
 use tracing::warn;
 use uuid::Uuid;
 
 use crate::{
     error::{
-        error::{MissingBwFiskInfoProfileSnafu, MissingJWTSnafu, ParseJWTSnafu},
         Error, Result,
+        error::{MissingBwFiskInfoProfileSnafu, MissingJWTSnafu, ParseJWTSnafu},
     },
     settings::BW_PROFILES_URL,
     states::BwState,

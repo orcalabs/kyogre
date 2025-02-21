@@ -1,6 +1,6 @@
 use crate::error::Result;
 use duckdb::DuckdbConnectionManager;
-use duckdb::{params, Transaction};
+use duckdb::{Transaction, params};
 use kyogre_core::retry;
 use orca_core::PsqlSettings;
 use r2d2::PooledConnection;

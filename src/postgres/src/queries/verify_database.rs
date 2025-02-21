@@ -4,13 +4,13 @@ use orca_core::Environment;
 use tracing::error;
 
 use crate::{
+    PostgresAdapter,
     error::{
         BuyerLocationsWithoutMappingSnafu, ConflictingVesselMappingsSnafu,
         DanglingVesselEventsSnafu, IncorrectHaulCatchesSnafu,
         IncorrectHaulsMatrixLivingWeightSnafu, IncorrectLandingMatrixLivingWeightSnafu,
         LandingsWithoutTripSnafu, Result,
     },
-    PostgresAdapter,
 };
 
 impl PostgresAdapter {

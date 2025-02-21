@@ -1,20 +1,21 @@
 use actix_web::web;
-use chrono::{offset::LocalResult, DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, NaiveDateTime, TimeZone, Utc, offset::LocalResult};
 use chrono_tz::Europe::Oslo;
 use fiskeridir_rs::CallSign;
 use kyogre_core::{
     CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementsQuery,
 };
-use oasgen::{oasgen, OaSchema};
-use serde::{de::Unexpected, Deserialize, Deserializer, Serialize};
+use oasgen::{OaSchema, oasgen};
+use serde::{Deserialize, Deserializer, Serialize, de::Unexpected};
 use serde_qs::actix::QsQuery as Query;
 
 use crate::{
-    error::{error::FuelAfterLowerThanFuelSnafu, Result},
+    Database,
+    error::{Result, error::FuelAfterLowerThanFuelSnafu},
     excel::decode_excel_base64,
     extractors::BwProfile,
     response::{Response, StreamResponse},
-    stream_response, Database,
+    stream_response,
 };
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]

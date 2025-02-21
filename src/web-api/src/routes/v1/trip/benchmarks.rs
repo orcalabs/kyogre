@@ -1,4 +1,4 @@
-use crate::{error::Result, extractors::BwProfile, response::Response, Database};
+use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
@@ -6,11 +6,11 @@ use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, EeoiQuery,
     FiskeridirVesselId, Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::serde_as;
 use serde_with::DisplayFromStr;
+use serde_with::serde_as;
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]

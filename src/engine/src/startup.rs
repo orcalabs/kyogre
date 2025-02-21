@@ -8,7 +8,7 @@ use scraper::{FiskeridirSource, Scraper};
 use tokio::select;
 use tracing::error;
 
-use crate::{settings::Settings, FisheryDiscriminants, FisheryEngine, SharedState};
+use crate::{FisheryDiscriminants, FisheryEngine, SharedState, settings::Settings};
 
 pub struct App {
     pub shared_state: SharedState,

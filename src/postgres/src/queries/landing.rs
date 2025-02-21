@@ -7,7 +7,7 @@ use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use fiskeridir_rs::{
     CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
 };
-use futures::{future::ready, Stream, TryStreamExt};
+use futures::{Stream, TryStreamExt, future::ready};
 use kyogre_core::{
     BoxIterator, DeletedLandingType, EmptyVecToNone, FiskeridirVesselId, LandingsQuery, Range,
     TripAssemblerId, TripId, VesselEventType,
@@ -15,11 +15,11 @@ use kyogre_core::{
 use tracing::error;
 
 use crate::{
+    PostgresAdapter,
     chunk::Chunks,
     error::Result,
     landing_set::LandingSet,
     models::{Landing, NewLanding, NewTripAssemblerConflict},
-    PostgresAdapter,
 };
 
 static CHUNK_SIZE: usize = 100_000;

@@ -1,6 +1,6 @@
 use crate::utils::timestamp_from_date_and_time;
-use crate::{deserialize_utils::*, string_new_types::NonEmptyString};
 use crate::{SpeciesGroup, SpeciesMainGroup, VesselLengthGroup};
+use crate::{deserialize_utils::*, string_new_types::NonEmptyString};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, Utc};
 use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;

@@ -1,6 +1,6 @@
 use super::{
-    find_close_point, PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId,
-    PrecisionStop, StartSearchPoint, TripPrecision,
+    PointClusterPreference, PrecisionConfig, PrecisionDirection, PrecisionId, PrecisionStop,
+    StartSearchPoint, TripPrecision, find_close_point,
 };
 use crate::error::Result;
 use async_trait::async_trait;

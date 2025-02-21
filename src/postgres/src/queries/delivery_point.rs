@@ -1,4 +1,4 @@
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
 use chrono::NaiveDateTime;
 use fiskeridir_rs::DeliveryPointId;
@@ -7,12 +7,12 @@ use kyogre_core::{BuyerLocation, DateRange, DeliveryPoint, FiskeridirVesselId};
 use sqlx::postgres::types::PgRange;
 
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{
         AquaCultureEntry, AquaCultureSpecies, AquaCultureTill, MattilsynetDeliveryPoint,
         NewBuyerLocation, NewDeliveryPointId, NewSpeciesFiskeridir,
     },
-    PostgresAdapter,
 };
 
 impl PostgresAdapter {

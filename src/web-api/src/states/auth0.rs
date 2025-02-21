@@ -1,13 +1,13 @@
 use crate::{
     error::{
-        jwt_decode_error::{DisabledSnafu, MissingValueSnafu},
         JWTDecodeError,
+        jwt_decode_error::{DisabledSnafu, MissingValueSnafu},
     },
     settings::Auth0Settings,
 };
 use http_client::HttpClient;
 use jsonwebtoken::{
-    decode, decode_header, jwk::JwkSet, Algorithm, DecodingKey, TokenData, Validation,
+    Algorithm, DecodingKey, TokenData, Validation, decode, decode_header, jwk::JwkSet,
 };
 use serde::de::DeserializeOwned;
 use std::str::FromStr;

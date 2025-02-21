@@ -1,4 +1,4 @@
-use crate::{error::Result, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};

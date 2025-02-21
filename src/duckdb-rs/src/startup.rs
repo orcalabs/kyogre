@@ -3,7 +3,7 @@ use crate::{adapter::DuckdbAdapter, api::MatrixCacheService, settings::Settings}
 use tokio::net::TcpListener;
 use tokio_stream::wrappers::TcpListenerStream;
 use tonic::codegen::CompressionEncoding;
-use tonic::transport::{server::Router, Server};
+use tonic::transport::{Server, server::Router};
 
 pub struct App {
     router: Router,

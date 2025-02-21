@@ -3,18 +3,19 @@ use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::DateRange;
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use snafu::ResultExt;
 
 use crate::{
+    Database,
     error::{
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
         Result,
+        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
     },
-    response::{ais_unfold, StreamResponse},
-    stream_response, Database,
+    response::{StreamResponse, ais_unfold},
+    stream_response,
 };
 
 #[derive(Debug, Deserialize, Serialize, OaSchema)]

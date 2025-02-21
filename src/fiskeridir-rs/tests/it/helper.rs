@@ -1,8 +1,8 @@
 use std::path::PathBuf;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 use wiremock::{
-    matchers::{self, method},
     Mock, MockServer, ResponseTemplate,
+    matchers::{self, method},
 };
 
 pub struct TestHelper {

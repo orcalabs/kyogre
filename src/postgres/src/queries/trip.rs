@@ -1,11 +1,11 @@
 use crate::{
+    PostgresAdapter,
     error::{Result, TripPositionMatchSnafu},
     models::{
         CurrentTrip, NewTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning,
         Trip, TripAisVmsPosition, TripCalculationTimer, TripDetailed, TripPrunedAisVmsPosition,
         UpdateTripPositionCargoWeight,
     },
-    PostgresAdapter,
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};

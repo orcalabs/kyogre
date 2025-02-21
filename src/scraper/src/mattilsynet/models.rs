@@ -1,6 +1,6 @@
 use fiskeridir_rs::DeliveryPointId;
 use serde::Deserialize;
-use serde_with::{serde_as, NoneAsEmptyString};
+use serde_with::{NoneAsEmptyString, serde_as};
 
 #[serde_as]
 #[derive(Debug, Clone, Deserialize)]

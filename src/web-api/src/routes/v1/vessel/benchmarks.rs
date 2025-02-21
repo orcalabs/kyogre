@@ -1,4 +1,4 @@
-use crate::{error::Result, extractors::BwProfile, response::Response, Database};
+use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web::{self};
 use kyogre_core::VesselBenchmarks;
 use oasgen::oasgen;

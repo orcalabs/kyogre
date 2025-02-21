@@ -1,4 +1,4 @@
-use crate::error::{error::FailedRequestSnafu, Result};
+use crate::error::{Result, error::FailedRequestSnafu};
 use futures::{StreamExt, TryStreamExt};
 use kyogre_core::{BearerToken, OauthConfig};
 use reqwest::{Client, Url};

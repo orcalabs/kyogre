@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 
-use futures::{future::ready, TryStreamExt};
+use futures::{TryStreamExt, future::ready};
 use kyogre_core::{BoxIterator, VesselEventType};
 use tracing::error;
 
 use crate::{
-    chunk::Chunks, error::Result, ers_tra_set::ErsTraSet, models::NewErsTra, PostgresAdapter,
+    PostgresAdapter, chunk::Chunks, error::Result, ers_tra_set::ErsTraSet, models::NewErsTra,
 };
 
 static CHUNK_SIZE: usize = 10_000;

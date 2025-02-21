@@ -3,15 +3,15 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisPermission, AisPosition, AisVesselMigrate, DateRange, Mmsi, NavigationStatus,
-    NewAisPosition, NewAisStatic, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    AisPermission, AisPosition, AisVesselMigrate, DateRange, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
+    LEISURE_VESSEL_SHIP_TYPES, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic,
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{self, NewAisCurrentPosition, NewAisVessel, NewAisVesselHistoric, NewAisVesselMmsi},
-    PostgresAdapter,
 };
 
 impl PostgresAdapter {

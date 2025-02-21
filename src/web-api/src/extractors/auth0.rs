@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
-use actix_web::{http::header::AUTHORIZATION, web::Data, FromRequest};
-use futures::future::{ready, Ready};
+use actix_web::{FromRequest, http::header::AUTHORIZATION, web::Data};
+use futures::future::{Ready, ready};
 use kyogre_core::AisPermission;
 use oasgen::{
     HeaderStyle, OaParameter, OaSchema, Parameter, ParameterData, ParameterKind,
@@ -14,8 +14,8 @@ use tracing::warn;
 
 use crate::{
     error::{
-        error::{MissingJWTSnafu, ParseJWTSnafu},
         Error,
+        error::{MissingJWTSnafu, ParseJWTSnafu},
     },
     states::Auth0State,
 };

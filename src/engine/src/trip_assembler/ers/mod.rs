@@ -1,8 +1,8 @@
-use crate::{error::error::TripStartedOnArrivalSnafu, DistanceToShorePrecision};
+use crate::{DistanceToShorePrecision, error::error::TripStartedOnArrivalSnafu};
 
 use super::{
-    ers::statemachine::ErsStatemachine, precision::TripPrecisionCalculator, DeliveryPointPrecision,
-    DockPointPrecision, PortPrecision, PrecisionConfig, StartSearchPoint,
+    DeliveryPointPrecision, DockPointPrecision, PortPrecision, PrecisionConfig, StartSearchPoint,
+    ers::statemachine::ErsStatemachine, precision::TripPrecisionCalculator,
 };
 use crate::error::Result;
 use async_trait::async_trait;

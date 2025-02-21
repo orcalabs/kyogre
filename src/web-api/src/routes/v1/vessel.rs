@@ -1,23 +1,24 @@
 use crate::error::error::{MissingDateRangeSnafu, UpdateVesselNotFoundSnafu};
 use crate::{
+    Database,
     error::Result,
     extractors::BwProfile,
     response::{Response, StreamResponse},
-    stream_response, Database,
+    stream_response,
 };
 use actix_web::web::{self};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi, VesselCurrentTrip,
-    DEFAULT_LIVE_FUEL_THRESHOLD,
+    DEFAULT_LIVE_FUEL_THRESHOLD, FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi,
+    VesselCurrentTrip,
 };
 use kyogre_core::{LiveFuel, UpdateVessel};
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 pub mod benchmarks;
 
@@ -187,7 +188,7 @@ impl FuelParams {
                     start: start_date.is_some(),
                     end: end_date.is_some(),
                 }
-                .fail()
+                .fail();
             }
         };
 

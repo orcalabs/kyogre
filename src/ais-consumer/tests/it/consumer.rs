@@ -1,4 +1,4 @@
-use ais_consumer::models::{create_eta_string_value, AisPosition, AisStatic};
+use ais_consumer::models::{AisPosition, AisStatic, create_eta_string_value};
 use chrono::{Duration, TimeZone, Utc};
 
 use crate::helper::test;

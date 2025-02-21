@@ -2,15 +2,16 @@ use actix_web::web;
 use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
 use kyogre_core::ML_SPECIES_GROUPS;
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use strum::IntoEnumIterator;
 
 use crate::{
+    Database,
     response::{Response, StreamResponse},
-    stream_response, Database,
+    stream_response,
 };
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]

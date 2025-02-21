@@ -3,14 +3,14 @@ use std::str::FromStr;
 use fiskeridir_rs::sqlx_str_impl;
 use geo::geometry::Polygon;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Serialize,
+    de::{self, Visitor},
 };
 use snafu::ResultExt;
 
 use crate::{
-    catch_location_id_error::{LengthSnafu, ParseSnafu},
     CatchLocationIdError,
+    catch_location_id_error::{LengthSnafu, ParseSnafu},
 };
 
 pub enum WeatherLocationOverlap {

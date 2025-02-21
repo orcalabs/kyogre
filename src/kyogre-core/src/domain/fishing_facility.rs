@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
-use serde::{de::Visitor, Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer, de::Visitor};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, EnumString};
 use uuid::Uuid;
@@ -175,8 +175,8 @@ mod _sqlx {
 
     use geozero::wkb;
     use sqlx::{
-        postgres::{PgTypeInfo, PgValueRef},
         Decode, Postgres, Type,
+        postgres::{PgTypeInfo, PgValueRef},
     };
     use wkt::ToWkt;
 

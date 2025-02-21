@@ -3,12 +3,12 @@ use fiskeridir_rs::{CallSign, GearGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     AisPermission, AisVmsPosition, AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual,
-    DateRange, FiskeridirVesselId, Mmsi, NavigationStatus, PositionType, TripId,
-    TripPositionLayerId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
-    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    DateRange, FiskeridirVesselId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
+    Mmsi, NavigationStatus, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY, PositionType, TripId,
+    TripPositionLayerId,
 };
 
-use crate::{error::Result, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result};
 
 impl PostgresAdapter {
     pub(crate) async fn ais_vms_positions_with_haul_and_manual_impl(

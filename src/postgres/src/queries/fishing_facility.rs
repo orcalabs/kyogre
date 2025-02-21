@@ -9,8 +9,8 @@ use kyogre_core::{
 };
 
 use crate::{
-    error::{ConvertSnafu, Result},
     PostgresAdapter,
+    error::{ConvertSnafu, Result},
 };
 
 impl PostgresAdapter {

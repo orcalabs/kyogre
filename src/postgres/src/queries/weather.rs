@@ -8,9 +8,9 @@ use kyogre_core::{
 };
 
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{NewWeather, NewWeatherDailyDirty, WeatherLocation},
-    PostgresAdapter,
 };
 
 impl PostgresAdapter {

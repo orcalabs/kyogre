@@ -1,10 +1,10 @@
 use super::FiskeridirVesselId;
 use crate::{
-    deserialize_utils::*, sqlx_str_impl, string_new_types::NonEmptyString, CallSign, Error,
+    CallSign, Error, deserialize_utils::*, sqlx_str_impl, string_new_types::NonEmptyString,
 };
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
+use serde_with::{DisplayFromStr, NoneAsEmptyString, serde_as};
 use std::{fmt::Display, str::FromStr};
 use strum::{AsRefStr, EnumString};
 

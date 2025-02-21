@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use kyogre_core::{live_fuel_year_day_hour, FiskeridirVesselId, PositionType, TripId};
+use kyogre_core::{FiskeridirVesselId, PositionType, TripId, live_fuel_year_day_hour};
 use unnest_insert::{UnnestInsert, UnnestUpdate};
 
 use crate::queries::type_to_i64;

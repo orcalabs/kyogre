@@ -3,8 +3,8 @@ use fiskeridir_rs::{Condition, GearGroup, Quality, VesselLengthGroup};
 use kyogre_core::WeeklySale;
 
 use crate::{
-    error::{InvalidIsoWeekSnafu, Result},
     PostgresAdapter,
+    error::{InvalidIsoWeekSnafu, Result},
 };
 
 impl PostgresAdapter {

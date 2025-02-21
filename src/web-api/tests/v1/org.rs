@@ -6,7 +6,7 @@ use fiskeridir_rs::{
 };
 use float_cmp::approx_eq;
 use http_client::StatusCode;
-use kyogre_core::{CreateFuelMeasurement, TestHelperOutbound, TEST_SIGNED_IN_VESSEL_CALLSIGN};
+use kyogre_core::{CreateFuelMeasurement, TEST_SIGNED_IN_VESSEL_CALLSIGN, TestHelperOutbound};
 use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
 use std::str::FromStr;
 use web_api::routes::v1::{org::OrgBenchmarkParameters, user::User, vessel::FuelParams};
@@ -526,9 +526,11 @@ async fn test_org_fuel_filter_by_orgs() {
         assert_eq!(fuel.len(), 2);
         assert!(approx_eq!(f64, expected_fuel, fuel[0].estimated_fuel_liter));
         assert!(approx_eq!(f64, expected_fuel, fuel[1].estimated_fuel_liter));
-        assert!(!fuel
-            .iter()
-            .any(|f| f.fiskeridir_vessel_id == state.vessels[2].fiskeridir.id));
+        assert!(
+            !fuel
+                .iter()
+                .any(|f| f.fiskeridir_vessel_id == state.vessels[2].fiskeridir.id)
+        );
     })
     .await;
 }

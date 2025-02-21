@@ -3,7 +3,7 @@ mod error;
 mod request;
 mod response;
 
-pub use reqwest::{header::HeaderMap, StatusCode};
+pub use reqwest::{StatusCode, header::HeaderMap};
 
 pub use client::{HttpClient, HttpClientBuilder};
 pub use error::{Error, Result};

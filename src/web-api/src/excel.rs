@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
-use base64::{prelude::BASE64_STANDARD, Engine};
-use calamine::{open_workbook_from_rs, RangeDeserializerBuilder, Reader, Xlsx};
+use base64::{Engine, prelude::BASE64_STANDARD};
+use calamine::{RangeDeserializerBuilder, Reader, Xlsx, open_workbook_from_rs};
 use serde::de::DeserializeOwned;
 
 use crate::error::Result;

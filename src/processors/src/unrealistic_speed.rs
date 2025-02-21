@@ -1,4 +1,4 @@
-use crate::{error::error::DistanceEstimationSnafu, Result};
+use crate::{Result, error::error::DistanceEstimationSnafu};
 use chrono::{DateTime, Utc};
 use geoutils::Location;
 use kyogre_core::{

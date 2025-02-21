@@ -2,7 +2,7 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumString};
 
-use crate::{string_new_types::NonEmptyString, SpeciesGroup, SpeciesMainGroup};
+use crate::{SpeciesGroup, SpeciesMainGroup, string_new_types::NonEmptyString};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Product {

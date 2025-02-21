@@ -5,7 +5,7 @@ use fiskeridir_rs::{
 use num_derive::FromPrimitive;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use crate::{buyer_location_error::TooManyApprovalNumbersSnafu, BuyerLocationError};
+use crate::{BuyerLocationError, buyer_location_error::TooManyApprovalNumbersSnafu};
 
 #[derive(Clone, Debug)]
 pub struct DeliveryPoint {

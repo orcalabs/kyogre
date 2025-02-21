@@ -7,8 +7,8 @@ use fiskeridir_rs::OrgId;
 use float_cmp::approx_eq;
 use kyogre_core::CreateFuelMeasurement;
 use kyogre_core::DateRange;
-use kyogre_core::TestHelperOutbound;
 use kyogre_core::TEST_SIGNED_IN_VESSEL_CALLSIGN;
+use kyogre_core::TestHelperOutbound;
 use web_api::routes::v1::vessel::FuelParams;
 
 #[tokio::test]

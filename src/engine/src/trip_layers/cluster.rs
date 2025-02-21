@@ -1,4 +1,4 @@
-use crate::error::{error::DistanceEstimationSnafu, Result};
+use crate::error::{Result, error::DistanceEstimationSnafu};
 use geoutils::Location;
 use kyogre_core::{
     AisVmsPosition, CoreResult, DateRange, PrunedTripPosition, TripPositionLayer,

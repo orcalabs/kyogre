@@ -9,8 +9,8 @@ use serde::Serialize;
 use tracing::instrument;
 
 use crate::{
-    ml_models::{lunar_value, CatchLocationWeatherKey},
     WeightPredictorSettings,
+    ml_models::{CatchLocationWeatherKey, lunar_value},
 };
 
 use super::{weight_predict_impl, weight_train_impl};

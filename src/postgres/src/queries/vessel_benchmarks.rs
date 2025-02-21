@@ -1,4 +1,4 @@
-use crate::{error::Result, models::VesselBenchmarks, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models::VesselBenchmarks};
 use chrono::{Datelike, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, ProcessingStatus};

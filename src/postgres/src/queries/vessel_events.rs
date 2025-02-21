@@ -1,4 +1,4 @@
-use crate::{error::Result, models::VesselEventDetailed, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models::VesselEventDetailed};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, VesselEventType};

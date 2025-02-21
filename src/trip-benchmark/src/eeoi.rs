@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use kyogre_core::{
-    BenchmarkTrip, CoreResult, TripBenchmark, TripBenchmarkId, TripBenchmarkOutbound,
-    TripBenchmarkOutput, DIESEL_LITER_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES,
+    BenchmarkTrip, CoreResult, DIESEL_LITER_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES, TripBenchmark,
+    TripBenchmarkId, TripBenchmarkOutbound, TripBenchmarkOutput,
 };
 
 /// Computes the EEOI for trips in the unit: `tonn / (tonn * nautical miles)`

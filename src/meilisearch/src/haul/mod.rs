@@ -1,4 +1,4 @@
-use crate::{error::Result, indexable::Indexable, query::Query, MeilisearchAdapter};
+use crate::{MeilisearchAdapter, error::Result, indexable::Indexable, query::Query};
 use kyogre_core::HaulsQuery;
 
 mod filter;

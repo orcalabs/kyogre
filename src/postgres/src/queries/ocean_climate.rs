@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{HaulOceanClimate, OceanClimate, OceanClimateQuery, WeatherLocationId};
 
-use crate::{error::Result, models::NewOceanClimate, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models::NewOceanClimate};
 
 impl PostgresAdapter {
     pub(crate) fn _ocean_climate_impl(

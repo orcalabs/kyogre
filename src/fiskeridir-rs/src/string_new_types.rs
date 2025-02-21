@@ -1,8 +1,8 @@
-use crate::error::{parse_string_error::EmptySnafu, ParseStringError};
+use crate::error::{ParseStringError, parse_string_error::EmptySnafu};
 use jurisdiction::Jurisdiction;
 use serde::{
-    de::{self, Visitor},
     Deserialize, Serialize,
+    de::{self, Visitor},
 };
 use std::{fmt::Display, ops::Deref, str::FromStr};
 

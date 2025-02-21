@@ -5,19 +5,19 @@ use std::{
 };
 
 use async_trait::async_trait;
-use futures::{future::BoxFuture, FutureExt};
-use kyogre_core::{running_in_test, MeilisearchSource};
+use futures::{FutureExt, future::BoxFuture};
+use kyogre_core::{MeilisearchSource, running_in_test};
 use meilisearch_sdk::{
     errors::ErrorCode, indexes::Index, search::Selectors, settings::PaginationSetting,
     task_info::TaskInfo, tasks::Task,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use strum::IntoEnumIterator;
 use tracing::{error, info, warn};
 
 use crate::{
-    error::{error::TaskSnafu, Result},
     CacheIndex, MeilisearchAdapter,
+    error::{Result, error::TaskSnafu},
 };
 
 pub trait IdVersion {
