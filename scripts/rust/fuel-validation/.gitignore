@@ -1,3 +1,6 @@
 /target
+<<<<<<< HEAD
 *.xlsx
 *.txt
+=======
+>>>>>>> 7f33c169 (feat: add script for comparing nerggård fuel to our estimation)
