@@ -39,11 +39,11 @@ pub trait WebApiOutboundPort {
         range: &DateRange,
         user_policy: AisPermission,
     ) -> PinBoxStream<'_, AisPosition>;
-    fn vms_positions(
-        &self,
-        call_sign: &CallSign,
-        range: &DateRange,
-    ) -> PinBoxStream<'_, VmsPosition>;
+    fn vms_positions<'a>(
+        &'a self,
+        call_sign: &'a CallSign,
+        range: &'a DateRange,
+    ) -> PinBoxStream<'a, VmsPosition>;
     fn ais_vms_positions(
         &self,
         params: AisVmsParams,

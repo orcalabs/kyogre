@@ -1,7 +1,7 @@
 [package]
 name = "postgres"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -31,7 +31,7 @@ geozero = { workspace = true }
 async-channel = { workspace = true }
 itertools = { workspace = true }
 
-unnest_insert = { version = "0.13.0", registry = "orcalabs-orcastrator", features = [
+unnest_insert = { version = "0.14.0", registry = "orcalabs-orcastrator", features = [
     "derive",
 ] }
 
