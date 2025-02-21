@@ -23,8 +23,8 @@ use processors::{AisVmsConflict, UnrealisticSpeed};
 use std::{
     collections::{HashMap, HashSet},
     sync::{
-        atomic::{self, AtomicU64},
         Arc,
+        atomic::{self, AtomicU64},
     },
 };
 use trip_benchmark::*;

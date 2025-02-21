@@ -1,8 +1,8 @@
 use super::fishing_facility::FishingFacility;
 use crate::{
-    error::{error::StartAfterEndSnafu, Result},
+    error::{Result, error::StartAfterEndSnafu},
     extractors::{OptionAuth0Profile, OptionBwProfile},
-    response::{ais_unfold, Response, ResponseOrStream, StreamResponse},
+    response::{Response, ResponseOrStream, StreamResponse, ais_unfold},
     routes::v1::ais_vms::AisVmsPosition,
     stream_response, *,
 };
@@ -14,10 +14,10 @@ use kyogre_core::{
     AisPermission, FiskeridirVesselId, HasTrack, Ordering, Pagination, Tra, TripAssemblerId,
     TripId, TripSorting, Trips, TripsQuery, VesselEventType,
 };
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use tracing::error;
 use v1::haul::Haul;
 
@@ -97,7 +97,7 @@ pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
     if let Some(meilisearch) = meilisearch.as_ref() {
         match meilisearch.trips(&query, read_fishing_facility).await {
             Ok(v) => {
-                return Ok(Response::new(v.into_iter().map(Trip::from).collect::<Vec<_>>()).into())
+                return Ok(Response::new(v.into_iter().map(Trip::from).collect::<Vec<_>>()).into());
             }
             Err(e) => {
                 error!("meilisearch cache returned error: {e:?}");

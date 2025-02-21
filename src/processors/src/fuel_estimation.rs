@@ -1,10 +1,10 @@
-use crate::{estimated_speed_between_points, Result, SpeedItem, UnrealisticSpeed};
+use crate::{Result, SpeedItem, UnrealisticSpeed, estimated_speed_between_points};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation, DateRange,
-    EngineType, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
-    DIESEL_GRAM_TO_LITER,
+    AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation,
+    DIESEL_GRAM_TO_LITER, DateRange, EngineType, FuelEstimation, NewFuelDayEstimate, PositionType,
+    Vessel, VesselEngine,
 };
 use std::{sync::Arc, vec};
 use tokio::task::JoinSet;

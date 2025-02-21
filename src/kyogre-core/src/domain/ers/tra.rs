@@ -2,8 +2,8 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{FiskeridirVesselId, SpeciesGroup};
 use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
 use serde_with::DisplayFromStr;
+use serde_with::serde_as;
 
 use super::ErsQuantumType;
 

@@ -3,19 +3,19 @@ use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
 use serde::Deserialize;
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use strum::{AsRefStr, Display, EnumIter, EnumString};
 
 use super::{
+    FiskeridirVesselId,
     gear::{Gear, GearGroup, MainGearGroup},
     product::{Condition, ConservationMethod, LandingMethod, Product, Purpose, Quality, Species},
-    FiskeridirVesselId,
 };
 use crate::{
+    CallSign, CatchLocation, DeliveryPointId, GearDetails, LandingId, NorthSouth62DegreesNorth,
+    SpeciesGroup, SpeciesMainGroup, TwelveMileBorder, Vessel, VesselLengthGroup, VesselType,
     deserialize_utils::*, string_new_types::NonEmptyString,
-    utils::convert_naive_date_and_naive_time_to_utc, CallSign, CatchLocation, DeliveryPointId,
-    GearDetails, LandingId, NorthSouth62DegreesNorth, SpeciesGroup, SpeciesMainGroup,
-    TwelveMileBorder, Vessel, VesselLengthGroup, VesselType,
+    utils::convert_naive_date_and_naive_time_to_utc,
 };
 
 /// Catch data from Fiskeridirektoratet

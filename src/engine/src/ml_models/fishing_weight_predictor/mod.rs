@@ -3,14 +3,15 @@ use chrono::{Datelike, NaiveDate, Utc};
 use derivative::Derivative;
 use fiskeridir_rs::SpeciesGroup;
 use kyogre_core::{
-    distance_to_shore, CatchLocation, CatchLocationId, CatchLocationWeather, MLModelsInbound,
-    MLModelsOutbound, ModelId, NewFishingWeightPrediction, PredictionRange, TrainingHaul,
-    TrainingMode, TrainingOutput, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
+    CatchLocation, CatchLocationId, CatchLocationWeather, MLModelsInbound, MLModelsOutbound,
+    ModelId, NewFishingWeightPrediction, PredictionRange, TrainingHaul, TrainingMode,
+    TrainingOutput, WeatherData, WeatherLocationOverlap, WeightPredictorTrainingData,
+    distance_to_shore,
 };
 use pyo3::{
+    Python,
     ffi::c_str,
     types::{PyAnyMethods, PyByteArray, PyModule},
-    Python,
 };
 use serde::Serialize;
 use std::{

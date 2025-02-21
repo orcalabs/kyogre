@@ -1,8 +1,8 @@
-use crate::{estimate_fuel_for_positions, Result};
+use crate::{Result, estimate_fuel_for_positions};
 use chrono::Utc;
 use kyogre_core::{
-    live_fuel_year_day_hour, AisPosition, Bound, DateRange, LiveFuelInbound, LiveFuelVessel,
-    NewLiveFuel,
+    AisPosition, Bound, DateRange, LiveFuelInbound, LiveFuelVessel, NewLiveFuel,
+    live_fuel_year_day_hour,
 };
 use std::{collections::HashMap, sync::Arc, time::Duration, vec};
 use tracing::{error, instrument};

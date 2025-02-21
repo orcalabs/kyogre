@@ -1,6 +1,6 @@
 use kyogre_core::{Pagination, TripDetailed, Trips, TripsQuery};
 
-use crate::{error::Result, indexable::Indexable, query::Query, MeilisearchAdapter};
+use crate::{MeilisearchAdapter, error::Result, indexable::Indexable, query::Query};
 
 mod filter;
 mod model;

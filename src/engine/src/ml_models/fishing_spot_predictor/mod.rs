@@ -1,17 +1,17 @@
-use crate::{error::Result, PredictionRange, TrainingOutcome};
+use crate::{PredictionRange, TrainingOutcome, error::Result};
 use chrono::{Datelike, NaiveDate, Utc};
 use fiskeridir_rs::SpeciesGroup;
-use kyogre_core::{
-    distance_to_shore, CatchLocationWeather, FishingSpotTrainingData, MLModelsInbound,
-    MLModelsOutbound, ModelId, NewFishingSpotPrediction, TrainingHaul, TrainingOutput, WeatherData,
-    WeatherLocationOverlap,
-};
 use kyogre_core::{CatchLocationId, TrainingMode};
+use kyogre_core::{
+    CatchLocationWeather, FishingSpotTrainingData, MLModelsInbound, MLModelsOutbound, ModelId,
+    NewFishingSpotPrediction, TrainingHaul, TrainingOutput, WeatherData, WeatherLocationOverlap,
+    distance_to_shore,
+};
 use pyo3::ffi::c_str;
 use pyo3::types::PyAnyMethods;
 use pyo3::{
-    types::{PyByteArray, PyModule},
     Python,
+    types::{PyByteArray, PyModule},
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};

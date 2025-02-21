@@ -1,4 +1,4 @@
-use crate::{deserialize_utils::*, string_new_types::NonEmptyString, DeliveryPointId};
+use crate::{DeliveryPointId, deserialize_utils::*, string_new_types::NonEmptyString};
 use chrono::NaiveDate;
 use serde::Deserialize;
 

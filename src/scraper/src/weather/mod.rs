@@ -7,8 +7,8 @@ use snafu::ResultExt;
 pub use weather_scraper::WeatherScraper;
 
 use crate::error::{
-    timestamp_error::{InvalidFilenameSnafu, InvalidHourSnafu, InvalidYMDSnafu, MalformedSnafu},
     TimestampError,
+    timestamp_error::{InvalidFilenameSnafu, InvalidHourSnafu, InvalidYMDSnafu, MalformedSnafu},
 };
 
 pub(crate) fn angle_between_vectors(v1: (f64, f64), v2: (f64, f64)) -> f64 {

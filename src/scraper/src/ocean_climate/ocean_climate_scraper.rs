@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use csv::Reader;
 use pyo3::{
-    ffi::c_str,
-    types::{timezone_utc, PyAnyMethods, PyDateTime, PyModule},
     Python,
+    ffi::c_str,
+    types::{PyAnyMethods, PyDateTime, PyModule, timezone_utc},
 };
 use tracing::{error, info};
 

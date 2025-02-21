@@ -1,6 +1,6 @@
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, User};
 
-use crate::{error::Result, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result};
 
 impl PostgresAdapter {
     pub(crate) async fn get_user_impl(&self, user_id: BarentswatchUserId) -> Result<Option<User>> {

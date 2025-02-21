@@ -1,4 +1,4 @@
-use crate::{error::Result, models::OrgBenchmarks, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models::OrgBenchmarks};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::OrgId;
 use kyogre_core::{DateRange, FiskeridirVesselId, FuelEntry, FuelQuery, OrgBenchmarkQuery};

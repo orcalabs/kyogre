@@ -294,14 +294,16 @@ async fn test_handles_conflict_correctly() {
             trip3.landing_coverage.end(),
             ers_last_trip_landing_coverage_end(&arrival2)
         );
-        assert!(helper
-            .adapter()
-            .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Ers)
-            .await
-            .unwrap()
-            .unwrap()
-            .conflict
-            .is_none());
+        assert!(
+            helper
+                .adapter()
+                .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Ers)
+                .await
+                .unwrap()
+                .unwrap()
+                .conflict
+                .is_none()
+        );
     })
     .await;
 }
@@ -411,14 +413,16 @@ async fn test_other_event_types_does_not_cause_conflicts() {
             .build()
             .await;
 
-        assert!(helper
-            .adapter()
-            .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Ers)
-            .await
-            .unwrap()
-            .unwrap()
-            .conflict
-            .is_none());
+        assert!(
+            helper
+                .adapter()
+                .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Ers)
+                .await
+                .unwrap()
+                .unwrap()
+                .conflict
+                .is_none()
+        );
     })
     .await;
 }

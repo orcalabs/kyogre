@@ -1,10 +1,10 @@
 use std::{any::TypeId, pin::Pin, task::Poll};
 
 use actix_web::{
-    body::BoxBody, http::header::ContentType, web::Bytes, HttpRequest, HttpResponse, Responder,
+    HttpRequest, HttpResponse, Responder, body::BoxBody, http::header::ContentType, web::Bytes,
 };
 use chrono::{DateTime, Duration, Utc};
-use futures::{stream, Stream};
+use futures::{Stream, stream};
 use kyogre_core::WebApiResult;
 use oasgen::{OaSchema, ObjectType, RefOr, Schema, SchemaData, SchemaKind, Type};
 use pin_project_lite::pin_project;

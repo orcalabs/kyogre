@@ -1,15 +1,15 @@
 use actix_web::{
+    HttpServer,
     dev::Server,
     middleware::{Compress, Condition},
     web::Data,
-    HttpServer,
 };
 use http_client::HttpClient;
 use meilisearch::MeilisearchAdapter;
 use oasgen::{
-    actix::{delete, get, post, put, scope},
     ImplicitOAuth2Flow, IndexMap, MediaType, OAuth2Flows, OaSchema, RefOr, Response,
     SecurityRequirement, SecurityScheme, StatusCode,
+    actix::{delete, get, post, put, scope},
 };
 use orca_core::{Environment, OrcaRootSpanBuilder, TracingLogger};
 use postgres::PostgresAdapter;
@@ -17,11 +17,11 @@ use serde_qs::actix::QsQueryConfig;
 use std::{io::Error, net::TcpListener};
 
 use crate::{
+    Cache, Database, Meilisearch,
     error::ErrorResponse,
     routes,
     settings::Settings,
     states::{Auth0State, BwState},
-    Cache, Database, Meilisearch,
 };
 
 use duckdb_rs::Client;

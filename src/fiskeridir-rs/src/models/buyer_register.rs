@@ -3,12 +3,12 @@ use std::{collections::HashSet, fmt::Display, str::FromStr};
 use chrono::NaiveDateTime;
 use jurisdiction::Jurisdiction;
 use num_derive::FromPrimitive;
-use serde::{de::Unexpected, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de::Unexpected};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 use strum::{AsRefStr, Display, EnumIter, EnumString};
 
-use crate::{sqlx_str_impl, string_new_types::NonEmptyString, ParseStringError};
+use crate::{ParseStringError, sqlx_str_impl, string_new_types::NonEmptyString};
 
 use super::DeliveryPointId;
 

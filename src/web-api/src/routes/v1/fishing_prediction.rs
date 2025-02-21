@@ -3,15 +3,16 @@ use chrono::{NaiveDate, Utc};
 use fiskeridir_rs::SpeciesGroup;
 use futures::TryStreamExt;
 use kyogre_core::{CatchLocationId, ModelId};
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{DisplayFromStr, serde_as};
 
 use crate::{
+    Database,
     error::Result,
     response::{Response, StreamResponse},
-    stream_response, Database,
+    stream_response,
 };
 
 pub const MAX_FISHING_WEIGHT_PREDICTIONS: u32 = 20;

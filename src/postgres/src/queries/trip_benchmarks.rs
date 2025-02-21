@@ -1,12 +1,13 @@
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
-    AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, DateRange, EeoiQuery,
-    EmptyVecToNone, FiskeridirVesselId, Mmsi, ProcessingStatus, TripBenchmarksQuery, TripId,
-    TripWithBenchmark, DIESEL_LITER_CARBON_FACTOR, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE,
+    AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
+    DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone, FiskeridirVesselId,
+    METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi, ProcessingStatus, TripBenchmarksQuery,
+    TripId, TripWithBenchmark,
 };
 
-use crate::{error::Result, models::TripBenchmarkOutput, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models::TripBenchmarkOutput};
 
 impl PostgresAdapter {
     pub(crate) async fn add_benchmark_outputs(

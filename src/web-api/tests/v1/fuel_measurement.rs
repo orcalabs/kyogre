@@ -1,4 +1,4 @@
-use base64::{prelude::BASE64_STANDARD, Engine};
+use base64::{Engine, prelude::BASE64_STANDARD};
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use engine::*;
 use http_client::StatusCode;
@@ -295,8 +295,8 @@ async fn test_update_fuel_measurement_only_update_fuel() {
 }
 
 #[tokio::test]
-async fn test_update_mulitlpe_fuel_measurement_move_timestamp_within_existing_fuel_measurement_range(
-) {
+async fn test_update_mulitlpe_fuel_measurement_move_timestamp_within_existing_fuel_measurement_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
         helper.app.login_user();
@@ -420,8 +420,8 @@ async fn test_update_single_fuel_measurement_move_timestamp_within_existing_fuel
     .await;
 }
 #[tokio::test]
-async fn test_update_mulitple_fuel_measurement_move_timestamp_outside_existing_fuel_measurement_range(
-) {
+async fn test_update_mulitple_fuel_measurement_move_timestamp_outside_existing_fuel_measurement_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
         helper.app.login_user();
@@ -484,8 +484,8 @@ async fn test_update_mulitple_fuel_measurement_move_timestamp_outside_existing_f
 }
 
 #[tokio::test]
-async fn test_update_single_fuel_measurement_move_timestamp_outside_existing_fuel_measurement_range(
-) {
+async fn test_update_single_fuel_measurement_move_timestamp_outside_existing_fuel_measurement_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
         helper.app.login_user();
@@ -1298,8 +1298,8 @@ async fn test_delete_fuel_measurement_sets_fuel_after_on_new_fuel_measurement_ra
 }
 
 #[tokio::test]
-async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_measurment_range_sets_fuel_after_on_new_fuel_measurement_range(
-) {
+async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_measurment_range_sets_fuel_after_on_new_fuel_measurement_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
 
@@ -1361,8 +1361,8 @@ async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_meas
     .await;
 }
 #[tokio::test]
-async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_measurment_range_but_inside_another_range(
-) {
+async fn test_update_fuel_measurement_with_timestamp_outside_exisiting_fuel_measurment_range_but_inside_another_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
 
@@ -1485,8 +1485,8 @@ async fn test_update_greater_fuel_after_than_fuel_returns_bad_request() {
 }
 
 #[tokio::test]
-async fn test_create_fuel_measurements_with_fuel_used_equal_or_lower_to_zero_does_not_create_fuel_measurement_range(
-) {
+async fn test_create_fuel_measurements_with_fuel_used_equal_or_lower_to_zero_does_not_create_fuel_measurement_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
 
@@ -1520,8 +1520,8 @@ async fn test_create_fuel_measurements_with_fuel_used_equal_or_lower_to_zero_doe
 }
 
 #[tokio::test]
-async fn test_update_fuel_measurements_with_fuel_used_equal_or_lower_than_zero_does_not_create_fuel_measurement_range(
-) {
+async fn test_update_fuel_measurements_with_fuel_used_equal_or_lower_than_zero_does_not_create_fuel_measurement_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
 
@@ -1563,8 +1563,8 @@ async fn test_update_fuel_measurements_with_fuel_used_equal_or_lower_than_zero_d
     .await;
 }
 #[tokio::test]
-async fn test_update_fuel_measurements_to_outside_existing_range_with_fuel_used_equal_or_lower_than_zero_does_not_create_fuel_measurement_range(
-) {
+async fn test_update_fuel_measurements_to_outside_existing_range_with_fuel_used_equal_or_lower_than_zero_does_not_create_fuel_measurement_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
 
@@ -1616,8 +1616,8 @@ async fn test_update_fuel_measurements_to_outside_existing_range_with_fuel_used_
 }
 
 #[tokio::test]
-async fn test_delete_fuel_measurements_with_fuel_used_equal_or_lower_than_zero_does_not_create_fuel_measurement_range(
-) {
+async fn test_delete_fuel_measurements_with_fuel_used_equal_or_lower_than_zero_does_not_create_fuel_measurement_range()
+ {
     test(|mut helper, builder| async move {
         builder.vessels(1).set_logged_in().build().await;
 

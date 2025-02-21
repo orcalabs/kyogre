@@ -136,14 +136,16 @@ async fn test_other_event_types_does_not_cause_conflicts() {
             .build()
             .await;
 
-        assert!(helper
-            .adapter()
-            .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Landings)
-            .await
-            .unwrap()
-            .unwrap()
-            .conflict
-            .is_none());
+        assert!(
+            helper
+                .adapter()
+                .trip_calculation_timer(state.vessels[0].fiskeridir.id, TripAssemblerId::Landings)
+                .await
+                .unwrap()
+                .unwrap()
+                .conflict
+                .is_none()
+        );
     })
     .await;
 }

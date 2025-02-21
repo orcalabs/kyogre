@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
-use futures::{future::ready, Stream, TryStreamExt};
+use futures::{Stream, TryStreamExt, future::ready};
 use kyogre_core::*;
-use sqlx::{postgres::types::PgRange, Pool, Postgres};
+use sqlx::{Pool, Postgres, postgres::types::PgRange};
 
-use crate::{error::Result, models::Haul, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result, models::Haul};
 
 impl PostgresAdapter {
     pub(crate) async fn haul_weights_from_range_impl(

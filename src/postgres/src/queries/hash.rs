@@ -1,4 +1,4 @@
-use crate::{error::Result, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result};
 use fiskeridir_rs::DataFileId;
 use futures::TryStreamExt;
 

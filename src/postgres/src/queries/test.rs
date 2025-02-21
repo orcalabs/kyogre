@@ -11,12 +11,12 @@ use kyogre_core::{
 };
 
 use crate::{
+    PostgresAdapter,
     error::Result,
     models::{
         FiskeridirAisVesselCombination, ManualDeliveryPoint, NewDeliveryPointId, Port, Tra,
         TripAssemblerLogEntry, VesselConflictInsert, VmsPosition,
     },
-    PostgresAdapter,
 };
 
 use super::vms::VmsPositionsArg;

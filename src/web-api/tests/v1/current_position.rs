@@ -65,8 +65,8 @@ async fn test_current_positions_does_not_return_positions_of_vessel_with_unknown
 }
 
 #[tokio::test]
-async fn test_current_positions_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check(
-) {
+async fn test_current_positions_prioritizes_fiskeridir_length_over_ais_length_in_leisure_vessel_length_check()
+ {
     test(|helper, builder| async move {
         builder
             .vessels(1)
@@ -152,8 +152,8 @@ async fn test_current_positions_return_positions_for_vessels_under_15m_with_full
 }
 
 #[tokio::test]
-async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy(
-) {
+async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_with_correct_roles_but_missing_policy()
+ {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
@@ -187,8 +187,8 @@ async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_
 }
 
 #[tokio::test]
-async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role(
-) {
+async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_with_correct_policy_but_missing_role()
+ {
     test(|mut helper, builder| async move {
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder

@@ -8,7 +8,7 @@ use kyogre_core::{
 use tracing::{error, instrument};
 
 use crate::{
-    estimated_speed_between_points, AisVmsConflict, Result, ShouldPrune, UnrealisticSpeed,
+    AisVmsConflict, Result, ShouldPrune, UnrealisticSpeed, estimated_speed_between_points,
 };
 
 static RUN_INTERVAL: Duration = Duration::from_secs(60);

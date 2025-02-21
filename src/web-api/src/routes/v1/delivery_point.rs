@@ -1,10 +1,10 @@
 use actix_web::web;
 use fiskeridir_rs::DeliveryPointId;
 use futures::TryStreamExt;
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 
-use crate::{response::StreamResponse, stream_response, Database};
+use crate::{Database, response::StreamResponse, stream_response};
 
 /// Returns all known delivery points.
 /// Delivery points originates from the following sources:

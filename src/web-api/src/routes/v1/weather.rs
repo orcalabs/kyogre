@@ -2,7 +2,7 @@ use actix_web::web;
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
 use kyogre_core::{Weather, WeatherLocationId, WeatherQuery};
-use oasgen::{oasgen, OaSchema};
+use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 

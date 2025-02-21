@@ -1,4 +1,4 @@
-use crate::{error::Result, PostgresAdapter};
+use crate::{PostgresAdapter, error::Result};
 
 impl PostgresAdapter {
     pub(crate) async fn increment_duckdb_version(&self) -> Result<()> {

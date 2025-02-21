@@ -412,8 +412,8 @@ async fn test_trips_returns_correct_ports() {
 }
 
 #[tokio::test]
-async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_with_equal_start_and_stop(
-) {
+async fn test_trip_contains_correct_arrival_and_departure_with_adjacent_trips_with_equal_start_and_stop()
+ {
     test_with_cache(|helper, builder| async move {
         let state = builder.vessels(1).trips(3).adjacent().build().await;
 
