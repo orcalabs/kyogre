@@ -727,11 +727,11 @@ impl WebApiOutboundPort for PostgresAdapter {
             .map_err(|e| e.into())
             .boxed()
     }
-    fn vms_positions(
-        &self,
-        call_sign: &CallSign,
-        range: &DateRange,
-    ) -> PinBoxStream<'_, VmsPosition> {
+    fn vms_positions<'a>(
+        &'a self,
+        call_sign: &'a CallSign,
+        range: &'a DateRange,
+    ) -> PinBoxStream<'a, VmsPosition> {
         self.vms_positions_impl(call_sign, range).convert().boxed()
     }
 

@@ -39,7 +39,7 @@ humantime-serde = "1.1"
 reqwest = { version = "0.12.12", default-features = false }
 stack-error = { version = "0.4.0", registry = "orcalabs-orcastrator" }
 snafu = "0.8.5"
-strum = { version = "0.26.3", features = ["derive"] }
+strum = { version = "0.27.1", features = ["derive"] }
 config = { version = "0.15", default-features = false, features = ["yaml"] }
 tokio = "1.43"
 tokio-stream = "0.1"
