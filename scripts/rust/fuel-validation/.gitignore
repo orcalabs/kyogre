@@ -1,2 +1,3 @@
 /target
-fuel-nergard.xlsx
+*.xlsx
+*.txt
