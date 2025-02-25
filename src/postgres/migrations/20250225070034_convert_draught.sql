@@ -1,0 +1,5 @@
+ALTER TABLE ais_vessels
+ALTER COLUMN draught type DOUBLE PRECISION USING draught::DOUBLE PRECISION / 10.0;
+
+ALTER TABLE ais_vessels_historic
+ALTER COLUMN draught type DOUBLE PRECISION USING draught::DOUBLE PRECISION / 10.0;

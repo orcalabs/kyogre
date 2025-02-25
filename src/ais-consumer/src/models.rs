@@ -150,7 +150,7 @@ impl TryFrom<AisStatic> for NewAisStatic {
             destination,
             eta,
             name,
-            draught,
+            draught: draught.map(|d| d.into()),
             ship_length,
             ship_width,
             ship_type,
@@ -281,7 +281,7 @@ impl PartialEq<kyogre_core::AisVesselHistoric> for AisStatic {
             && other.imo_number == *imo_number
             && other.call_sign.as_ref().map(|c| c.as_ref()) == call_sign.as_deref()
             && other.name == *name
-            && other.draught == *draught
+            && other.draught == draught.map(|d| d.into())
             && other.ship_width == *ship_width
             && other.ship_length == *ship_length
             && other.eta.map(|t| t.with_year(1980).unwrap().timestamp())

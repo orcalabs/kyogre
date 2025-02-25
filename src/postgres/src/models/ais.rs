@@ -1,8 +1,8 @@
 use chrono::{DateTime, Utc};
-use kyogre_core::{AisClass, Mmsi, NavigationStatus};
+use kyogre_core::{AisClass, Draught, Mmsi, NavigationStatus};
 use unnest_insert::UnnestInsert;
 
-use crate::queries::{opt_type_as_static_str, type_to_i32};
+use crate::queries::{opt_type_as_static_str, opt_type_to_f64, type_to_i32};
 
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(table_name = "ais_vessels", conflict = "mmsi")]
@@ -32,8 +32,12 @@ pub struct NewAisVessel<'a> {
     pub ship_type: Option<i32>,
     #[unnest_insert(update = "eta = COALESCE(EXCLUDED.eta, ais_vessels.eta)")]
     pub eta: Option<DateTime<Utc>>,
-    #[unnest_insert(update = "draught = COALESCE(EXCLUDED.draught, ais_vessels.draught)")]
-    pub draught: Option<i32>,
+    #[unnest_insert(
+        sql_type = "DOUBLE PRECISION",
+        type_conversion = "opt_type_to_f64",
+        update = "draught = COALESCE(EXCLUDED.draught, ais_vessels.draught)"
+    )]
+    pub draught: Option<Draught>,
     #[unnest_insert(
         update = "destination = COALESCE(EXCLUDED.destination, ais_vessels.destination)"
     )]
@@ -57,7 +61,8 @@ pub struct NewAisVesselHistoric<'a> {
     pub ship_length: Option<i32>,
     pub ship_type: Option<i32>,
     pub eta: Option<DateTime<Utc>>,
-    pub draught: Option<i32>,
+    #[unnest_insert(sql_type = "DOUBLE PRECISION", type_conversion = "opt_type_to_f64")]
+    pub draught: Option<Draught>,
     pub destination: Option<&'a str>,
     pub dimension_a: Option<i32>,
     pub dimension_b: Option<i32>,

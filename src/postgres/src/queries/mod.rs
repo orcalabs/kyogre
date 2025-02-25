@@ -37,6 +37,10 @@ pub mod vessel_events;
 pub mod vms;
 pub mod weather;
 
+pub fn opt_type_to_f64<T: Into<f64>>(value: Option<T>) -> Option<f64> {
+    value.map(|v| v.into())
+}
+
 pub fn type_to_i32<T: Into<i32>>(value: T) -> i32 {
     value.into()
 }

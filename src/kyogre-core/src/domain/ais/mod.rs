@@ -35,6 +35,28 @@ pub struct DataMessage {
     pub static_messages: Vec<NewAisStatic>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+pub struct Draught(f64);
+
+impl Draught {
+    pub fn into_inner(self) -> f64 {
+        self.0
+    }
+}
+
+impl From<i32> for Draught {
+    fn from(value: i32) -> Draught {
+        Draught(value as f64 / 10.0)
+    }
+}
+
+impl From<Draught> for f64 {
+    fn from(value: Draught) -> f64 {
+        value.0
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -69,7 +91,7 @@ pub struct NewAisStatic {
     pub destination: Option<String>,
     pub eta: Option<DateTime<Utc>>,
     pub name: Option<String>,
-    pub draught: Option<i32>,
+    pub draught: Option<Draught>,
     pub ship_length: Option<i32>,
     pub ship_width: Option<i32>,
     pub ship_type: Option<i32>,
@@ -136,7 +158,7 @@ pub struct AisVesselHistoric {
     pub ship_length: Option<i32>,
     pub ship_type: Option<i32>,
     pub eta: Option<DateTime<Utc>>,
-    pub draught: Option<i32>,
+    pub draught: Option<Draught>,
     pub destination: Option<String>,
     pub dimension_a: Option<i32>,
     pub dimension_b: Option<i32>,
@@ -273,7 +295,7 @@ mod test {
                 message_type: Some(AisMessageType::Static),
                 message_type_id: 18,
                 msgtime: Utc.timestamp_opt(900, 0).unwrap(),
-                draught: Some(50),
+                draught: Some(50.into()),
                 ship_type: Some(1),
                 dimension_a: Some(1),
                 dimension_b: Some(1),
