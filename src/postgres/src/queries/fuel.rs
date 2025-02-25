@@ -353,4 +353,22 @@ FROM
         self.unnest_update_from::<_, _, UpdateTripPositionFuel>(values, &self.pool)
             .await
     }
+
+    pub(crate) async fn delete_fuel_estimates_impl(
+        &self,
+        vessels: &[FiskeridirVesselId],
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+DELETE FROM fuel_estimates
+WHERE
+    fiskeridir_vessel_id = ANY ($1::BIGINT[])
+            "#,
+            vessels as &[FiskeridirVesselId],
+        )
+        .execute(&self.pool)
+        .await
+        .map(|_| ())
+        .map_err(|e| e.into())
+    }
 }

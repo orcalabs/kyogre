@@ -570,6 +570,9 @@ impl FuelEstimation for PostgresAdapter {
         })
         .await?)
     }
+    async fn delete_fuel_estimates(&self, vessels: &[FiskeridirVesselId]) -> CoreResult<()> {
+        Ok(retry(|| self.delete_fuel_estimates_impl(vessels)).await?)
+    }
     async fn dates_to_estimate(
         &self,
         vessel_id: FiskeridirVesselId,
