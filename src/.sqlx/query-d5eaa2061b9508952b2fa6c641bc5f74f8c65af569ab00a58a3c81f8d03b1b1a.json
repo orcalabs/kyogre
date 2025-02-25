@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    mmsi AS \"mmsi!: Mmsi\",\n    imo_number,\n    message_type_id,\n    message_timestamp,\n    call_sign,\n    \"name\",\n    ship_width,\n    ship_length,\n    ship_type,\n    eta,\n    draught,\n    destination,\n    dimension_a,\n    dimension_b,\n    dimension_c,\n    dimension_d,\n    position_fixing_device_type,\n    report_class\nFROM\n    ais_vessels_historic\nORDER BY\n    message_timestamp\n            ",
+  "query": "\nSELECT\n    mmsi AS \"mmsi!: Mmsi\",\n    imo_number,\n    message_type_id,\n    message_timestamp,\n    call_sign,\n    \"name\",\n    ship_width,\n    ship_length,\n    ship_type,\n    eta,\n    draught as \"draught?: Draught\",\n    destination,\n    dimension_a,\n    dimension_b,\n    dimension_c,\n    dimension_d,\n    position_fixing_device_type,\n    report_class\nFROM\n    ais_vessels_historic\nORDER BY\n    message_timestamp\n            ",
   "describe": {
     "columns": [
       {
@@ -55,8 +55,8 @@
       },
       {
         "ordinal": 10,
-        "name": "draught",
-        "type_info": "Int4"
+        "name": "draught?: Draught",
+        "type_info": "Float8"
       },
       {
         "ordinal": 11,
@@ -118,5 +118,5 @@
       true
     ]
   },
-  "hash": "2d0c1802bd0abe1289bbde1d2a8c11e1d4ecb2510c75c5f393166f82c6d3e38c"
+  "hash": "d5eaa2061b9508952b2fa6c641bc5f74f8c65af569ab00a58a3c81f8d03b1b1a"
 }

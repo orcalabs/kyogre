@@ -193,7 +193,7 @@ SELECT
     ship_length,
     ship_type,
     eta,
-    draught,
+    draught as "draught?: Draught",
     destination,
     dimension_a,
     dimension_b,
