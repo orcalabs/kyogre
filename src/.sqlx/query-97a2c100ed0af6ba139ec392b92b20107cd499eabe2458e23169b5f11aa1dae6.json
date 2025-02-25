@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM fuel_estimates\nWHERE\n    fiskeridir_vessel_id = ANY ($1::BIGINT[])\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "97a2c100ed0af6ba139ec392b92b20107cd499eabe2458e23169b5f11aa1dae6"
+}

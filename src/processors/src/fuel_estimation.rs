@@ -8,7 +8,10 @@ use kyogre_core::{
     DIESEL_GRAM_TO_LITER, DateRange, EngineType, FiskeridirVesselId, FuelEstimation,
     NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
 };
-use tokio::task::JoinSet;
+use tokio::{
+    io::{AsyncBufReadExt, BufReader, stdin},
+    task::JoinSet,
+};
 use tracing::{error, info, instrument, warn};
 
 use crate::{Result, SpeedItem, UnrealisticSpeed, estimated_speed_between_points};
@@ -95,8 +98,17 @@ impl FuelEstimator {
 
     pub async fn run_continuous(self) -> Result<()> {
         if let Some(vessels) = &self.local_processing_vessels {
-            self.run_local_fuel_estimation(vessels).await?;
-            Ok(())
+            let mut lines = BufReader::new(stdin()).lines();
+            loop {
+                info!("deleting existing fuel estimates...");
+                self.adapter.delete_fuel_estimates(vessels).await?;
+
+                info!("running fuel estimation...");
+                self.run_local_fuel_estimation(vessels).await?;
+
+                info!("fuel processing done, press enter to run again...");
+                lines.next_line().await.unwrap();
+            }
         } else {
             loop {
                 if let Some(last_run) = self.adapter.last_run().await? {
@@ -264,8 +276,6 @@ impl FuelEstimator {
 
             info!("processed vessel: {}", vessel.id());
         }
-
-        info!("FUEL PROCESSING DONE!");
 
         Ok(())
     }
