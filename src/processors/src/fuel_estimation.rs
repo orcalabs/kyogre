@@ -350,7 +350,7 @@ async fn process_day(
     adapter: &dyn FuelEstimation,
     date: NaiveDate,
 ) -> Result<NewFuelDayEstimate> {
-    let range = DateRange::from_dates(date, date.succ_opt().unwrap())?;
+    let range = DateRange::from_dates(date, date)?;
     let ais_vms = adapter
         .ais_vms_positions_with_haul(
             vessel.id(),
