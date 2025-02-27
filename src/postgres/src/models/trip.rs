@@ -92,9 +92,11 @@ pub struct NewTrip {
     pub end_port_id: Option<String>,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub position_layers_status: ProcessingStatus,
-    pub track_coverage: Option<f64>,
+    pub track_coverage: f64,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub trip_position_cargo_weight_distribution_status: ProcessingStatus,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub trip_position_fuel_consumption_distribution_status: ProcessingStatus,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -115,7 +117,8 @@ pub struct TripAisVmsPosition {
     pub position_type_id: PositionType,
     #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
     pub pruned_by: Option<TripPositionLayerId>,
-    pub trip_cumulative_cargo_weight: Option<f64>,
+    pub trip_cumulative_cargo_weight: f64,
+    pub trip_cumulative_fuel_consumption_liter: f64,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -143,6 +146,18 @@ pub struct UpdateTripPositionCargoWeight {
     pub trip_cumulative_cargo_weight: f64,
 }
 
+#[derive(Debug, Clone, UnnestUpdate)]
+#[unnest_update(table_name = "trip_positions")]
+pub struct UpdateTripPositionFuelConsumption {
+    #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i64")]
+    pub trip_id: TripId,
+    #[unnest_update(id)]
+    pub timestamp: DateTime<Utc>,
+    #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i32")]
+    pub position_type_id: PositionType,
+    pub trip_cumulative_fuel_consumption_liter: f64,
+}
+
 impl From<&TripProcessingUnit> for NewTrip {
     fn from(value: &TripProcessingUnit) -> Self {
         let TripProcessingUnit {
@@ -164,8 +179,7 @@ impl From<&TripProcessingUnit> for NewTrip {
             positions: _,
             precision_outcome,
             distance_output,
-            trip_position_output,
-            trip_position_cargo_weight_distribution_output,
+            position_layers_output,
         } = value;
 
         let (
@@ -201,17 +215,6 @@ impl From<&TripProcessingUnit> for NewTrip {
             None => (None, None),
         };
 
-        let (position_layers_status, track_coverage) = match trip_position_output {
-            Some(v) => (ProcessingStatus::Successful, Some(v.track_coverage)),
-            None => (ProcessingStatus::Attempted, None),
-        };
-
-        let trip_position_haul_weight_distribution_status =
-            match trip_position_cargo_weight_distribution_output.is_some() {
-                true => ProcessingStatus::Successful,
-                false => ProcessingStatus::Unprocessed,
-            };
-
         NewTrip {
             period: PgRange::from(period),
             period_extended: PgRange::from(period_extended),
@@ -228,10 +231,13 @@ impl From<&TripProcessingUnit> for NewTrip {
             distancer_id,
             start_port_id: start_port.clone().map(|p| p.id),
             end_port_id: end_port.clone().map(|p| p.id),
-            position_layers_status,
-            track_coverage,
-            trip_position_cargo_weight_distribution_status:
-                trip_position_haul_weight_distribution_status,
+            track_coverage: position_layers_output
+                .as_ref()
+                .map(|v| v.track_coverage)
+                .unwrap_or(0.),
+            position_layers_status: ProcessingStatus::Successful,
+            trip_position_cargo_weight_distribution_status: ProcessingStatus::Successful,
+            trip_position_fuel_consumption_distribution_status: ProcessingStatus::Successful,
         }
     }
 }
@@ -289,7 +295,7 @@ pub struct TripDetailed {
     pub target_species_fiskeridir_id: Option<i32>,
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption_liter: Option<f64>,
-    pub track_coverage: Option<f64>,
+    pub track_coverage: f64,
     pub has_track: HasTrack,
 }
 
@@ -528,6 +534,7 @@ impl TripAisVmsPosition {
             position_type_id: p.position_type,
             pruned_by: p.pruned_by,
             trip_cumulative_cargo_weight: p.trip_cumulative_cargo_weight,
+            trip_cumulative_fuel_consumption_liter: p.trip_cumulative_fuel_consumption_liter,
         }
     }
 }

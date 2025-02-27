@@ -50,7 +50,7 @@ pub struct Trip {
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao: Option<String>,
     pub fuel_consumption_liter: Option<f64>,
-    pub track_coverage: Option<f64>,
+    pub track_coverage: f64,
     pub has_track: HasTrack,
 }
 

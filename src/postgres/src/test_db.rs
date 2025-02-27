@@ -193,7 +193,7 @@ SELECT
     ship_length,
     ship_type,
     eta,
-    draught as "draught?: Draught",
+    draught AS "draught?: Draught",
     destination,
     dimension_a,
     dimension_b,
@@ -543,12 +543,16 @@ WHERE
         self.db.add_ais_positions(&ais_positions).await.unwrap();
         self.db.add_vms(vms_positions).await.unwrap();
 
-        let db_positions = kyogre_core::TripPrecisionOutboundPort::ais_vms_positions(
+        let db_positions = kyogre_core::WebApiOutboundPort::ais_vms_positions(
             &self.db,
-            Some(mmsi),
-            Some(call_sign),
-            &range,
+            AisVmsParams::Range {
+                mmsi: Some(mmsi),
+                call_sign: Some(call_sign.clone()),
+                range,
+            },
+            AisPermission::All,
         )
+        .try_collect::<Vec<_>>()
         .await
         .unwrap();
 

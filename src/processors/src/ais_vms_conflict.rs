@@ -1,7 +1,7 @@
 use chrono::Duration;
 use kyogre_core::{
-    AisVmsPosition, CoreResult, DateRange, PositionType, PrunedTripPosition, TripPositionLayer,
-    TripPositionLayerId, TripPositionLayerOutput, track_coverage,
+    AisVmsPosition, CoreResult, PositionType, PrunedTripPosition, TripPositionLayer,
+    TripPositionLayerId, TripProcessingUnit,
 };
 use serde_json::json;
 
@@ -55,32 +55,24 @@ impl TripPositionLayer for AisVmsConflict {
         TripPositionLayerId::AisVmsConflict
     }
 
-    fn prune_positions(
-        &self,
-        input: TripPositionLayerOutput,
-        trip_period: &DateRange,
-    ) -> CoreResult<TripPositionLayerOutput> {
-        let num_positions = input.trip_positions.len();
+    fn prune_positions(&self, mut unit: TripProcessingUnit) -> CoreResult<TripProcessingUnit> {
+        let num_positions = unit.positions.len();
         if num_positions <= 1 {
-            return Ok(input);
+            return Ok(unit);
         }
 
-        let TripPositionLayerOutput {
-            trip_positions,
-            mut pruned_positions,
-            track_coverage: _,
-        } = input;
+        let mut output = unit.position_layers_output.take().unwrap_or_default();
 
         let mut new_positions: Vec<AisVmsPosition> = Vec::with_capacity(num_positions);
 
-        let mut iter = trip_positions.into_iter().peekable();
+        let mut iter = unit.positions.into_iter().peekable();
 
         while let Some(mut pos) = iter.next() {
             if let Some(next) = iter.peek_mut() {
                 match self.should_prune(&pos, next) {
                     ShouldPrune::No => {}
                     ShouldPrune::Current(diff) => {
-                        pruned_positions.push(PrunedTripPosition {
+                        output.pruned_positions.push(PrunedTripPosition {
                             positions: json!([pos]),
                             value: json!({ "seconds": diff.num_seconds() }),
                             trip_layer: TripPositionLayerId::AisVmsConflict,
@@ -95,7 +87,7 @@ impl TripPositionLayer for AisVmsConflict {
                     ShouldPrune::Next(diff) => {
                         let pruned = iter.next().unwrap();
 
-                        pruned_positions.push(PrunedTripPosition {
+                        output.pruned_positions.push(PrunedTripPosition {
                             positions: json!([pruned]),
                             value: json!({ "seconds": diff.num_seconds() }),
                             trip_layer: TripPositionLayerId::AisVmsConflict,
@@ -111,10 +103,9 @@ impl TripPositionLayer for AisVmsConflict {
             new_positions.push(pos);
         }
 
-        Ok(TripPositionLayerOutput {
-            track_coverage: track_coverage(new_positions.len(), trip_period),
-            trip_positions: new_positions,
-            pruned_positions,
-        })
+        unit.positions = new_positions;
+        unit.position_layers_output = Some(output);
+
+        Ok(unit)
     }
 }

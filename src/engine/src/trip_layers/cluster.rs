@@ -1,8 +1,8 @@
 use crate::error::{Result, error::DistanceEstimationSnafu};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, CoreResult, DateRange, PrunedTripPosition, TripPositionLayer,
-    TripPositionLayerId, TripPositionLayerOutput,
+    AisVmsPosition, CoreResult, PrunedTripPosition, TripPositionLayer, TripPositionLayerId,
+    TripProcessingUnit,
 };
 use serde_json::json;
 use tracing::warn;
@@ -26,27 +26,19 @@ impl TripPositionLayer for Cluster {
         TripPositionLayerId::Cluster
     }
 
-    fn prune_positions(
-        &self,
-        input: TripPositionLayerOutput,
-        _trip_period: &DateRange,
-    ) -> CoreResult<TripPositionLayerOutput> {
-        let num_positions = input.trip_positions.len();
+    fn prune_positions(&self, mut unit: TripProcessingUnit) -> CoreResult<TripProcessingUnit> {
+        let num_positions = unit.positions.len();
         if num_positions <= 1 {
-            return Ok(input);
+            return Ok(unit);
         }
 
-        let TripPositionLayerOutput {
-            mut trip_positions,
-            mut pruned_positions,
-            track_coverage,
-        } = input;
+        let mut output = unit.position_layers_output.take().unwrap_or_default();
 
         let mut new_positions = Vec::with_capacity(num_positions);
 
         let mut next_pruned_by = false;
 
-        for chunk in trip_positions.chunks_mut(self.chunk_size) {
+        for chunk in unit.positions.chunks_mut(self.chunk_size) {
             if chunk.len() <= 1 {
                 new_positions.extend_from_slice(chunk);
                 break;
@@ -68,7 +60,7 @@ impl TripPositionLayer for Cluster {
                 }
                 new_positions.extend_from_slice(chunk);
             } else {
-                pruned_positions.push(PrunedTripPosition {
+                output.pruned_positions.push(PrunedTripPosition {
                     positions: json!(chunk),
                     value: json!({ "distance": distance }),
                     trip_layer: TripPositionLayerId::Cluster,
@@ -81,11 +73,10 @@ impl TripPositionLayer for Cluster {
             }
         }
 
-        Ok(TripPositionLayerOutput {
-            trip_positions: new_positions,
-            pruned_positions,
-            track_coverage,
-        })
+        unit.positions = new_positions;
+        unit.position_layers_output = Some(output);
+
+        Ok(unit)
     }
 }
 

@@ -19,28 +19,34 @@ pub struct AisVmsPosition {
     pub distance_to_shore: f64,
     pub position_type: PositionType,
     pub pruned_by: Option<TripPositionLayerId>,
-    pub trip_cumulative_fuel_consumption_liter: Option<f64>,
-    pub trip_cumulative_cargo_weight: Option<f64>,
+    pub trip_cumulative_cargo_weight: f64,
+    pub trip_cumulative_fuel_consumption_liter: f64,
+
+    // This field should only be populated when fetching positions for trip processing
+    pub is_inside_haul_and_active_gear: bool,
 }
 
 #[derive(Debug, Clone)]
-pub struct AisVmsPositionWithHaul {
+pub struct DailyFuelEstimationPosition {
+    pub trip_id: Option<TripId>,
     pub latitude: f64,
     pub longitude: f64,
     pub timestamp: DateTime<Utc>,
     pub speed: Option<f64>,
-    pub is_inside_haul_and_active_gear: bool,
     pub position_type_id: PositionType,
+    pub cumulative_cargo_weight: f64,
+    pub cumulative_fuel_consumption_liter: f64,
 }
 
 #[derive(Debug, Clone)]
-pub struct AisVmsPositionWithHaulAndManual {
+pub struct TripPositionWithManual {
+    pub trip_id: Option<TripId>,
     pub latitude: f64,
     pub longitude: f64,
     pub timestamp: DateTime<Utc>,
     pub speed: Option<f64>,
-    pub is_inside_haul_and_active_gear: bool,
     pub position_type_id: PositionType,
+    pub cumulative_fuel_consumption_liter: f64,
     pub covered_by_manual_fuel_entry: bool,
 }
 
@@ -65,19 +71,5 @@ pub enum PositionType {
 impl From<PositionType> for i32 {
     fn from(value: PositionType) -> Self {
         value as i32
-    }
-}
-
-impl From<AisVmsPositionWithHaul> for AisVmsPositionWithHaulAndManual {
-    fn from(value: AisVmsPositionWithHaul) -> Self {
-        Self {
-            speed: value.speed,
-            timestamp: value.timestamp,
-            position_type_id: value.position_type_id,
-            is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
-            latitude: value.latitude,
-            longitude: value.longitude,
-            covered_by_manual_fuel_entry: false,
-        }
     }
 }

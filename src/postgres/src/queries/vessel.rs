@@ -67,7 +67,7 @@ SELECT
     a.name AS ais_name,
     MAX(c.departure_timestamp) AS current_trip_departure_timestamp,
     MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id,
-    BOOL_OR(v.is_active) as "is_active!"
+    BOOL_OR(v.is_active) AS "is_active!"
 FROM
     all_vessels AS v
     INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
@@ -201,7 +201,7 @@ SELECT
     (ARRAY_AGG(f.fiskeridir_vessel_id)) [1],
     (ARRAY_AGG(a.mmsi)) [1],
     f.call_sign,
-    true
+    TRUE
 FROM
     fiskeridir_vessels AS f
     LEFT JOIN ais_vessels AS a ON f.call_sign = a.call_sign
@@ -225,7 +225,7 @@ INSERT INTO
     all_vessels (fiskeridir_vessel_id, is_active)
 SELECT
     f.fiskeridir_vessel_id,
-    true
+    TRUE
 FROM
     fiskeridir_vessels AS f
 WHERE
@@ -597,5 +597,26 @@ WHERE
         tx.commit().await?;
 
         Ok(())
+    }
+
+    pub(crate) async fn vessel_max_cargo_weight_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> Result<f64> {
+        let res = sqlx::query!(
+            r#"
+SELECT
+    COALESCE(MAX(landing_total_living_weight), 0) AS "weight!"
+FROM
+    trips_detailed
+WHERE
+    fiskeridir_vessel_id = $1
+            "#,
+            vessel_id.into_inner(),
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(res.map(|v| v.weight).unwrap_or(0.))
     }
 }

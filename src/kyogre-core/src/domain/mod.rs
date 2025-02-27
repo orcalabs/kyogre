@@ -36,6 +36,15 @@ impl From<ProcessingStatus> for i32 {
     }
 }
 
+impl From<bool> for ProcessingStatus {
+    fn from(value: bool) -> Self {
+        match value {
+            true => Self::Successful,
+            false => Self::Unprocessed,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Coordinates {
     pub latitude: f64,

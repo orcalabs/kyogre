@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(MAX(landing_total_living_weight), 0) AS \"weight!\"\nFROM\n    trips_detailed\nWHERE\n    fiskeridir_vessel_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "weight!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "6b0c20a758e9bf594730d1d79ce8818241d109546c0087a92a1e2d017b5a9fd7"
+}

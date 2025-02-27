@@ -1,6 +1,10 @@
+use std::ops::AddAssign;
+
 use chrono::{DateTime, Datelike, NaiveDate, Timelike, Utc};
 use fiskeridir_rs::FiskeridirVesselId;
 use serde::{Deserialize, Serialize};
+
+use super::{DailyFuelEstimationPosition, PositionType};
 
 #[derive(Debug, Clone)]
 pub struct NewFuelDayEstimate {
@@ -54,4 +58,27 @@ pub struct LiveFuel {
 
 pub fn live_fuel_year_day_hour(ts: DateTime<Utc>) -> (i32, u32, u32) {
     (ts.year(), ts.ordinal(), ts.hour())
+}
+
+impl AddAssign<ComputedFuelEstimation> for NewFuelDayEstimate {
+    fn add_assign(&mut self, rhs: ComputedFuelEstimation) {
+        let ComputedFuelEstimation {
+            fuel_liter,
+            num_ais_positions,
+            num_vms_positions,
+        } = rhs;
+
+        self.estimate_liter += fuel_liter;
+        self.num_ais_positions += num_ais_positions;
+        self.num_vms_positions += num_vms_positions;
+    }
+}
+
+impl AddAssign<&DailyFuelEstimationPosition> for NewFuelDayEstimate {
+    fn add_assign(&mut self, rhs: &DailyFuelEstimationPosition) {
+        match rhs.position_type_id {
+            PositionType::Ais => self.num_ais_positions += 1,
+            PositionType::Vms => self.num_vms_positions += 1,
+        }
+    }
 }

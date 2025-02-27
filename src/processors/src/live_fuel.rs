@@ -105,10 +105,11 @@ impl LiveFuel {
                     let latest_position_timestamp =
                         positions.iter().map(|p| p.msgtime).max().unwrap();
                     let fuel = estimate_fuel_for_positions(
-                        positions,
+                        &positions,
                         &engines,
                         vessel.service_speed,
                         vessel.degree_of_electrification,
+                        None,
                     );
 
                     Some(NewLiveFuel {

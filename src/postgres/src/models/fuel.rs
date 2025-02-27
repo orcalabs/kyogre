@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
-use kyogre_core::{FiskeridirVesselId, PositionType, TripId, live_fuel_year_day_hour};
-use unnest_insert::{UnnestInsert, UnnestUpdate};
+use kyogre_core::{FiskeridirVesselId, live_fuel_year_day_hour};
+use unnest_insert::UnnestInsert;
 
 use crate::queries::type_to_i64;
 
@@ -20,29 +20,6 @@ pub struct UpsertNewLiveFuel {
     pub latest_position_timestamp: DateTime<Utc>,
     #[unnest_insert(update = "fuel_liter = live_fuel.fuel_liter + excluded.fuel_liter")]
     pub fuel_liter: f64,
-}
-
-#[derive(Debug, Clone, UnnestUpdate)]
-#[unnest_update(table_name = "trip_positions")]
-pub struct UpdateTripPositionFuel {
-    #[unnest_update(id, sql_type = "BIGINT")]
-    pub trip_id: TripId,
-    #[unnest_update(id)]
-    pub timestamp: DateTime<Utc>,
-    #[unnest_update(id, sql_type = "INT")]
-    pub position_type_id: PositionType,
-    pub trip_cumulative_fuel_consumption_liter: f64,
-}
-
-impl From<&kyogre_core::UpdateTripPositionFuel> for UpdateTripPositionFuel {
-    fn from(v: &kyogre_core::UpdateTripPositionFuel) -> Self {
-        Self {
-            trip_id: v.trip_id,
-            timestamp: v.timestamp,
-            position_type_id: v.position_type_id,
-            trip_cumulative_fuel_consumption_liter: v.trip_cumulative_fuel_consumption_liter,
-        }
-    }
 }
 
 impl UpsertNewLiveFuel {

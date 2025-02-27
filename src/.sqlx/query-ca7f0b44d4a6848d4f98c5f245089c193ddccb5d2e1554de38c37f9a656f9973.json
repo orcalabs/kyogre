@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    ranges AS (\n        SELECT\n            RANGE_AGG(f.fuel_range) AS fuel_range\n        FROM\n            trips t\n            INNER JOIN fuel_measurement_ranges f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND f.fuel_range && t.period\n            AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (f.fuel_range, t.period) >= 0.5\n        WHERE\n            t.trip_id = $1\n    )\nSELECT\n    p.trip_id AS \"trip_id: TripId\",\n    p.latitude AS \"latitude!\",\n    p.longitude AS \"longitude!\",\n    p.timestamp AS \"timestamp!\",\n    p.speed,\n    p.position_type_id AS \"position_type_id!: PositionType\",\n    r.fuel_range IS NOT NULL AS \"covered_by_manual_fuel_entry!\",\n    p.trip_cumulative_fuel_consumption_liter AS \"cumulative_fuel_consumption_liter!\"\nFROM\n    trip_positions p\n    LEFT JOIN ranges r ON p.timestamp <@ r.fuel_range\nWHERE\n    p.trip_id = $1\nORDER BY\n    p.timestamp ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "position_type_id!: PositionType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "covered_by_manual_fuel_entry!",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "cumulative_fuel_consumption_liter!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      null,
+      false
+    ]
+  },
+  "hash": "ca7f0b44d4a6848d4f98c5f245089c193ddccb5d2e1554de38c37f9a656f9973"
+}

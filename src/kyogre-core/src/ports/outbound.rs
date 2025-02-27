@@ -174,7 +174,17 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> CoreResult<Vec<AisVmsPosition>>;
-    async fn trip_positions(&self, trip_id: TripId) -> CoreResult<Vec<AisVmsPosition>>;
+    async fn ais_vms_positions_with_inside_haul(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> CoreResult<Vec<AisVmsPosition>>;
+    async fn trip_positions_with_inside_haul(
+        &self,
+        trip_id: TripId,
+    ) -> CoreResult<Vec<AisVmsPosition>>;
     async fn delivery_points_associated_with_trip(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -191,31 +201,16 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
         vessel_id: FiskeridirVesselId,
         range: &DateRange,
     ) -> CoreResult<Vec<HaulWeight>>;
+    async fn vessel_max_cargo_weight(&self, vessel_id: FiskeridirVesselId) -> CoreResult<f64>;
 }
 
 #[async_trait]
 pub trait TripBenchmarkOutbound: Send + Sync {
-    async fn update_trip_position_fuel_consumption(
-        &self,
-        values: &[UpdateTripPositionFuel],
-    ) -> CoreResult<()>;
     async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
-    async fn track_of_trip_with_haul(&self, id: TripId) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
-    async fn ais_vms_positions_with_haul_and_manual(
+    async fn trip_positions_with_manual(
         &self,
-        vessel_id: FiskeridirVesselId,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        period: &DateRange,
         trip_id: TripId,
-    ) -> CoreResult<Vec<AisVmsPositionWithHaulAndManual>>;
-    async fn ais_vms_positions_with_haul(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        period: &DateRange,
-    ) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
+    ) -> CoreResult<Vec<TripPositionWithManual>>;
     async fn trips_to_benchmark(&self) -> CoreResult<Vec<BenchmarkTrip>>;
     async fn overlapping_measurment_fuel(
         &self,
@@ -277,15 +272,6 @@ pub trait FuelEstimation: Send + Sync {
     // Only used in tests to reduce the amount of estimations generated
     #[cfg(feature = "test")]
     async fn latest_position(&self) -> CoreResult<Option<NaiveDate>>;
-    #[cfg(feature = "test")]
-    async fn track_with_haul_and_manual(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        period: &DateRange,
-        trip_id: TripId,
-    ) -> CoreResult<Vec<AisVmsPositionWithHaulAndManual>>;
 
     async fn last_run(&self) -> CoreResult<Option<DateTime<Utc>>>;
     async fn add_run(&self) -> CoreResult<()>;
@@ -300,13 +286,14 @@ pub trait FuelEstimation: Send + Sync {
         mmsi: Option<Mmsi>,
         end_date: NaiveDate,
     ) -> CoreResult<Vec<NaiveDate>>;
-    async fn ais_vms_positions_with_haul(
+    async fn fuel_estimation_positions(
         &self,
         vessel_id: FiskeridirVesselId,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
-    ) -> CoreResult<Vec<AisVmsPositionWithHaul>>;
+    ) -> CoreResult<Vec<DailyFuelEstimationPosition>>;
+    async fn vessel_max_cargo_weight(&self, vessel_id: FiskeridirVesselId) -> CoreResult<f64>;
 }
 
 #[async_trait]
@@ -368,6 +355,10 @@ pub trait ScraperFileHashOutboundPort {
 #[async_trait]
 pub trait TripPipelineOutbound: Send + Sync {
     async fn trips_without_position_cargo_weight_distribution(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<Trip>>;
+    async fn trips_without_position_fuel_consumption_distribution(
         &self,
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<Trip>>;

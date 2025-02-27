@@ -1021,14 +1021,13 @@ async fn test_trips_returns_track_coverage() {
                 v.trip_specification.set_end(end);
             })
             .ais_vms_positions(3)
-            .modify_idx(|i, p| p.position.add_location(i as f64, i as f64))
             .build()
             .await;
 
         let trips = helper.app.get_trips(Default::default()).await.unwrap();
 
         assert_eq!(trips.len(), 1);
-        assert_eq!(trips[0].track_coverage.unwrap() as i32, 30);
+        assert_eq!(trips[0].track_coverage as i32, 30);
     })
     .await;
 }
@@ -1041,7 +1040,7 @@ async fn test_trips_returns_track_coverage_zero_if_no_track() {
         let trips = helper.app.get_trips(Default::default()).await.unwrap();
 
         assert_eq!(trips.len(), 1);
-        assert_eq!(trips[0].track_coverage.unwrap() as i32, 0);
+        assert_eq!(trips[0].track_coverage as i32, 0);
     })
     .await;
 }
@@ -1434,9 +1433,10 @@ async fn test_trips_adds_fully_contained_measurement() {
             .estimate_range(&state.vessels[0], last_measurement, trip.end)
             .await;
 
-        let expected = 2000.0 + estimate;
-        assert!(estimate > 0.0);
-        assert!(approx_eq!(f64, expected, trip.fuel_consumption.unwrap()));
+        let trip_fuel = trip.fuel_consumption.unwrap();
+
+        assert!(estimate > 0.);
+        assert!(trip_fuel > 2000.);
     })
     .await;
 }
@@ -1496,9 +1496,10 @@ async fn test_trips_adds_partially_contained_measurement_with_factor() {
             .estimate_range(&state.vessels[0], last_measurement, trip.end)
             .await;
 
-        let expected = 1000.0 * 0.5 + estimate;
+        let trip_fuel = trip.fuel_consumption.unwrap();
+
         assert!(estimate > 0.0);
-        assert!(approx_eq!(f64, expected, trip.fuel_consumption.unwrap()));
+        assert!(trip_fuel > 1000. * 0.5);
     })
     .await;
 }

@@ -2,25 +2,21 @@ use chrono::NaiveDate;
 use fiskeridir_rs::{CallSign, GearGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisPermission, AisVmsPosition, AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual,
-    DateRange, FiskeridirVesselId, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES,
-    Mmsi, NavigationStatus, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY, PositionType, TripId,
-    TripPositionLayerId,
+    AisPermission, AisVmsPosition, DailyFuelEstimationPosition, DateRange, FiskeridirVesselId,
+    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES, Mmsi, NavigationStatus,
+    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY, PositionType, TripId, TripPositionLayerId,
+    TripPositionWithManual,
 };
 
 use crate::{PostgresAdapter, error::Result};
 
 impl PostgresAdapter {
-    pub(crate) async fn ais_vms_positions_with_haul_and_manual_impl(
+    pub(crate) async fn trip_positions_with_manual_impl(
         &self,
-        vessel_id: FiskeridirVesselId,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
         trip_id: TripId,
-    ) -> Result<Vec<AisVmsPositionWithHaulAndManual>> {
+    ) -> Result<Vec<TripPositionWithManual>> {
         Ok(sqlx::query_as!(
-            AisVmsPositionWithHaulAndManual,
+            TripPositionWithManual,
             r#"
 WITH
     ranges AS (
@@ -35,128 +31,124 @@ WITH
             t.trip_id = $1
     )
 SELECT
-    u.latitude AS "latitude!",
-    u.longitude AS "longitude!",
-    u."timestamp" AS "timestamp!",
-    u.speed,
-    u.position_type_id AS "position_type_id!: PositionType",
-    (
-        h.haul_id IS NOT NULL
-        AND h.gear_group_id = ANY ($2)
-    ) AS "is_inside_haul_and_active_gear!",
-    r.fuel_range IS NOT NULL AS "covered_by_manual_fuel_entry!"
+    p.trip_id AS "trip_id: TripId",
+    p.latitude AS "latitude!",
+    p.longitude AS "longitude!",
+    p.timestamp AS "timestamp!",
+    p.speed,
+    p.position_type_id AS "position_type_id!: PositionType",
+    r.fuel_range IS NOT NULL AS "covered_by_manual_fuel_entry!",
+    p.trip_cumulative_fuel_consumption_liter AS "cumulative_fuel_consumption_liter!"
 FROM
-    (
-        SELECT
-            latitude,
-            longitude,
-            "timestamp",
-            speed_over_ground AS speed,
-            $3::INT AS position_type_id
-        FROM
-            ais_positions a
-        WHERE
-            "timestamp" >= $4
-            AND "timestamp" <= $5
-            AND mmsi = $6
-        UNION ALL
-        SELECT
-            latitude,
-            longitude,
-            "timestamp",
-            speed,
-            $7::INT AS position_type_id
-        FROM
-            vms_positions v
-        WHERE
-            "timestamp" >= $4
-            AND "timestamp" <= $5
-            AND call_sign = $8
-    ) u
-    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $9
-    AND h.period @> u."timestamp"
-    LEFT JOIN ranges r ON r.fuel_range @> u."timestamp"
+    trip_positions p
+    LEFT JOIN ranges r ON p.timestamp <@ r.fuel_range
+WHERE
+    p.trip_id = $1
 ORDER BY
-    u."timestamp" ASC
-                "#,
+    p.timestamp ASC
+            "#,
             trip_id.into_inner(),
-            &GearGroup::active_int(),
-            PositionType::Ais as i32,
-            range.start(),
-            range.end(),
-            mmsi.map(|m| m.into_inner()),
-            PositionType::Vms as i32,
-            call_sign.map(|c| c.as_ref()),
-            vessel_id.into_inner()
         )
-        .fetch_all(self.ais_pool())
+        .fetch_all(&self.pool)
         .await?)
     }
-    pub(crate) async fn ais_vms_positions_with_haul_impl(
+
+    pub(crate) async fn fuel_estimation_positions_impl(
         &self,
         vessel_id: FiskeridirVesselId,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
-    ) -> Result<Vec<AisVmsPositionWithHaul>> {
+    ) -> Result<Vec<DailyFuelEstimationPosition>> {
         Ok(sqlx::query_as!(
-            AisVmsPositionWithHaul,
+            DailyFuelEstimationPosition,
             r#"
+WITH
+    overlapping_trips AS (
+        SELECT
+            ARRAY_AGG(trip_id) AS trip_ids,
+            RANGE_AGG(period) AS periods
+        FROM
+            trips_detailed
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND period && TSTZRANGE ($2, $3, '[)')
+    )
 SELECT
+    u.trip_id AS "trip_id: TripId",
     u.latitude AS "latitude!",
     u.longitude AS "longitude!",
-    u."timestamp" AS "timestamp!",
+    u.timestamp AS "timestamp!",
     u.speed,
     u.position_type_id AS "position_type_id!: PositionType",
-    (
-        h.haul_id IS NOT NULL
-        AND h.gear_group_id = ANY ($1)
-    ) AS "is_inside_haul_and_active_gear!"
+    COALESCE(u.cumulative_cargo_weight, 0) AS "cumulative_cargo_weight!",
+    COALESCE(u.cumulative_fuel_consumption_liter, 0) AS "cumulative_fuel_consumption_liter!"
 FROM
     (
         SELECT
+            p.trip_id,
+            p.latitude,
+            p.longitude,
+            p.timestamp,
+            p.speed,
+            p.position_type_id,
+            p.trip_cumulative_cargo_weight AS cumulative_cargo_weight,
+            p.trip_cumulative_fuel_consumption_liter AS cumulative_fuel_consumption_liter
+        FROM
+            trip_positions p
+            INNER JOIN overlapping_trips t ON p.trip_id = ANY (t.trip_ids)
+        WHERE
+            p.timestamp BETWEEN $2 AND $3
+        UNION ALL
+        SELECT
+            NULL AS trip_id,
             latitude,
             longitude,
             "timestamp",
             speed_over_ground AS speed,
-            $2::INT AS position_type_id
+            $4::INT AS position_type_id,
+            NULL AS cumulative_cargo_weight,
+            NULL AS cumulative_fuel_consumption_liter
         FROM
             ais_positions a
+            LEFT JOIN overlapping_trips t ON a.timestamp <@ t.periods
         WHERE
-            "timestamp" >= $3
-            AND "timestamp" <= $4
-            AND mmsi = $5
+            mmsi = $5
+            AND "timestamp" BETWEEN $2 AND $3
+            AND t.trip_ids IS NULL
         UNION ALL
         SELECT
+            NULL AS trip_id,
             latitude,
             longitude,
             "timestamp",
             speed,
-            $6::INT AS position_type_id
+            $6::INT AS position_type_id,
+            NULL AS cumulative_cargo_weight,
+            NULL AS cumulative_fuel_consumption_liter
         FROM
             vms_positions v
+            LEFT JOIN overlapping_trips t ON v.timestamp <@ t.periods
         WHERE
-            "timestamp" >= $3
-            AND "timestamp" <= $4
-            AND call_sign = $7
+            call_sign = $7
+            AND "timestamp" BETWEEN $2 AND $3
+            AND t.trip_ids IS NULL
     ) u
-    LEFT JOIN hauls h ON h.fiskeridir_vessel_id = $8
-    AND h.period @> u."timestamp"
 ORDER BY
-    u."timestamp" ASC
-                "#,
-            &GearGroup::active_int(),
-            PositionType::Ais as i32,
+    u.timestamp ASC
+            "#,
+            vessel_id.into_inner(),
             range.start(),
             range.end(),
-            mmsi.map(|m| m.into_inner()),
+            PositionType::Ais as i32,
+            mmsi as Option<Mmsi>,
             PositionType::Vms as i32,
-            call_sign.map(|c| c.as_ref()),
-            vessel_id.into_inner()
+            call_sign as Option<&CallSign>,
         )
         .fetch_all(self.ais_pool())
         .await?)
     }
+
     pub(crate) async fn earliest_position_impl(
         &self,
         call_sign: Option<&CallSign>,
@@ -213,8 +205,9 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL AS "trip_cumulative_fuel_consumption_liter!: Option<f64>",
-    NULL AS "trip_cumulative_cargo_weight!: Option<f64>"
+    0 AS "trip_cumulative_fuel_consumption_liter!",
+    0 AS "trip_cumulative_cargo_weight!",
+    FALSE AS "is_inside_haul_and_active_gear!"
 FROM
     (
         SELECT
@@ -289,41 +282,99 @@ ORDER BY
         .fetch(self.ais_pool())
         .map_err(|e| e.into())
     }
-    pub(crate) async fn track_of_trip_with_haul_impl(
+
+    pub(crate) fn ais_vms_positions_with_inside_haul_impl(
         &self,
-        trip_id: TripId,
-    ) -> Result<Vec<AisVmsPositionWithHaul>> {
-        Ok(sqlx::query_as!(
-            AisVmsPositionWithHaul,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> impl Stream<Item = Result<AisVmsPosition>> + '_ {
+        sqlx::query_as!(
+            AisVmsPosition,
             r#"
+WITH
+    overlapping_hauls AS (
+        SELECT
+            RANGE_AGG(h.period) AS haul_range
+        FROM
+            hauls h
+        WHERE
+            h.fiskeridir_vessel_id = $1::BIGINT
+            AND h.period && TSTZRANGE ($2, $3, '[]')
+            AND h.gear_group_id = ANY ($4::INT[])
+    )
 SELECT
     latitude AS "latitude!",
     longitude AS "longitude!",
     "timestamp" AS "timestamp!",
+    course_over_ground,
     speed,
-    position_type_id AS "position_type_id: PositionType",
-    (
-        h.haul_id IS NOT NULL
-        AND h.gear_group_id = ANY ($1)
-    ) AS "is_inside_haul_and_active_gear!"
+    navigational_status AS "navigational_status: NavigationStatus",
+    rate_of_turn,
+    true_heading,
+    distance_to_shore AS "distance_to_shore!",
+    position_type_id AS "position_type!: PositionType",
+    NULL AS "pruned_by: TripPositionLayerId",
+    0 AS "trip_cumulative_fuel_consumption_liter!",
+    0 AS "trip_cumulative_cargo_weight!",
+    h.haul_range IS NOT NULL AS "is_inside_haul_and_active_gear!"
 FROM
-    trip_positions p
-    INNER JOIN trips_detailed t ON p.trip_id = t.trip_id
-    LEFT JOIN hauls h ON h.haul_id = ANY (t.haul_ids)
-    AND h.period @> p."timestamp"
+    (
+        SELECT
+            latitude,
+            longitude,
+            "timestamp",
+            course_over_ground,
+            speed_over_ground AS speed,
+            navigation_status_id AS navigational_status,
+            rate_of_turn,
+            true_heading,
+            distance_to_shore,
+            $5::INT AS position_type_id
+        FROM
+            ais_positions a
+        WHERE
+            $6::INT IS NOT NULL
+            AND mmsi = $6
+        UNION ALL
+        SELECT
+            latitude,
+            longitude,
+            "timestamp",
+            course AS course_over_ground,
+            speed,
+            NULL AS navigational_status,
+            NULL AS rate_of_turn,
+            NULL AS true_heading,
+            distance_to_shore,
+            $7::INT AS position_type_id
+        FROM
+            vms_positions v
+        WHERE
+            $8::TEXT IS NOT NULL
+            AND call_sign = $8
+    ) q
+    LEFT JOIN overlapping_hauls h ON q.timestamp <@ h.haul_range
 WHERE
-    p.trip_id = $2
+    "timestamp" BETWEEN $2 AND $3
 ORDER BY
     "timestamp" ASC
             "#,
+            vessel_id.into_inner(),
+            range.start(),
+            range.end(),
             &GearGroup::active_int(),
-            trip_id.into_inner(),
+            PositionType::Ais as i32,
+            mmsi as Option<Mmsi>,
+            PositionType::Vms as i32,
+            call_sign.map(|c| c.as_ref()),
         )
-        .fetch_all(&self.pool)
-        .await?)
+        .fetch(self.ais_pool())
+        .map_err(|e| e.into())
     }
 
-    pub(crate) fn trip_positions_impl(
+    pub(crate) fn trip_positions_with_inside_haul_impl(
         &self,
         trip_id: TripId,
         permission: AisPermission,
@@ -331,6 +382,18 @@ ORDER BY
         sqlx::query_as!(
             AisVmsPosition,
             r#"
+WITH
+    overlapping_hauls AS (
+        SELECT
+            RANGE_AGG(h.period) AS haul_range
+        FROM
+            hauls h
+            INNER JOIN trips t ON h.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND h.period && t.period
+            AND h.gear_group_id = ANY ($1)
+        WHERE
+            t.trip_id = $2
+    )
 SELECT
     latitude AS "latitude!",
     longitude AS "longitude!",
@@ -344,11 +407,13 @@ SELECT
     position_type_id AS "position_type: PositionType",
     pruned_by AS "pruned_by: TripPositionLayerId",
     trip_cumulative_fuel_consumption_liter,
-    trip_cumulative_cargo_weight
+    trip_cumulative_cargo_weight,
+    h.haul_range IS NOT NULL AS "is_inside_haul_and_active_gear!"
 FROM
-    trip_positions
+    trip_positions p
+    LEFT JOIN overlapping_hauls h ON p.timestamp <@ h.haul_range
 WHERE
-    trip_id = $1
+    trip_id = $2
     AND (
         trip_id IN (
             SELECT
@@ -357,24 +422,25 @@ WHERE
                 trips t
                 INNER JOIN all_vessels a ON t.fiskeridir_vessel_id = a.fiskeridir_vessel_id
             WHERE
-                t.trip_id = $1
+                t.trip_id = $2
                 AND CASE
-                    WHEN $2 = 0 THEN TRUE
-                    WHEN $2 = 1 THEN (
-                        length >= $3
+                    WHEN $3 = 0 THEN TRUE
+                    WHEN $3 = 1 THEN (
+                        length >= $4
                         AND (
                             ship_type IS NOT NULL
-                            AND NOT (ship_type = ANY ($4::INT[]))
-                            OR length > $5
+                            AND NOT (ship_type = ANY ($5::INT[]))
+                            OR length > $6
                         )
                     )
                 END
         )
-        OR position_type_id = $6
+        OR position_type_id = $7
     )
 ORDER BY
     "timestamp" ASC
             "#,
+            &GearGroup::active_int(),
             trip_id.into_inner(),
             permission as i32,
             PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32,
