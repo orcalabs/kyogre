@@ -1,20 +1,18 @@
-#![allow(dead_code)]
-
+use anyhow::Result;
+use calamine::{open_workbook_from_rs, Data, DataType, RangeDeserializerBuilder, Reader, Xlsx};
+use chrono::{Datelike, Duration};
+use clap::{Parser, ValueEnum};
+use serde::de::DeserializeOwned;
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    types::chrono::NaiveDate,
+    PgPool,
+};
 use std::{
     collections::HashMap,
     fmt::Display,
     fs::File,
     io::{stdout, Cursor, Write},
-};
-
-use anyhow::Result;
-use calamine::{open_workbook_from_rs, Data, DataType, RangeDeserializerBuilder, Reader, Xlsx};
-use chrono::{Datelike, Duration};
-use serde::de::DeserializeOwned;
-use sqlx::{
-    postgres::{PgConnectOptions, PgPoolOptions},
-    types::chrono::{DateTime, NaiveDate, TimeZone, Utc},
-    PgPool,
 };
 
 #[derive(Debug, Clone)]
@@ -78,21 +76,47 @@ ORDER BY
     })
 }
 
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+enum Vessels {
+    Ramoen,
+    #[default]
+    Nergaard,
+    Heroyfjord,
+    Eros,
+}
+
+/// Run fuel validation on vessels
+#[derive(Parser, Debug)]
+struct Args {
+    /// Name of the vessel to run validation on
+    #[arg(value_enum, short, long, default_value_t = Vessels::default())]
+    vessel: Vessels,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
-    // let (name, vessel_id, bytes) = (
-    //     "TUROVERSIKT EROS",
-    //     2013060592,
-    //     include_bytes!("../EROS oljeforbruk 2022 - 2024.xlsx"),
-    // );
-    //let (name, vessel_id, bytes) = (
-    //    "HERØYFJORD",
-    //    2021117460,
-    //    include_bytes!("../Herøyfjord oljeforbruk 2022-24.xlsx"),
-    //);
-    //run_heroyfjord_eros(bytes, vessel_id, name).await
-    run_ramoen().await
-    // run_nergard().await
+    let args = Args::parse();
+
+    match args.vessel {
+        Vessels::Ramoen => run_ramoen().await,
+        Vessels::Nergaard => run_nergard().await,
+        Vessels::Heroyfjord => {
+            let (name, vessel_id, bytes) = (
+                "HERØYFJORD",
+                2021117460,
+                include_bytes!("../Herøyfjord oljeforbruk 2022-24.xlsx"),
+            );
+            run_heroyfjord_eros(bytes, vessel_id, name).await
+        }
+        Vessels::Eros => {
+            let (name, vessel_id, bytes) = (
+                "TUROVERSIKT EROS",
+                2013060592,
+                include_bytes!("../EROS oljeforbruk 2022 - 2024.xlsx"),
+            );
+            run_heroyfjord_eros(bytes, vessel_id, name).await
+        }
+    }
 }
 
 async fn run_ramoen() -> Result<()> {
