@@ -1,17 +1,19 @@
 #![allow(dead_code)]
 
 use std::{
+    collections::HashMap,
     fmt::Display,
     fs::File,
     io::{stdout, Cursor, Write},
 };
 
 use anyhow::Result;
-use calamine::{open_workbook_from_rs, Data, RangeDeserializerBuilder, Reader, Xlsx};
+use calamine::{open_workbook_from_rs, Data, DataType, RangeDeserializerBuilder, Reader, Xlsx};
+use chrono::{Datelike, Duration};
 use serde::de::DeserializeOwned;
 use sqlx::{
     postgres::{PgConnectOptions, PgPoolOptions},
-    types::chrono::NaiveDate,
+    types::chrono::{DateTime, NaiveDate, TimeZone, Utc},
     PgPool,
 };
 
@@ -83,13 +85,73 @@ async fn main() -> Result<()> {
     //     2013060592,
     //     include_bytes!("../EROS oljeforbruk 2022 - 2024.xlsx"),
     // );
-    let (name, vessel_id, bytes) = (
-        "HERØYFJORD",
-        2021117460,
-        include_bytes!("../Herøyfjord oljeforbruk 2022-24.xlsx"),
-    );
-    run_heroyfjord_eros(bytes, vessel_id, name).await
+    //let (name, vessel_id, bytes) = (
+    //    "HERØYFJORD",
+    //    2021117460,
+    //    include_bytes!("../Herøyfjord oljeforbruk 2022-24.xlsx"),
+    //);
+    //run_heroyfjord_eros(bytes, vessel_id, name).await
+    run_ramoen().await
     // run_nergard().await
+}
+
+async fn run_ramoen() -> Result<()> {
+    let bytes = include_bytes!("../RAMOEN oljeforbruk 2022-24.xlsx");
+    let vessel_id = 2016073913;
+    let mut trips = decode_ramoen(bytes)?;
+
+    let pool = connect().await;
+
+    let mut diffs = Vec::with_capacity(trips.len());
+    let mut stdout = stdout().lock();
+
+    write_header(&mut stdout)?;
+
+    trips.sort_by_key(|t| t.entries[0].date);
+    for trip in trips {
+        if trip.entries.is_empty() {
+            continue;
+        }
+
+        let start = trip.entries[0].date;
+        let end = trip.entries.last().unwrap().date;
+
+        let estimated = temp(&pool, vessel_id, start, end).await?;
+
+        let total = trip.fuel_total();
+        let estimated_total = estimated.fuel_total();
+        let distance_total = estimated.distance_total();
+        let ais_total = estimated.ais_total();
+        let vms_total = estimated.vms_total();
+
+        let diff_percent = write_stats(
+            &mut stdout,
+            &trip.name,
+            ais_total,
+            vms_total,
+            estimated_total,
+            total,
+            distance_total,
+        )?;
+
+        diffs.push(diff_percent.abs());
+    }
+
+    let n = diffs.len() as f64;
+    let mean = diffs.iter().sum::<f64>() / n;
+
+    let sd = (diffs
+        .iter()
+        .map(|v| ((v - mean).abs().powf(2.)))
+        .sum::<f64>()
+        / n)
+        .sqrt();
+
+    println!();
+    println!("Mean diff percent: {mean:.0}");
+    println!("SD:                {sd:.2}");
+
+    Ok(())
 }
 
 async fn run_heroyfjord_eros(bytes: &[u8], vessel_id: i64, name: &str) -> Result<()> {
@@ -278,6 +340,93 @@ pub fn write_stats(
     )?;
 
     Ok(diff_percent)
+}
+
+pub fn decode_ramoen(input: impl AsRef<[u8]>) -> Result<Vec<Trip>> {
+    let mut doc: Xlsx<_> = open_workbook_from_rs(Cursor::new(input))?;
+
+    let (_, range) = doc.worksheets().into_iter().next().unwrap();
+
+    let mut rows = range.rows();
+
+    // year, current_date
+    let mut current_trip_year_date: HashMap<usize, NaiveDate> = HashMap::new();
+
+    let mut row_idx = 0;
+
+    struct YearIndex {
+        year: usize,
+        fuel: usize,
+        date: usize,
+    }
+
+    let year_indexes = vec![
+        YearIndex {
+            year: 2024,
+            fuel: 1,
+            date: 3,
+        },
+        YearIndex {
+            year: 2023,
+            fuel: 6,
+            date: 8,
+        },
+        YearIndex {
+            year: 2022,
+            fuel: 11,
+            date: 13,
+        },
+    ];
+
+    let mut trips = Vec::new();
+
+    loop {
+        let Some(row) = rows.next() else {
+            break;
+        };
+        let is_data_row = !row.is_empty() && row[0].to_string().starts_with("Tur") && row_idx <= 14;
+
+        if is_data_row {
+            for y in &year_indexes {
+                let mut start = current_trip_year_date
+                    .get(&y.year)
+                    .cloned()
+                    .unwrap_or(NaiveDate::from_ymd_opt(y.year as i32, 1, 1).unwrap());
+                if start.month() == 10 {
+                    start = start.with_month0(start.month0() + 1).unwrap();
+                }
+                let fuel = row[y.fuel].get_float().unwrap();
+                let duration_days = (row[y.date].get_float().unwrap()) as i64;
+
+                let end = start + Duration::days(duration_days);
+
+                trips.push(Trip {
+                    name: format!("Trip from {start} to {end}"),
+                    entries: vec![
+                        TripEntry {
+                            date: start,
+                            fuel: 0.,
+                            num_ais_positions: 0,
+                            num_vms_positions: 0,
+                            distance: None,
+                        },
+                        TripEntry {
+                            date: end,
+                            fuel,
+                            num_ais_positions: 0,
+                            num_vms_positions: 0,
+                            distance: None,
+                        },
+                    ],
+                });
+
+                current_trip_year_date.insert(y.year, end.succ_opt().unwrap());
+            }
+        }
+        row_idx += 1;
+    }
+
+    Ok(trips)
 }
 
 pub fn decode_heroyfjord_eros(input: impl AsRef<[u8]>, name: &str) -> Result<Vec<Trip>> {
