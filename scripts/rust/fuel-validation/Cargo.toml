@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = "0.4"
 anyhow = "1.0.96"
 calamine = { version = "0.26.1", features = ["chrono", "dates"] }
 serde = { version = "1.0.218", features = ["derive"] }

@@ -2,3 +2,4 @@ target
 _build
 shell.nix
 src/*/config/*.secret.yml
+*.xls
