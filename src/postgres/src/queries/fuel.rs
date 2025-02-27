@@ -1,8 +1,3 @@
-use crate::{
-    PostgresAdapter,
-    error::Result,
-    models::{UpdateTripPositionFuel, UpsertNewLiveFuel},
-};
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
@@ -12,6 +7,8 @@ use kyogre_core::{
 };
 use sqlx::postgres::types::PgRange;
 use unnest_insert::UnnestInsert;
+
+use crate::{PostgresAdapter, error::Result, models::UpsertNewLiveFuel};
 
 impl PostgresAdapter {
     pub(crate) fn live_fuel_impl(
@@ -344,14 +341,6 @@ FROM
         .fetch_one(&self.pool)
         .await?
         .estimate_liter)
-    }
-
-    pub(crate) async fn update_trip_position_fuel_consumption_impl(
-        &self,
-        values: &[kyogre_core::UpdateTripPositionFuel],
-    ) -> Result<()> {
-        self.unnest_update_from::<_, _, UpdateTripPositionFuel>(values, &self.pool)
-            .await
     }
 
     pub(crate) async fn delete_fuel_estimates_impl(

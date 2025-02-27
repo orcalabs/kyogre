@@ -779,7 +779,11 @@ async fn test_fuel_is_recalculated_with_new_hauls() {
             .await
             .unwrap();
 
-        assert!(!approx_eq!(f64, fuel, fuel2))
+        assert!(
+            !approx_eq!(f64, fuel, fuel2),
+            "before: {fuel}, after: {fuel2}"
+        );
+        assert!(fuel2 > fuel);
     })
     .await;
 }

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips\nSET\n    position_layers_status = $1,\n    trip_position_cargo_weight_distribution_status = $1,\n    trip_position_fuel_consumption_distribution_status = $1,\n    track_coverage = COALESCE($2, track_coverage)\nWHERE\n    trip_id = $3\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Float8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fe5c9a43e564add6851886b1cb54204d85231ab309eb275c1ef939836523f7d7"
+}

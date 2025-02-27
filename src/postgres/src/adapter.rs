@@ -532,23 +532,6 @@ impl FuelEstimation for PostgresAdapter {
         Ok(self.latest_position_impl().await?)
     }
 
-    #[cfg(feature = "test")]
-    async fn track_with_haul_and_manual(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
-        trip_id: TripId,
-    ) -> CoreResult<Vec<AisVmsPositionWithHaulAndManual>> {
-        Ok(retry(|| {
-            self.ais_vms_positions_with_haul_and_manual_impl(
-                vessel_id, mmsi, call_sign, range, trip_id,
-            )
-        })
-        .await?)
-    }
-
     async fn last_run(&self) -> CoreResult<Option<DateTime<Utc>>> {
         Ok(retry(|| self.last_run_impl(Processor::FuelProcessor)).await?)
     }
@@ -583,17 +566,21 @@ impl FuelEstimation for PostgresAdapter {
         Ok(retry(|| self.dates_to_estimate_impl(vessel_id, call_sign, mmsi, end_date)).await?)
     }
 
-    async fn ais_vms_positions_with_haul(
+    async fn fuel_estimation_positions(
         &self,
         vessel_id: FiskeridirVesselId,
         mmsi: Option<Mmsi>,
         call_sign: Option<&CallSign>,
         range: &DateRange,
-    ) -> CoreResult<Vec<AisVmsPositionWithHaul>> {
+    ) -> CoreResult<Vec<DailyFuelEstimationPosition>> {
         Ok(
-            retry(|| self.ais_vms_positions_with_haul_impl(vessel_id, mmsi, call_sign, range))
+            retry(|| self.fuel_estimation_positions_impl(vessel_id, mmsi, call_sign, range))
                 .await?,
         )
+    }
+
+    async fn vessel_max_cargo_weight(&self, vessel_id: FiskeridirVesselId) -> CoreResult<f64> {
+        Ok(retry(|| self.vessel_max_cargo_weight_impl(vessel_id)).await?)
     }
 }
 
@@ -745,7 +732,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> PinBoxStream<'_, AisVmsPosition> {
         match params {
             AisVmsParams::Trip(trip_id) => self
-                .trip_positions_impl(trip_id, permission)
+                .trip_positions_with_inside_haul_impl(trip_id, permission)
                 .map_err(|e| e.into())
                 .boxed(),
             AisVmsParams::Range {
@@ -1145,8 +1132,11 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripPrecisionOutboundPort for PostgresAdapter {
-    async fn trip_positions(&self, trip_id: TripId) -> CoreResult<Vec<AisVmsPosition>> {
-        self.trip_positions_impl(trip_id, AisPermission::All)
+    async fn trip_positions_with_inside_haul(
+        &self,
+        trip_id: TripId,
+    ) -> CoreResult<Vec<AisVmsPosition>> {
+        self.trip_positions_with_inside_haul_impl(trip_id, AisPermission::All)
             .convert_collect()
             .await
     }
@@ -1176,6 +1166,17 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
             .convert_collect()
             .await
     }
+    async fn ais_vms_positions_with_inside_haul(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Option<Mmsi>,
+        call_sign: Option<&CallSign>,
+        range: &DateRange,
+    ) -> CoreResult<Vec<AisVmsPosition>> {
+        self.ais_vms_positions_with_inside_haul_impl(vessel_id, mmsi, call_sign, range)
+            .convert_collect()
+            .await
+    }
     async fn delivery_points_associated_with_trip(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -1184,6 +1185,9 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
         Ok(self
             .delivery_points_associated_with_trip_impl(vessel_id, trip_landing_coverage)
             .await?)
+    }
+    async fn vessel_max_cargo_weight(&self, vessel_id: FiskeridirVesselId) -> CoreResult<f64> {
+        Ok(retry(|| self.vessel_max_cargo_weight_impl(vessel_id)).await?)
     }
 }
 
@@ -1199,16 +1203,6 @@ impl TripBenchmarkOutbound for PostgresAdapter {
         })
         .await
     }
-    async fn track_of_trip_with_haul(&self, id: TripId) -> CoreResult<Vec<AisVmsPositionWithHaul>> {
-        Ok(retry(|| self.track_of_trip_with_haul_impl(id)).await?)
-    }
-
-    async fn update_trip_position_fuel_consumption(
-        &self,
-        values: &[UpdateTripPositionFuel],
-    ) -> CoreResult<()> {
-        Ok(retry(|| self.update_trip_position_fuel_consumption_impl(values)).await?)
-    }
 
     async fn overlapping_measurment_fuel(
         &self,
@@ -1218,33 +1212,11 @@ impl TripBenchmarkOutbound for PostgresAdapter {
         Ok(retry(|| self.overlapping_measurment_fuel_impl(vessel_id, range)).await?)
     }
 
-    async fn ais_vms_positions_with_haul(
+    async fn trip_positions_with_manual(
         &self,
-        vessel_id: FiskeridirVesselId,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
-    ) -> CoreResult<Vec<AisVmsPositionWithHaul>> {
-        Ok(
-            retry(|| self.ais_vms_positions_with_haul_impl(vessel_id, mmsi, call_sign, range))
-                .await?,
-        )
-    }
-
-    async fn ais_vms_positions_with_haul_and_manual(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
         trip_id: TripId,
-    ) -> CoreResult<Vec<AisVmsPositionWithHaulAndManual>> {
-        Ok(retry(|| {
-            self.ais_vms_positions_with_haul_and_manual_impl(
-                vessel_id, mmsi, call_sign, range, trip_id,
-            )
-        })
-        .await?)
+    ) -> CoreResult<Vec<TripPositionWithManual>> {
+        Ok(retry(|| self.trip_positions_with_manual_impl(trip_id)).await?)
     }
 }
 
@@ -1305,6 +1277,14 @@ impl TripPipelineOutbound for PostgresAdapter {
         vessel_id: FiskeridirVesselId,
     ) -> CoreResult<Vec<Trip>> {
         self.trips_without_position_cargo_weight_distribution_impl(vessel_id)
+            .convert_collect()
+            .await
+    }
+    async fn trips_without_position_fuel_consumption_distribution(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> CoreResult<Vec<Trip>> {
+        self.trips_without_position_fuel_consumption_distribution_impl(vessel_id)
             .convert_collect()
             .await
     }

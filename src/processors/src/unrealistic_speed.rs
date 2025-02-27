@@ -1,9 +1,9 @@
-use crate::{Result, error::error::DistanceEstimationSnafu};
+use crate::{FuelItem, Result, error::error::DistanceEstimationSnafu};
 use chrono::{DateTime, Utc};
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPosition, AisVmsPositionWithHaul, CoreResult, CurrentPosition, DateRange,
-    PrunedTripPosition, TripPositionLayer, TripPositionLayerId, TripPositionLayerOutput,
+    AisPosition, AisVmsPosition, CoreResult, CurrentPosition, DailyFuelEstimationPosition,
+    PrunedTripPosition, TripPositionLayer, TripPositionLayerId, TripProcessingUnit,
 };
 use serde_json::json;
 
@@ -38,6 +38,28 @@ impl From<&AisVmsPosition> for SpeedItem {
     }
 }
 
+impl From<&AisPosition> for SpeedItem {
+    fn from(value: &AisPosition) -> Self {
+        SpeedItem {
+            latitude: value.latitude,
+            longitude: value.longitude,
+            speed: value.speed_over_ground,
+            timestamp: value.msgtime,
+        }
+    }
+}
+
+impl From<&DailyFuelEstimationPosition> for SpeedItem {
+    fn from(value: &DailyFuelEstimationPosition) -> Self {
+        SpeedItem {
+            latitude: value.latitude,
+            longitude: value.longitude,
+            speed: value.speed,
+            timestamp: value.timestamp,
+        }
+    }
+}
+
 impl From<&CurrentPosition> for SpeedItem {
     fn from(value: &CurrentPosition) -> Self {
         SpeedItem {
@@ -49,8 +71,8 @@ impl From<&CurrentPosition> for SpeedItem {
     }
 }
 
-impl From<&AisVmsPositionWithHaul> for SpeedItem {
-    fn from(value: &AisVmsPositionWithHaul) -> Self {
+impl From<&FuelItem> for SpeedItem {
+    fn from(value: &FuelItem) -> Self {
         SpeedItem {
             latitude: value.latitude,
             longitude: value.longitude,
@@ -88,25 +110,17 @@ where
 }
 
 impl TripPositionLayer for UnrealisticSpeed {
-    fn prune_positions(
-        &self,
-        input: TripPositionLayerOutput,
-        _trip_period: &DateRange,
-    ) -> CoreResult<TripPositionLayerOutput> {
-        let num_positions = input.trip_positions.len();
+    fn prune_positions(&self, mut unit: TripProcessingUnit) -> CoreResult<TripProcessingUnit> {
+        let num_positions = unit.positions.len();
         if num_positions <= 1 {
-            return Ok(input);
+            return Ok(unit);
         }
 
-        let TripPositionLayerOutput {
-            trip_positions,
-            mut pruned_positions,
-            track_coverage,
-        } = input;
+        let mut output = unit.position_layers_output.take().unwrap_or_default();
 
         let mut new_positions = Vec::with_capacity(num_positions);
 
-        let mut iter = trip_positions.into_iter();
+        let mut iter = unit.positions.into_iter();
 
         new_positions.push(iter.next().unwrap());
 
@@ -123,7 +137,7 @@ impl TripPositionLayer for UnrealisticSpeed {
                 }
                 new_positions.push(next);
             } else {
-                pruned_positions.push(PrunedTripPosition {
+                output.pruned_positions.push(PrunedTripPosition {
                     positions: json!([current, next]),
                     value: json!({ "speed": speed }),
                     trip_layer: TripPositionLayerId::UnrealisticSpeed,
@@ -134,11 +148,10 @@ impl TripPositionLayer for UnrealisticSpeed {
             }
         }
 
-        Ok(TripPositionLayerOutput {
-            trip_positions: new_positions,
-            pruned_positions,
-            track_coverage,
-        })
+        unit.positions = new_positions;
+        unit.position_layers_output = Some(output);
+
+        Ok(unit)
     }
 
     fn layer_id(&self) -> TripPositionLayerId {
@@ -167,8 +180,9 @@ mod tests {
             distance_to_shore: 21.1,
             position_type: PositionType::Vms,
             pruned_by: None,
-            trip_cumulative_fuel_consumption_liter: None,
-            trip_cumulative_cargo_weight: None,
+            trip_cumulative_fuel_consumption_liter: 0.,
+            trip_cumulative_cargo_weight: 0.,
+            is_inside_haul_and_active_gear: false,
         };
 
         let second = AisVmsPosition {
@@ -183,8 +197,9 @@ mod tests {
             distance_to_shore: 21.1,
             position_type: PositionType::Vms,
             pruned_by: None,
-            trip_cumulative_fuel_consumption_liter: None,
-            trip_cumulative_cargo_weight: None,
+            trip_cumulative_fuel_consumption_liter: 0.,
+            trip_cumulative_cargo_weight: 0.,
+            is_inside_haul_and_active_gear: false,
         };
 
         let res = estimated_speed_between_points(&first, &second).unwrap();

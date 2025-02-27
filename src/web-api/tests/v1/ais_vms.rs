@@ -1004,21 +1004,17 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
             .unwrap();
 
         assert_eq!(positions.len(), 3);
-        assert!(positions[0].trip_cumulative_fuel_consumption.is_none());
+        assert_eq!(positions[0].trip_cumulative_fuel_consumption, 0.);
         assert!(
             positions
                 .iter()
                 .skip(1)
-                .map(|v| v.trip_cumulative_fuel_consumption.unwrap())
+                .map(|v| v.trip_cumulative_fuel_consumption)
                 .is_sorted()
         );
         assert!(approx_eq!(
             f64,
-            positions
-                .last()
-                .unwrap()
-                .trip_cumulative_fuel_consumption
-                .unwrap(),
+            positions.last().unwrap().trip_cumulative_fuel_consumption,
             state.trips[0].fuel_consumption_liter.unwrap()
         ));
     })
@@ -1053,21 +1049,17 @@ async fn test_ais_vms_by_trip_returns_cumulative_cargo_weight() {
             .unwrap();
 
         assert_eq!(positions.len(), 3);
-        assert_eq!(positions[0].trip_cumulative_cargo_weight.unwrap(), 0.0);
+        assert_eq!(positions[0].trip_cumulative_cargo_weight, 0.0);
         assert!(
             positions
                 .iter()
                 .skip(1)
-                .map(|v| v.trip_cumulative_cargo_weight.unwrap())
+                .map(|v| v.trip_cumulative_cargo_weight)
                 .is_sorted()
         );
         assert!(approx_eq!(
             f64,
-            positions
-                .last()
-                .unwrap()
-                .trip_cumulative_cargo_weight
-                .unwrap(),
+            positions.last().unwrap().trip_cumulative_cargo_weight,
             state.trips[0]
                 .hauls
                 .iter()
@@ -1128,25 +1120,25 @@ async fn test_ais_vms_by_trip_spreads_cargo_weight_evenly_among_positions_within
 
         let haul_weight = state.hauls[0].total_living_weight() as f64;
 
-        assert_eq!(positions[0].trip_cumulative_cargo_weight.unwrap(), 0.0);
+        assert_eq!(positions[0].trip_cumulative_cargo_weight, 0.0);
         assert!(approx_eq!(
             f64,
-            positions[1].trip_cumulative_cargo_weight.unwrap(),
+            positions[1].trip_cumulative_cargo_weight,
             haul_weight / 2.
         ));
         assert!(approx_eq!(
             f64,
-            positions[2].trip_cumulative_cargo_weight.unwrap(),
+            positions[2].trip_cumulative_cargo_weight,
             haul_weight
         ));
         assert!(approx_eq!(
             f64,
-            positions[3].trip_cumulative_cargo_weight.unwrap(),
+            positions[3].trip_cumulative_cargo_weight,
             haul_weight
         ));
         assert!(approx_eq!(
             f64,
-            positions[4].trip_cumulative_cargo_weight.unwrap(),
+            positions[4].trip_cumulative_cargo_weight,
             haul_weight
         ));
     })
@@ -1196,21 +1188,17 @@ async fn tests_cumulative_cargo_weight_is_recomputed_with_new_data() {
             .unwrap();
 
         assert_eq!(positions.len(), 3);
-        assert_eq!(positions[0].trip_cumulative_cargo_weight.unwrap(), 0.0);
+        assert_eq!(positions[0].trip_cumulative_cargo_weight, 0.0);
         assert!(
             positions
                 .iter()
                 .skip(1)
-                .map(|v| v.trip_cumulative_cargo_weight.unwrap())
+                .map(|v| v.trip_cumulative_cargo_weight)
                 .is_sorted()
         );
         assert!(approx_eq!(
             f64,
-            positions
-                .last()
-                .unwrap()
-                .trip_cumulative_cargo_weight
-                .unwrap(),
+            positions.last().unwrap().trip_cumulative_cargo_weight,
             state.trips[0]
                 .hauls
                 .iter()
@@ -1274,17 +1262,17 @@ async fn tests_cumulative_cargo_weight_includes_departures() {
         assert_eq!(positions.len(), 3);
         assert!(approx_eq!(
             f64,
-            positions[0].trip_cumulative_cargo_weight.unwrap(),
+            positions[0].trip_cumulative_cargo_weight,
             0.
         ));
         assert!(approx_eq!(
             f64,
-            positions[1].trip_cumulative_cargo_weight.unwrap(),
+            positions[1].trip_cumulative_cargo_weight,
             100.
         ));
         assert!(approx_eq!(
             f64,
-            positions[2].trip_cumulative_cargo_weight.unwrap(),
+            positions[2].trip_cumulative_cargo_weight,
             200.
         ));
     })
@@ -1343,21 +1331,17 @@ async fn tests_cumulative_cargo_weight_combines_hauls_and_departures() {
             positions
                 .iter()
                 .skip(1)
-                .map(|v| v.trip_cumulative_cargo_weight.unwrap())
+                .map(|v| v.trip_cumulative_cargo_weight)
                 .is_sorted()
         );
         assert!(approx_eq!(
             f64,
-            positions[0].trip_cumulative_cargo_weight.unwrap(),
+            positions[0].trip_cumulative_cargo_weight,
             dep_weight as f64
         ));
         assert!(approx_eq!(
             f64,
-            positions
-                .last()
-                .unwrap()
-                .trip_cumulative_cargo_weight
-                .unwrap(),
+            positions.last().unwrap().trip_cumulative_cargo_weight,
             state.trips[0]
                 .hauls
                 .iter()

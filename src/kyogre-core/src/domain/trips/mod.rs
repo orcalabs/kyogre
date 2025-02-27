@@ -100,15 +100,7 @@ pub struct TripProcessingUnit {
     pub positions: Vec<AisVmsPosition>,
     pub precision_outcome: Option<PrecisionOutcome>,
     pub distance_output: Option<TripDistanceOutput>,
-    pub trip_position_output: Option<TripPositionLayerOutput>,
-    pub trip_position_cargo_weight_distribution_output: Option<Vec<UpdateTripPositionCargoWeight>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct UpdateTripPositionCargoWeight {
-    pub timestamp: DateTime<Utc>,
-    pub position_type: PositionType,
-    pub trip_cumulative_cargo_weight: f64,
+    pub position_layers_output: Option<TripPositionLayerOutput>,
 }
 
 #[derive(Debug, Clone)]
@@ -170,8 +162,8 @@ pub struct TripUpdate {
     pub trip_id: TripId,
     pub precision: Option<PrecisionOutcome>,
     pub distance: Option<TripDistanceOutput>,
-    pub position_layers: Option<TripPositionLayerOutput>,
-    pub trip_position_cargo_weight_distribution_output: Option<Vec<UpdateTripPositionCargoWeight>>,
+    pub positions: Vec<AisVmsPosition>,
+    pub position_layers_output: Option<TripPositionLayerOutput>,
 }
 
 impl Trip {
@@ -247,7 +239,7 @@ pub struct TripDetailed {
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption_liter: Option<f64>,
-    pub track_coverage: Option<f64>,
+    pub track_coverage: f64,
     pub has_track: HasTrack,
 }
 

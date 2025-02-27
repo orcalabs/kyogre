@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trip_positions t\nSET\n    trip_cumulative_fuel_consumption_liter = q.trip_cumulative_fuel_consumption_liter\nFROM (\n    SELECT\n        *\n    FROM\n        UNNEST (\n            $1::INT[],$2::TIMESTAMPTZ[],$3::INT[],$4::DOUBLE PRECISION[]\n        ) u (trip_id,timestamp,position_type_id,trip_cumulative_fuel_consumption_liter)\n) q\nWHERE\n    t.trip_id = q.trip_id AND t.timestamp = q.timestamp AND t.position_type_id = q.position_type_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "TimestamptzArray",
+        "Int4Array",
+        "Float8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e338cde47b5c8de611e15003b9f80a53230c98d15e44c317b6338394561b6eb2"
+}

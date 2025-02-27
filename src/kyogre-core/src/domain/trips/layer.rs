@@ -4,11 +4,7 @@ use strum::{AsRefStr, EnumString};
 
 pub trait TripPositionLayer: Send + Sync {
     fn layer_id(&self) -> TripPositionLayerId;
-    fn prune_positions(
-        &self,
-        input: TripPositionLayerOutput,
-        trip_period: &DateRange,
-    ) -> CoreResult<TripPositionLayerOutput>;
+    fn prune_positions(&self, unit: TripProcessingUnit) -> CoreResult<TripProcessingUnit>;
 }
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
@@ -32,9 +28,8 @@ pub enum TripPositionLayerId {
     AisVmsConflict = 3,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct TripPositionLayerOutput {
-    pub trip_positions: Vec<AisVmsPosition>,
     pub pruned_positions: Vec<PrunedTripPosition>,
     pub track_coverage: f64,
 }

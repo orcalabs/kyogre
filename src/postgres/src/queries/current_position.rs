@@ -87,8 +87,9 @@ SELECT
     c.distance_to_shore,
     c.position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL::DOUBLE PRECISION AS trip_cumulative_fuel_consumption_liter,
-    NULL::DOUBLE PRECISION AS trip_cumulative_cargo_weight
+    0 AS "trip_cumulative_fuel_consumption_liter!",
+    0 AS "trip_cumulative_cargo_weight!",
+    FALSE AS "is_inside_haul_and_active_gear!"
 FROM
     current_trip_positions c
     INNER JOIN active_vessels m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id

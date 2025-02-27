@@ -154,8 +154,8 @@ pub struct AisVmsPosition {
     pub timestamp: DateTime<Utc>,
     pub cog: Option<f64>,
     pub speed: Option<f64>,
-    pub trip_cumulative_fuel_consumption: Option<f64>,
-    pub trip_cumulative_cargo_weight: Option<f64>,
+    pub trip_cumulative_fuel_consumption: f64,
+    pub trip_cumulative_cargo_weight: f64,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub pruned_by: Option<TripPositionLayerId>,
     pub det: Option<AisVmsPositionDetails>,
@@ -221,6 +221,7 @@ impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
             pruned_by,
             trip_cumulative_fuel_consumption_liter,
             trip_cumulative_cargo_weight,
+            is_inside_haul_and_active_gear: _,
         } = v;
 
         AisVmsPosition {

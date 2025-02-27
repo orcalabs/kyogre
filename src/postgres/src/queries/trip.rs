@@ -4,24 +4,29 @@ use crate::{
     models::{
         CurrentTrip, NewTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning,
         Trip, TripAisVmsPosition, TripCalculationTimer, TripDetailed, TripPrunedAisVmsPosition,
-        UpdateTripPositionCargoWeight,
     },
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    Bound, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack, Ordering, PrecisionOutcome,
-    ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput, TripSet, TripSorting,
-    TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
+    AisVmsPosition, Bound, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack, Ordering,
+    PrecisionOutcome, ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput, TripSet,
+    TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use std::collections::{HashMap, HashSet};
 
 pub struct TripPositions {
     trip_id: TripId,
-    positions: Option<TripPositionLayerOutput>,
-    cargo_weights: Vec<kyogre_core::UpdateTripPositionCargoWeight>,
+    positions: Vec<AisVmsPosition>,
+    position_layers_output: Option<TripPositionLayerOutput>,
+}
+
+pub struct TripPositionsOutput {
+    positions: Vec<AisVmsPosition>,
+    position_layers_output: Option<TripPositionLayerOutput>,
+    period_start: i64,
 }
 
 impl PostgresAdapter {
@@ -205,7 +210,8 @@ SET
     trip_precision_status_id = $1,
     distancer_id = NULL,
     position_layers_status = $1,
-    trip_position_cargo_weight_distribution_status = $1
+    trip_position_cargo_weight_distribution_status = $1,
+    trip_position_fuel_consumption_distribution_status = $1
 FROM
     (
         SELECT
@@ -249,55 +255,27 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn update_trip_position_cargo_weight(
+    pub(crate) async fn update_trip_positions(
         &self,
         id: TripId,
-        output: Vec<kyogre_core::UpdateTripPositionCargoWeight>,
+        positions: Vec<AisVmsPosition>,
+        output: Option<TripPositionLayerOutput>,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
-        sqlx::query!(
-            r#"
-UPDATE trips
-SET
-    trip_position_cargo_weight_distribution_status = $1
-WHERE
-    trip_id = $2
-            "#,
-            ProcessingStatus::Successful as i32,
-            id.into_inner()
-        )
-        .execute(&mut **tx)
-        .await?;
+        let positions = positions
+            .into_iter()
+            .map(|v| TripAisVmsPosition::new(id, v));
 
-        self.unnest_update(
-            output.into_iter().map(|h| UpdateTripPositionCargoWeight {
-                trip_id: id,
-                timestamp: h.timestamp,
-                position_type_id: h.position_type,
-                trip_cumulative_cargo_weight: h.trip_cumulative_cargo_weight,
-            }),
-            &mut **tx,
-        )
-        .await?;
-
-        Ok(())
-    }
-
-    pub(crate) async fn add_trip_position(
-        &self,
-        id: TripId,
-        output: TripPositionLayerOutput,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    ) -> Result<()> {
-        let mut trip_positions = Vec::with_capacity(output.trip_positions.len());
-        let mut pruned_positions = Vec::with_capacity(output.pruned_positions.len());
-
-        for p in output.trip_positions {
-            trip_positions.push(TripAisVmsPosition::new(id, p));
-        }
-        for p in output.pruned_positions {
-            pruned_positions.push(TripPrunedAisVmsPosition::new(id, p));
-        }
+        let (track_coverage, pruned_positions) = output
+            .map(|v| {
+                (
+                    v.track_coverage,
+                    v.pruned_positions
+                        .into_iter()
+                        .map(|v| TripPrunedAisVmsPosition::new(id, v)),
+                )
+            })
+            .unzip();
 
         // We assume that the caller of this method is updating an existing trip
         // and we therefore have to remove any existing trip_positions if they exist
@@ -323,22 +301,31 @@ WHERE
         .execute(&mut **tx)
         .await?;
 
-        self.unnest_insert(trip_positions, &mut **tx).await?;
-        self.unnest_insert(pruned_positions, &mut **tx).await?;
+        self.unnest_insert(positions, &mut **tx).await?;
+
+        if let Some(pruned_positions) = pruned_positions {
+            self.unnest_insert(pruned_positions, &mut **tx).await?;
+        }
 
         sqlx::query!(
             r#"
 UPDATE trips
 SET
-    position_layers_status = $1
+    position_layers_status = $1,
+    trip_position_cargo_weight_distribution_status = $1,
+    trip_position_fuel_consumption_distribution_status = $1,
+    track_coverage = COALESCE($2, track_coverage)
 WHERE
-    trip_id = $2
+    trip_id = $3
             "#,
             ProcessingStatus::Successful as i32,
+            track_coverage,
             id.into_inner(),
         )
         .execute(&mut **tx)
         .await?;
+
+        self.invalidate_fuel_estimates(&[id], tx).await?;
 
         Ok(())
     }
@@ -348,50 +335,69 @@ WHERE
         input: Vec<TripPositions>,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
-        let mut trip_positions = Vec::with_capacity(input.len());
-        let mut pruned_positions = Vec::with_capacity(trip_positions.len());
-        let mut weight_updates = Vec::with_capacity(input.len());
+        let len = input.len();
+        let mut trip_ids = Vec::with_capacity(len);
+        let mut trip_positions = Vec::with_capacity(len);
+        let mut pruned_positions = Vec::with_capacity(len);
 
         for t in input {
             let id = t.trip_id;
-            if let Some(position_output) = t.positions {
-                for p in position_output.trip_positions {
-                    trip_positions.push(TripAisVmsPosition::new(id, p));
-                }
-                for p in position_output.pruned_positions {
+
+            trip_ids.push(id);
+
+            for p in t.positions {
+                trip_positions.push(TripAisVmsPosition::new(id, p));
+            }
+            if let Some(output) = t.position_layers_output {
+                for p in output.pruned_positions {
                     pruned_positions.push(TripPrunedAisVmsPosition::new(id, p));
                 }
             }
-
-            weight_updates.extend(t.cargo_weights.into_iter().map(|h| {
-                UpdateTripPositionCargoWeight {
-                    trip_id: id,
-                    timestamp: h.timestamp,
-                    position_type_id: h.position_type,
-                    trip_cumulative_cargo_weight: h.trip_cumulative_cargo_weight,
-                }
-            }));
         }
 
         self.unnest_insert(trip_positions, &mut **tx).await?;
         self.unnest_insert(pruned_positions, &mut **tx).await?;
-        self.unnest_update(weight_updates, &mut **tx).await?;
 
+        self.invalidate_fuel_estimates(&trip_ids, tx).await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn invalidate_fuel_estimates(
+        &self,
+        trip_ids: &[TripId],
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+UPDATE fuel_estimates e
+SET
+    status = $1
+FROM
+    trips t
+WHERE
+    t.trip_id = ANY ($2::BIGINT[])
+    AND e.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    AND e.day_range && t.period
+            "#,
+            ProcessingStatus::Unprocessed as i32,
+            trip_ids as &[TripId],
+        )
+        .execute(&mut **tx)
+        .await?;
         Ok(())
     }
 
     pub(crate) async fn update_trip_impl(&self, update: TripUpdate) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        if let Some(output) = update.position_layers {
-            self.add_trip_position(update.trip_id, output, &mut tx)
-                .await?;
-        }
-
-        if let Some(output) = update.trip_position_cargo_weight_distribution_output {
-            self.update_trip_position_cargo_weight(update.trip_id, output, &mut tx)
-                .await?;
-        }
+        self.update_trip_positions(
+            update.trip_id,
+            update.positions,
+            update.position_layers_output,
+            &mut tx,
+        )
+        .await?;
 
         if let Some(output) = update.distance {
             sqlx::query!(
@@ -402,7 +408,7 @@ SET
     distance = $2
 WHERE
     trip_id = $3
-            "#,
+                "#,
                 output.distancer_id as i32,
                 output.distance,
                 update.trip_id.into_inner(),
@@ -457,7 +463,7 @@ SET
     trip_precision_status_id = $6
 WHERE
     trip_id = $7
-            "#,
+                "#,
                 start_precision_id,
                 start_precision_direction,
                 end_precision_id,
@@ -1335,19 +1341,11 @@ VALUES
         for v in value.values {
             new_trips.push(crate::models::NewTrip::from(&v));
 
-            match (
-                v.trip_position_output,
-                v.trip_position_cargo_weight_distribution_output,
-            ) {
-                (None, None) => (),
-                (s, o) => {
-                    trip_positions.push((
-                        s,
-                        o.unwrap_or_default(),
-                        v.trip.period.start().timestamp(),
-                    ));
-                }
-            };
+            trip_positions.push(TripPositionsOutput {
+                positions: v.positions,
+                position_layers_output: v.position_layers_output,
+                period_start: v.trip.period.start().timestamp(),
+            });
         }
 
         if let Err(e) = self
@@ -1375,11 +1373,7 @@ VALUES
         &self,
         new_trips: Vec<NewTrip>,
         earliest_trip_range: DateRange,
-        trip_positions: Vec<(
-            Option<TripPositionLayerOutput>,
-            Vec<kyogre_core::UpdateTripPositionCargoWeight>,
-            i64,
-        )>,
+        trip_positions: Vec<TripPositionsOutput>,
         vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
         conflict_strategy: TripsConflictStrategy,
@@ -1510,15 +1504,15 @@ RETURNING
         // We use the start of the trips period to map the inserted trips trip_ids to the trip positions,
         // as trips cannot overlap we are guranteed that the start of trips are unique
         let mut trip_positions_with_trip_id = Vec::with_capacity(trip_positions.len());
-        for (positions, cargo_weights, period_start) in trip_positions {
+        for v in trip_positions {
             let trip_id = trip_positions_insert_mapping
-                .remove(&period_start)
+                .remove(&v.period_start)
                 .ok_or_else(|| TripPositionMatchSnafu.build())?;
 
             trip_positions_with_trip_id.push(TripPositions {
                 trip_id,
-                positions,
-                cargo_weights,
+                positions: v.positions,
+                position_layers_output: v.position_layers_output,
             })
         }
 
@@ -1842,6 +1836,38 @@ WHERE
         .map_err(|e| e.into())
     }
 
+    pub(crate) fn trips_without_position_fuel_consumption_distribution_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+    ) -> impl Stream<Item = Result<Trip>> + '_ {
+        sqlx::query_as!(
+            Trip,
+            r#"
+SELECT
+    trip_id AS "trip_id!: TripId",
+    period AS "period!: DateRange",
+    period_extended AS "period_extended: DateRange",
+    period_precision AS "period_precision: DateRange",
+    landing_coverage AS "landing_coverage!: DateRange",
+    distance,
+    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
+    start_port_id,
+    end_port_id,
+    target_species_fiskeridir_id,
+    target_species_fao_id
+FROM
+    trips
+WHERE
+    fiskeridir_vessel_id = $1
+    AND trip_position_fuel_consumption_distribution_status = $2
+            "#,
+            vessel_id.into_inner(),
+            ProcessingStatus::Unprocessed as i32,
+        )
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
+    }
+
     pub(crate) fn trips_without_trip_layers_impl(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -2055,7 +2081,7 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn update_trip_position_cargo_weight_distribution_status<'a>(
+    pub(crate) async fn reset_trip_position_distribution_status<'a>(
         &'a self,
         haul_vessel_event_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
@@ -2064,7 +2090,8 @@ WHERE
             r#"
 UPDATE trips t
 SET
-    trip_position_cargo_weight_distribution_status = $1
+    trip_position_cargo_weight_distribution_status = $1,
+    trip_position_fuel_consumption_distribution_status = $1
 FROM
     (
         SELECT DISTINCT

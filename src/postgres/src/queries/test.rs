@@ -78,6 +78,7 @@ WHERE
     AND distancer_id IS NULL
     AND position_layers_status = $1
     AND trip_position_cargo_weight_distribution_status = $1
+    AND trip_position_fuel_consumption_distribution_status = $1
             "#,
             ProcessingStatus::Unprocessed as i32
         )
@@ -298,8 +299,9 @@ SELECT
     distance_to_shore AS "distance_to_shore!",
     position_type_id AS "position_type!: PositionType",
     NULL AS "pruned_by: TripPositionLayerId",
-    NULL AS "trip_cumulative_fuel_consumption_liter!: Option<f64>",
-    NULL AS "trip_cumulative_cargo_weight!: Option<f64>"
+    0 AS "trip_cumulative_fuel_consumption_liter!",
+    0 AS "trip_cumulative_cargo_weight!",
+    FALSE AS "is_inside_haul_and_active_gear!"
 FROM
     (
         SELECT

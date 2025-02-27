@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips\nSET\n    distancer_id = $1,\n    distance = $2\nWHERE\n    trip_id = $3\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Float8",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "83dceb4012c75393b84f0e4235afcecf44835673b4afc170266412a28ba44e09"
+}

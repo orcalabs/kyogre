@@ -4,24 +4,24 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use core::f64;
 use geoutils::Location;
 use kyogre_core::{
-    AisVmsPositionWithHaul, AisVmsPositionWithHaulAndManual, ComputedFuelEstimation,
-    DIESEL_GRAM_TO_LITER, DateRange, EngineType, FiskeridirVesselId, FuelEstimation,
-    NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
+    AisPosition, AisVmsPosition, ComputedFuelEstimation, DailyFuelEstimationPosition, DateRange,
+    EngineType, FiskeridirVesselId, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
+    VesselEngine, DIESEL_GRAM_TO_LITER,
 };
 use tokio::{
-    io::{AsyncBufReadExt, BufReader, stdin},
+    io::{stdin, AsyncBufReadExt, BufReader},
     task::JoinSet,
 };
 use tracing::{error, info, instrument, warn};
 
-use crate::{Result, SpeedItem, UnrealisticSpeed, estimated_speed_between_points};
+use crate::{estimated_speed_between_points, Result, SpeedItem, UnrealisticSpeed};
 
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
 
 static RUN_INTERVAL: Duration = Duration::hours(5);
 static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
-static HAUL_LOAD_FACTOR: f64 = 1.75;
+static HAUL_LOAD_FACTOR: f64 = 10.75;
 static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
 
 #[derive(Debug)]
@@ -33,12 +33,14 @@ pub struct FuelItem {
     pub position_type_id: PositionType,
     pub is_inside_haul_and_active_gear: bool,
     pub is_covered_by_manual_entry: bool,
+    pub cumulative_cargo_weight: f64,
 }
 
 #[derive(Debug)]
 struct VesselToProcess {
     vessel: Vessel,
     engines: Vec<VesselEngine>,
+    max_cargo_weight: f64,
 }
 
 impl std::ops::Deref for VesselToProcess {
@@ -78,7 +80,7 @@ impl FuelEstimator {
     ) -> f64 {
         let ais_vms = self
             .adapter
-            .ais_vms_positions_with_haul(
+            .fuel_estimation_positions(
                 vessel.id(),
                 vessel.mmsi(),
                 vessel.fiskeridir_call_sign(),
@@ -87,11 +89,18 @@ impl FuelEstimator {
             .await
             .unwrap();
 
+        let max_cargo_weight = self
+            .adapter
+            .vessel_max_cargo_weight(vessel.id())
+            .await
+            .unwrap();
+
         estimate_fuel_for_positions(
-            ais_vms,
+            &ais_vms,
             &vessel.engines(),
             vessel.fiskeridir.service_speed,
             vessel.fiskeridir.degree_of_electrification,
+            Some(max_cargo_weight),
         )
         .fuel_liter
     }
@@ -166,10 +175,19 @@ impl FuelEstimator {
                 continue;
             }
 
+            let max_cargo_weight = self.adapter.vessel_max_cargo_weight(vessel.id()).await?;
+
+            // TODO
+            // Reset and process trip_positions for vessel!
+
             // Only errors on all receivers being dropped which cannot be at this step as we have
             // the receiver in scope
             sender
-                .send(VesselToProcess { vessel, engines })
+                .send(VesselToProcess {
+                    vessel,
+                    engines,
+                    max_cargo_weight,
+                })
                 .await
                 .unwrap();
         }
@@ -191,7 +209,7 @@ impl FuelEstimator {
 
     #[instrument(skip_all)]
     async fn run_local_fuel_estimation(&self, vessel_ids: &[FiskeridirVesselId]) -> Result<()> {
-        let vessels = self.adapter.vessels_with_trips(0).await?;
+        let vessels = self.adapter.vessels_with_trips(1).await?;
 
         let end_date = Utc::now().naive_utc().date().pred_opt().unwrap();
 
@@ -218,7 +236,14 @@ impl FuelEstimator {
             let len = dates_to_estimate.len();
             info!("dates to process: {len}");
 
-            let vessel = Arc::new(VesselToProcess { vessel, engines });
+            let max_cargo_weight = self.adapter.vessel_max_cargo_weight(vessel.id()).await?;
+
+            let vessel = Arc::new(VesselToProcess {
+                vessel,
+                engines,
+                max_cargo_weight,
+            });
+
             let (worker_tx, worker_rx) = async_channel::bounded(len);
             let (master_tx, master_rx) = async_channel::bounded(len);
 
@@ -351,8 +376,9 @@ async fn process_day(
     date: NaiveDate,
 ) -> Result<NewFuelDayEstimate> {
     let range = DateRange::from_dates(date, date)?;
-    let ais_vms = adapter
-        .ais_vms_positions_with_haul(
+
+    let positions = adapter
+        .fuel_estimation_positions(
             vessel.id(),
             vessel.mmsi(),
             vessel.fiskeridir_call_sign(),
@@ -360,31 +386,80 @@ async fn process_day(
         )
         .await?;
 
-    let estimate = estimate_fuel_for_positions(
-        ais_vms,
-        &vessel.engines,
-        vessel.fiskeridir.service_speed,
-        vessel.fiskeridir.degree_of_electrification,
-    );
-
-    Ok(NewFuelDayEstimate {
+    let mut estimate = NewFuelDayEstimate {
         vessel_id: vessel.id(),
         date,
-        estimate_liter: estimate.fuel_liter,
         engine_version: vessel.vessel.fiskeridir.engine_version,
-        num_ais_positions: estimate.num_ais_positions,
-        num_vms_positions: estimate.num_vms_positions,
-    })
+        estimate_liter: 0.,
+        num_ais_positions: 0,
+        num_vms_positions: 0,
+    };
+
+    let len = positions.len();
+    if len < 2 {
+        return Ok(estimate);
+    }
+
+    let mut start_idx = 0;
+
+    while start_idx < len - 1 {
+        let start = &positions[start_idx];
+
+        if start.trip_id.is_some() {
+            let Some((end_idx, end)) = positions
+                .iter()
+                .enumerate()
+                .skip(start_idx + 1)
+                .take_while(|(_, v)| v.trip_id == start.trip_id)
+                .inspect(|(_, v)| estimate += *v)
+                .last()
+            else {
+                start_idx += 1;
+                continue;
+            };
+
+            estimate += start;
+            estimate.estimate_liter +=
+                end.cumulative_fuel_consumption_liter - start.cumulative_fuel_consumption_liter;
+            start_idx = end_idx + 1;
+        } else {
+            let Some((end_idx, _)) = positions
+                .iter()
+                .enumerate()
+                .skip(start_idx + 1)
+                .take_while(|(_, v)| v.trip_id.is_none())
+                .last()
+            else {
+                start_idx += 1;
+                continue;
+            };
+
+            estimate += estimate_fuel_for_positions(
+                &positions[start_idx..=end_idx],
+                &vessel.engines,
+                vessel.fiskeridir.service_speed,
+                vessel.fiskeridir.degree_of_electrification,
+                Some(vessel.max_cargo_weight),
+            );
+
+            start_idx = end_idx + 1;
+        }
+    }
+
+    Ok(estimate)
 }
 
 pub fn estimate_fuel_for_positions<T>(
-    positions: Vec<T>,
+    positions: &[T],
     engines: &[VesselEngine],
     service_speed: Option<f64>,
     degree_of_electrification: Option<f64>,
+    max_cargo_weight: Option<f64>,
 ) -> ComputedFuelEstimation
 where
-    T: Into<AisVmsPositionWithHaulAndManual>,
+    T: Clone,
+    FuelItem: for<'a> From<&'a T>,
+    SpeedItem: for<'a> From<&'a T>,
 {
     let positions = prune_unrealistic_speed(positions);
 
@@ -392,15 +467,17 @@ where
         engines,
         service_speed,
         degree_of_electrification,
-        positions,
+        max_cargo_weight,
+        &positions,
         &mut vec![],
         |_, _| {},
     )
 }
 
-fn prune_unrealistic_speed<T>(positions: Vec<T>) -> Vec<AisVmsPositionWithHaulAndManual>
+fn prune_unrealistic_speed<T>(positions: &[T]) -> Vec<T>
 where
-    T: Into<AisVmsPositionWithHaulAndManual>,
+    T: Clone,
+    SpeedItem: for<'a> From<&'a T>,
 {
     let unrealistic = UnrealisticSpeed::default();
     let mut new_positions = Vec::with_capacity(positions.len());
@@ -409,18 +486,16 @@ where
         return vec![];
     }
 
-    let mut iter = positions.into_iter();
-    new_positions.push(iter.next().unwrap().into());
+    let mut iter = positions.iter();
+    new_positions.push(iter.next().unwrap().clone());
 
     for next in iter {
         let current = new_positions.last().unwrap();
 
-        let next = next.into();
-
-        match estimated_speed_between_points(current, &next) {
+        match estimated_speed_between_points(current, next) {
             Ok(speed) => {
                 if speed < unrealistic.knots_limit {
-                    new_positions.push(next);
+                    new_positions.push(next.clone());
                 }
             }
             Err(e) => {
@@ -440,41 +515,47 @@ struct State {
     prev: FuelItem,
 }
 
-impl From<AisVmsPositionWithHaul> for FuelItem {
-    fn from(value: AisVmsPositionWithHaul) -> Self {
-        FuelItem {
+impl From<&DailyFuelEstimationPosition> for FuelItem {
+    fn from(value: &DailyFuelEstimationPosition) -> Self {
+        Self {
             speed: value.speed,
             latitude: value.latitude,
             longitude: value.longitude,
             timestamp: value.timestamp,
             position_type_id: value.position_type_id,
+            cumulative_cargo_weight: value.cumulative_cargo_weight,
+            is_inside_haul_and_active_gear: false,
+            is_covered_by_manual_entry: false,
+        }
+    }
+}
+
+impl From<&AisVmsPosition> for FuelItem {
+    fn from(value: &AisVmsPosition) -> Self {
+        Self {
+            speed: value.speed,
+            latitude: value.latitude,
+            longitude: value.longitude,
+            timestamp: value.timestamp,
+            position_type_id: value.position_type,
+            cumulative_cargo_weight: value.trip_cumulative_cargo_weight,
             is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
             is_covered_by_manual_entry: false,
         }
     }
 }
 
-impl From<AisVmsPositionWithHaulAndManual> for FuelItem {
-    fn from(value: AisVmsPositionWithHaulAndManual) -> Self {
-        FuelItem {
-            speed: value.speed,
-            latitude: value.latitude,
-            longitude: value.longitude,
-            timestamp: value.timestamp,
-            position_type_id: value.position_type_id,
-            is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
-            is_covered_by_manual_entry: value.covered_by_manual_fuel_entry,
-        }
-    }
-}
-
-impl From<&AisVmsPositionWithHaulAndManual> for SpeedItem {
-    fn from(value: &AisVmsPositionWithHaulAndManual) -> Self {
+impl From<&AisPosition> for FuelItem {
+    fn from(value: &AisPosition) -> Self {
         Self {
+            speed: value.speed_over_ground,
             latitude: value.latitude,
             longitude: value.longitude,
-            speed: value.speed,
-            timestamp: value.timestamp,
+            timestamp: value.msgtime,
+            position_type_id: PositionType::Ais,
+            is_inside_haul_and_active_gear: false,
+            is_covered_by_manual_entry: false,
+            cumulative_cargo_weight: 0.,
         }
     }
 }
@@ -483,19 +564,20 @@ pub fn estimate_fuel<S, T, R>(
     engines: &[VesselEngine],
     service_speed: Option<f64>,
     degree_of_electrification: Option<f64>,
-    items: Vec<R>,
+    max_cargo_weight: Option<f64>,
+    items: &[R],
     per_point: &mut Vec<S>,
     per_point_closure: T,
 ) -> ComputedFuelEstimation
 where
     T: Fn(&FuelItem, f64) -> S,
-    R: Into<FuelItem>,
+    FuelItem: for<'a> From<&'a R>,
 {
     if items.len() < 2 {
         return ComputedFuelEstimation::default();
     }
 
-    let mut iter = items.into_iter().map(R::into);
+    let mut iter = items.iter().map(From::from);
 
     let state = State {
         main_kwh: 0.,
@@ -511,6 +593,14 @@ where
     let mut num_ais_positions = 0;
     let mut num_vms_positions = 0;
 
+    // TODO: Currently using surrogate value from:
+    // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf
+    // Table 3. C1C2 Propulsive Power and Load Factor Surrogates
+    let empty_service_speed = service_speed.unwrap_or(12.);
+    let full_service_speed = empty_service_speed * 0.75;
+
+    let degree_of_electrification = 1. - degree_of_electrification.unwrap_or(0.0);
+
     let result = iter.fold(state, |mut state, v| {
         let first_loc = Location::new(state.prev.latitude, state.prev.longitude);
         let second_loc = Location::new(v.latitude, v.longitude);
@@ -520,6 +610,15 @@ where
             state.prev = v;
             return state;
         }
+
+        let service_speed = match max_cargo_weight {
+            Some(max_weight) if max_weight > 0. => {
+                full_service_speed
+                    + ((empty_service_speed - full_service_speed)
+                        * (v.cumulative_cargo_weight / max_weight).clamp(0., 1.))
+            }
+            _ => empty_service_speed,
+        };
 
         let speed = match first_loc.distance_to(&second_loc) {
             Ok(v) => (v.meters() / (time_ms / 1000.)) * METER_PER_SECONDS_TO_KNOTS,
@@ -534,23 +633,18 @@ where
             }
         };
 
-        // TODO: Currently using surrogate value from:
-        // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf
-        // Table 3. C1C2 Propulsive Power and Load Factor Surrogates
-        let service_speed = service_speed.unwrap_or(12.);
-        let degree_of_electrification = degree_of_electrification.unwrap_or(0.0);
         let load_factor = ((speed / service_speed).powf(3.) * 0.85).clamp(0., 0.98);
 
         for (i, e) in engines.iter().enumerate() {
             let kwh = load_factor
-                * (e.power_kw
-                    * if v.is_inside_haul_and_active_gear {
-                        HAUL_LOAD_FACTOR
-                    } else {
-                        1.0
-                    })
+                * e.power_kw
+                * if v.is_inside_haul_and_active_gear {
+                    HAUL_LOAD_FACTOR
+                } else {
+                    1.0
+                }
                 * time_ms
-                * (1.0 - degree_of_electrification)
+                * degree_of_electrification
                 / 3_600_000.;
 
             // We want to ensure that the trip_positions fuel is computed regardless if

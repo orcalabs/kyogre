@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips\nSET\n    start_precision_id = $1,\n    start_precision_direction = $2,\n    end_precision_id = $3,\n    end_precision_direction = $4,\n    period_precision = $5,\n    trip_precision_status_id = $6\nWHERE\n    trip_id = $7\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Varchar",
+        "Int4",
+        "Varchar",
+        "TstzRange",
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3cb6d28545bfc9498d256edf19a9dcb77198b06949422617ec80a3f11821a88f"
+}
