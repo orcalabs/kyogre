@@ -5,8 +5,8 @@ use core::f64;
 use geoutils::Location;
 use kyogre_core::{
     AisPosition, AisVmsPosition, ComputedFuelEstimation, DIESEL_GRAM_TO_LITER,
-    DailyFuelEstimationPosition, DateRange, EngineType, FiskeridirVesselId, FuelEstimation,
-    NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
+    DailyFuelEstimationPosition, DateRange, FiskeridirVesselId, FuelEstimation, NewFuelDayEstimate,
+    PositionType, Vessel, VesselEngine,
 };
 use tokio::{
     io::{AsyncBufReadExt, BufReader, stdin},
@@ -23,18 +23,6 @@ static RUN_INTERVAL: Duration = Duration::hours(5);
 static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
 static HAUL_LOAD_FACTOR: f64 = 10.75;
 static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
-
-#[derive(Debug)]
-pub struct FuelItem {
-    pub speed: Option<f64>,
-    pub latitude: f64,
-    pub longitude: f64,
-    pub timestamp: DateTime<Utc>,
-    pub position_type_id: PositionType,
-    pub is_inside_haul_and_active_gear: bool,
-    pub is_covered_by_manual_entry: bool,
-    pub cumulative_cargo_weight: f64,
-}
 
 #[derive(Debug)]
 struct VesselToProcess {
@@ -462,20 +450,18 @@ pub fn estimate_fuel_for_positions<T>(
     max_cargo_weight: Option<f64>,
 ) -> ComputedFuelEstimation
 where
-    T: Clone,
+    T: AddCumulativeFuelLiter + Clone,
     FuelItem: for<'a> From<&'a T>,
     SpeedItem: for<'a> From<&'a T>,
 {
-    let positions = prune_unrealistic_speed(positions);
+    let mut positions = prune_unrealistic_speed(positions);
 
     estimate_fuel(
+        &mut positions,
         engines,
         service_speed,
         degree_of_electrification,
         max_cargo_weight,
-        &positions,
-        &mut vec![],
-        |_, _| {},
     )
 }
 
@@ -513,11 +499,15 @@ where
     new_positions
 }
 
-struct State {
-    main_kwh: f64,
-    aux_kwh: f64,
-    boiler_kwh: f64,
-    prev: FuelItem,
+#[derive(Debug)]
+pub struct FuelItem {
+    pub speed: Option<f64>,
+    pub latitude: f64,
+    pub longitude: f64,
+    pub timestamp: DateTime<Utc>,
+    pub position_type_id: PositionType,
+    pub is_inside_haul_and_active_gear: bool,
+    pub cumulative_cargo_weight: f64,
 }
 
 impl From<&DailyFuelEstimationPosition> for FuelItem {
@@ -530,7 +520,6 @@ impl From<&DailyFuelEstimationPosition> for FuelItem {
             position_type_id: value.position_type_id,
             cumulative_cargo_weight: value.cumulative_cargo_weight,
             is_inside_haul_and_active_gear: false,
-            is_covered_by_manual_entry: false,
         }
     }
 }
@@ -545,7 +534,6 @@ impl From<&AisVmsPosition> for FuelItem {
             position_type_id: value.position_type,
             cumulative_cargo_weight: value.trip_cumulative_cargo_weight,
             is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
-            is_covered_by_manual_entry: false,
         }
     }
 }
@@ -559,163 +547,152 @@ impl From<&AisPosition> for FuelItem {
             timestamp: value.msgtime,
             position_type_id: PositionType::Ais,
             is_inside_haul_and_active_gear: false,
-            is_covered_by_manual_entry: false,
             cumulative_cargo_weight: 0.,
         }
     }
 }
 
-// NB! This function _should_ populate `per_point` to the same length as the input `items`.
-// TODO: Enforce this using type system somehow.
-pub fn estimate_fuel<S, T, R>(
+pub trait AddCumulativeFuelLiter {
+    fn add_cumulative_fuel_liter(&mut self, fuel_liter: f64);
+}
+
+impl AddCumulativeFuelLiter for DailyFuelEstimationPosition {
+    fn add_cumulative_fuel_liter(&mut self, fuel_liter: f64) {
+        self.cumulative_fuel_consumption_liter = fuel_liter;
+    }
+}
+
+impl AddCumulativeFuelLiter for AisVmsPosition {
+    fn add_cumulative_fuel_liter(&mut self, fuel_liter: f64) {
+        self.trip_cumulative_fuel_consumption_liter = fuel_liter;
+    }
+}
+
+impl AddCumulativeFuelLiter for AisPosition {
+    fn add_cumulative_fuel_liter(&mut self, _fuel_liter: f64) {}
+}
+
+pub fn estimate_fuel<T>(
+    items: &mut [T],
     engines: &[VesselEngine],
     service_speed: Option<f64>,
     degree_of_electrification: Option<f64>,
     max_cargo_weight: Option<f64>,
-    items: &[R],
-    per_point: &mut Vec<S>,
-    per_point_closure: T,
 ) -> ComputedFuelEstimation
 where
-    T: Fn(&FuelItem, f64) -> S,
-    FuelItem: for<'a> From<&'a R>,
+    T: AddCumulativeFuelLiter,
+    FuelItem: for<'a> From<&'a T>,
 {
-    if items.len() < 2 {
+    if items.is_empty() {
         return ComputedFuelEstimation::default();
     }
-
-    let mut iter = items.iter().map(From::from);
-
-    let state = State {
-        main_kwh: 0.,
-        aux_kwh: 0.,
-        boiler_kwh: 0.,
-        // `unwrap` is safe due to `len() < 2` check above
-        prev: iter.next().unwrap(),
-    };
-
-    // The first position always starts with zero fuel.
-    per_point.push(per_point_closure(&state.prev, 0.));
-
-    let num_engines = engines.len();
-
-    let mut per_point_val = 0.;
-    let mut num_ais_positions = 0;
-    let mut num_vms_positions = 0;
 
     // TODO: Currently using surrogate value from:
     // https://www.epa.gov/system/files/documents/2023-01/2020NEI_C1C2_Documentation.pdf
     // Table 3. C1C2 Propulsive Power and Load Factor Surrogates
-    let empty_service_speed = service_speed.unwrap_or(12.);
-    let full_service_speed = empty_service_speed * 0.75;
+    let service_speed = service_speed.unwrap_or(12.);
+    let degree_of_electrification = degree_of_electrification.unwrap_or(0.0);
 
-    let degree_of_electrification = 1. - degree_of_electrification.unwrap_or(0.0);
+    let mut iter = items.iter_mut();
+    let mut prev = iter.next().unwrap();
 
-    let result = iter.fold(state, |mut state, v| {
-        let first_loc = Location::new(state.prev.latitude, state.prev.longitude);
-        let second_loc = Location::new(v.latitude, v.longitude);
+    // The first position always starts with zero fuel.
+    prev.add_cumulative_fuel_liter(0.);
 
-        let time_ms = (v.timestamp - state.prev.timestamp).num_milliseconds() as f64;
-        if time_ms <= 0.0 {
-            per_point.push(per_point_closure(&v, per_point_val));
-            state.prev = v;
-            return state;
-        }
+    let mut fuel_liter = 0.;
+    let mut num_ais_positions = 0;
+    let mut num_vms_positions = 0;
 
-        let service_speed = match max_cargo_weight {
-            Some(max_weight) if max_weight > 0. => {
-                full_service_speed
-                    + ((empty_service_speed - full_service_speed)
-                        * (v.cumulative_cargo_weight / max_weight).clamp(0., 1.))
-            }
-            _ => empty_service_speed,
-        };
+    for next in iter {
+        let prev_item = (&*prev).into();
+        let next_item = (&*next).into();
 
-        let speed = match first_loc.distance_to(&second_loc) {
-            Ok(v) => (v.meters() / (time_ms / 1000.)) * METER_PER_SECONDS_TO_KNOTS,
-            Err(e) => {
-                warn!("failed to calculate distance: {e:?}");
-                match (state.prev.speed, v.speed) {
-                    (Some(a), Some(b)) => (a + b) / 2.,
-                    (Some(a), None) => a,
-                    (None, Some(b)) => b,
-                    (None, None) => {
-                        per_point.push(per_point_closure(&v, per_point_val));
-                        return state;
-                    }
-                }
-            }
-        };
-
-        let load_factor = ((speed / service_speed).powf(3.) * 0.85).clamp(0., 0.98);
-
-        for (i, e) in engines.iter().enumerate() {
-            let kwh = load_factor
-                * e.power_kw
-                * if v.is_inside_haul_and_active_gear {
-                    HAUL_LOAD_FACTOR
-                } else {
-                    1.0
-                }
-                * time_ms
-                * degree_of_electrification
-                / 3_600_000.;
-
-            // We want to ensure that the trip_positions fuel is computed regardless if
-            // we are skipping the point or not.
-            per_point_val += e.sfc * kwh * DIESEL_GRAM_TO_LITER;
-            if i == num_engines - 1 {
-                per_point.push(per_point_closure(&v, per_point_val));
-            }
-
-            // These fields are only set in the 'AisVmsPositionWithHaulAndManual' type which is only
-            // used during fuel estimation of trips.
-            if !v.is_covered_by_manual_entry || !state.prev.is_covered_by_manual_entry {
-                match v.position_type_id {
-                    PositionType::Ais => {
-                        num_ais_positions += 1;
-                    }
-                    PositionType::Vms => {
-                        num_vms_positions += 1;
-                    }
-                };
-
-                match e.engine_type {
-                    EngineType::Main => {
-                        state.main_kwh += kwh;
-                        state.main_kwh
-                    }
-                    EngineType::Auxiliary => {
-                        state.aux_kwh += kwh;
-                        state.aux_kwh
-                    }
-                    EngineType::Boiler => {
-                        state.boiler_kwh += kwh;
-                        state.boiler_kwh
-                    }
-                };
-            }
-        }
-
-        state.prev = v;
-        state
-    });
-
-    let fuel_liter = engines
-        .iter()
-        .map(|e| {
-            let kwh = match e.engine_type {
-                EngineType::Main => result.main_kwh,
-                EngineType::Auxiliary => result.aux_kwh,
-                EngineType::Boiler => result.boiler_kwh,
+        if let Some(v) = estimate_fuel_between_points(
+            &prev_item,
+            &next_item,
+            engines,
+            service_speed,
+            degree_of_electrification,
+            max_cargo_weight,
+        ) {
+            fuel_liter += v;
+            match next_item.position_type_id {
+                PositionType::Ais => num_ais_positions += 1,
+                PositionType::Vms => num_vms_positions += 1,
             };
-            e.sfc * kwh * DIESEL_GRAM_TO_LITER
-        })
-        .sum();
+            next.add_cumulative_fuel_liter(fuel_liter);
+            prev = next;
+        } else {
+            next.add_cumulative_fuel_liter(fuel_liter);
+        }
+    }
 
     ComputedFuelEstimation {
         fuel_liter,
         num_ais_positions,
         num_vms_positions,
     }
+}
+
+fn estimate_fuel_between_points(
+    first: &FuelItem,
+    second: &FuelItem,
+    engines: &[VesselEngine],
+    service_speed: f64,
+    degree_of_electrification: f64,
+    max_cargo_weight: Option<f64>,
+) -> Option<f64> {
+    let time_ms = (second.timestamp - first.timestamp).num_milliseconds() as f64;
+
+    if time_ms <= 0. {
+        return None;
+    }
+
+    let first_loc = Location::new(first.latitude, first.longitude);
+    let second_loc = Location::new(second.latitude, second.longitude);
+
+    let empty_service_speed = service_speed;
+    let full_service_speed = empty_service_speed * 0.75;
+    let degree_of_electrification = 1. - degree_of_electrification;
+
+    let service_speed = match max_cargo_weight {
+        Some(max_weight) if max_weight > 0. => {
+            let cargo_weight =
+                (first.cumulative_cargo_weight + second.cumulative_cargo_weight) / 2.;
+
+            full_service_speed
+                + ((empty_service_speed - full_service_speed)
+                    * (cargo_weight / max_weight).clamp(0., 1.))
+        }
+        _ => empty_service_speed,
+    };
+
+    let speed = match first_loc.distance_to(&second_loc) {
+        Ok(v) => (v.meters() / (time_ms / 1000.)) * METER_PER_SECONDS_TO_KNOTS,
+        Err(e) => {
+            warn!("failed to calculate distance: {e:?}");
+            match (first.speed, second.speed) {
+                (Some(a), Some(b)) => (a + b) / 2.,
+                (Some(a), None) => a,
+                (None, Some(b)) => b,
+                (None, None) => return None,
+            }
+        }
+    };
+
+    let mut load_factor = ((speed / service_speed).powf(3.) * 0.85).clamp(0., 0.98);
+
+    if first.is_inside_haul_and_active_gear || second.is_inside_haul_and_active_gear {
+        load_factor *= HAUL_LOAD_FACTOR;
+    }
+
+    let fuel = engines
+        .iter()
+        .map(|e| {
+            let kwh = load_factor * e.power_kw * time_ms * degree_of_electrification / 3_600_000.;
+            e.sfc * kwh * DIESEL_GRAM_TO_LITER
+        })
+        .sum();
+
+    Some(fuel)
 }
