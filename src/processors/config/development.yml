@@ -1,5 +1,5 @@
 log_level: Info
-num_fuel_estimation_workers: 4
+num_fuel_estimation_workers: 2
 current_positions_batch_size: 100
 tracing_mode: Regular
 postgres:
