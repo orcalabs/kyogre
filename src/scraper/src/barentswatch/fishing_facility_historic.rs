@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use kyogre_core::{BearerToken, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::Deserialize;
-use serde_with::{DisplayFromStr, serde_as};
+use serde_with::{DisplayFromStr, NoneAsEmptyString, serde_as};
 use tracing::info;
 use uuid::Uuid;
 
@@ -75,6 +75,7 @@ struct FishingFacilityHistoric {
     tool_id: Uuid,
     vessel_name: Option<String>,
     // International radio call sign
+    #[serde_as(as = "NoneAsEmptyString")]
     ircs: Option<CallSign>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     mmsi: Option<Mmsi>,
