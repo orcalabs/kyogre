@@ -2127,4 +2127,25 @@ WHERE
 
         Ok(())
     }
+
+    pub(crate) async fn reset_trip_positions_fuel_status_impl(
+        &self,
+        vessels: &[FiskeridirVesselId],
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+UPDATE trips
+SET
+    trip_position_fuel_consumption_distribution_status = $1
+WHERE
+    fiskeridir_vessel_id = ANY ($2)
+            "#,
+            ProcessingStatus::Unprocessed as i32,
+            vessels as &[FiskeridirVesselId],
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
 }

@@ -4,17 +4,17 @@ use chrono::{DateTime, Duration, NaiveDate, Utc};
 use core::f64;
 use geoutils::Location;
 use kyogre_core::{
-    AisPosition, AisVmsPosition, ComputedFuelEstimation, DailyFuelEstimationPosition, DateRange,
-    EngineType, FiskeridirVesselId, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
-    VesselEngine, DIESEL_GRAM_TO_LITER,
+    AisPosition, AisVmsPosition, ComputedFuelEstimation, DIESEL_GRAM_TO_LITER,
+    DailyFuelEstimationPosition, DateRange, EngineType, FiskeridirVesselId, FuelEstimation,
+    NewFuelDayEstimate, PositionType, Vessel, VesselEngine,
 };
 use tokio::{
-    io::{stdin, AsyncBufReadExt, BufReader},
+    io::{AsyncBufReadExt, BufReader, stdin},
     task::JoinSet,
 };
 use tracing::{error, info, instrument, warn};
 
-use crate::{estimated_speed_between_points, Result, SpeedItem, UnrealisticSpeed};
+use crate::{Result, SpeedItem, UnrealisticSpeed, estimated_speed_between_points};
 
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
@@ -112,6 +112,14 @@ impl FuelEstimator {
                 info!("deleting existing fuel estimates...");
                 self.adapter.delete_fuel_estimates(vessels).await?;
 
+                info!("invalidating trip positions...");
+                self.adapter
+                    .reset_trip_positions_fuel_status(vessels)
+                    .await?;
+
+                info!("please run trips state for vessels before continuing...");
+                lines.next_line().await.unwrap();
+
                 info!("running fuel estimation...");
                 self.run_local_fuel_estimation(vessels).await?;
 
@@ -176,9 +184,6 @@ impl FuelEstimator {
             }
 
             let max_cargo_weight = self.adapter.vessel_max_cargo_weight(vessel.id()).await?;
-
-            // TODO
-            // Reset and process trip_positions for vessel!
 
             // Only errors on all receivers being dropped which cannot be at this step as we have
             // the receiver in scope

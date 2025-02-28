@@ -279,6 +279,10 @@ pub trait FuelEstimation: Send + Sync {
     async fn add_fuel_estimates(&self, estimates: &[NewFuelDayEstimate]) -> CoreResult<()>;
     async fn vessels_with_trips(&self, num_trips: u32) -> CoreResult<Vec<Vessel>>;
     async fn delete_fuel_estimates(&self, vessels: &[FiskeridirVesselId]) -> CoreResult<()>;
+    async fn reset_trip_positions_fuel_status(
+        &self,
+        vessels: &[FiskeridirVesselId],
+    ) -> CoreResult<()>;
     async fn dates_to_estimate(
         &self,
         vessel_id: FiskeridirVesselId,
