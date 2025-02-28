@@ -27,9 +27,6 @@ impl TripComputationStep for FuelConsumption {
 
         let mut updates = Vec::with_capacity(unit.positions.len());
 
-        // The first position always starts with zero fuel.
-        updates.push(0.);
-
         estimate_fuel(
             &engines,
             vessel.fiskeridir.service_speed,

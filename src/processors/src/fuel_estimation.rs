@@ -565,6 +565,8 @@ impl From<&AisPosition> for FuelItem {
     }
 }
 
+// NB! This function _should_ populate `per_point` to the same length as the input `items`.
+// TODO: Enforce this using type system somehow.
 pub fn estimate_fuel<S, T, R>(
     engines: &[VesselEngine],
     service_speed: Option<f64>,
@@ -592,6 +594,9 @@ where
         prev: iter.next().unwrap(),
     };
 
+    // The first position always starts with zero fuel.
+    per_point.push(per_point_closure(&state.prev, 0.));
+
     let num_engines = engines.len();
 
     let mut per_point_val = 0.;
@@ -612,6 +617,7 @@ where
 
         let time_ms = (v.timestamp - state.prev.timestamp).num_milliseconds() as f64;
         if time_ms <= 0.0 {
+            per_point.push(per_point_closure(&v, per_point_val));
             state.prev = v;
             return state;
         }
@@ -633,7 +639,10 @@ where
                     (Some(a), Some(b)) => (a + b) / 2.,
                     (Some(a), None) => a,
                     (None, Some(b)) => b,
-                    (None, None) => return state,
+                    (None, None) => {
+                        per_point.push(per_point_closure(&v, per_point_val));
+                        return state;
+                    }
                 }
             }
         };
