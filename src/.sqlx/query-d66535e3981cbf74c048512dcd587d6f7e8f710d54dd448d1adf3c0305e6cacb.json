@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips\nSET\n    trip_position_fuel_consumption_distribution_status = $1\nWHERE\n    fiskeridir_vessel_id = ANY ($2)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d66535e3981cbf74c048512dcd587d6f7e8f710d54dd448d1adf3c0305e6cacb"
+}

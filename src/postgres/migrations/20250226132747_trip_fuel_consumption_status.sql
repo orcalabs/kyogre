@@ -14,7 +14,7 @@ SET NOT NULL;
 
 UPDATE trips_detailed
 SET
-    track_coverage = track_coverage
+    track_coverage = 0
 WHERE
     track_coverage IS NULL;
 

@@ -9,6 +9,7 @@ use trip_benchmark::*;
 #[derive(Debug, Deserialize)]
 pub struct Settings {
     pub num_trip_state_workers: u32,
+    pub local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
     pub postgres: PsqlSettings,
     pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,

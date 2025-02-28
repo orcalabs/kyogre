@@ -113,20 +113,28 @@ enum WorkerTask {
 }
 
 async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
-    shared_state
-        .trip_pipeline_inbound
-        .update_preferred_trip_assemblers()
-        .await?;
+    // For faster local iteration we don't need to update trip assemblers
+    // since it is a relatively expensive query.
+    if shared_state.local_processing_vessels.is_none() {
+        shared_state
+            .trip_pipeline_inbound
+            .update_preferred_trip_assemblers()
+            .await?;
+    }
 
     shared_state
         .trip_pipeline_inbound
         .check_for_out_of_order_vms_insertion()
         .await?;
 
-    let vessels = shared_state
+    let mut vessels = shared_state
         .trip_assembler_outbound_port
         .all_vessels()
         .await?;
+
+    if let Some(ids) = &shared_state.local_processing_vessels {
+        vessels.retain(|v| ids.contains(&v.id()));
+    }
 
     if vessels.is_empty() {
         return Ok(Default::default());

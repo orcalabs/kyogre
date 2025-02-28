@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use kyogre_core::FiskeridirVesselId;
 use machine::StateMachine;
 use meilisearch::MeilisearchAdapter;
 use orca_core::Environment;
@@ -15,6 +16,7 @@ pub struct App {
     pub transition_log: machine::PostgresAdapter,
     pub single_state_run: Option<FisheryDiscriminants>,
     meilisearch: Option<MeilisearchAdapter<PostgresAdapter>>,
+    local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
 }
 
 impl App {
@@ -68,6 +70,7 @@ impl App {
 
         let shared_state = SharedState::new(
             settings.num_trip_state_workers,
+            settings.local_processing_vessels.clone(),
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
@@ -97,11 +100,20 @@ impl App {
             shared_state,
             single_state_run: settings.single_state_run,
             meilisearch,
+            local_processing_vessels: settings.local_processing_vessels.clone(),
         }
     }
 
     pub async fn run(self) {
-        if let Some(start_state) = self.single_state_run {
+        if self.local_processing_vessels.is_some() {
+            let step = crate::Step::initial(
+                crate::TripsState,
+                self.shared_state,
+                Box::new(self.transition_log),
+            );
+            let engine = FisheryEngine::Trips(step);
+            engine.run_single().await;
+        } else if let Some(start_state) = self.single_state_run {
             match start_state {
                 FisheryDiscriminants::Scrape => {
                     let step = crate::Step::initial(
