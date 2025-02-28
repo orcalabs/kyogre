@@ -25,21 +25,13 @@ impl TripComputationStep for FuelConsumption {
 
         let max_cargo_weight = adapter.vessel_max_cargo_weight(vessel.id()).await?;
 
-        let mut updates = Vec::with_capacity(unit.positions.len());
-
         estimate_fuel(
+            &mut unit.positions,
             &engines,
             vessel.fiskeridir.service_speed,
             vessel.fiskeridir.degree_of_electrification,
             Some(max_cargo_weight),
-            &unit.positions,
-            &mut updates,
-            |_, cumulative_fuel| cumulative_fuel,
         );
-
-        for (pos, fuel) in unit.positions.iter_mut().zip(updates) {
-            pos.trip_cumulative_fuel_consumption_liter = fuel;
-        }
 
         Ok(unit)
     }
