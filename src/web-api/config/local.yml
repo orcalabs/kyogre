@@ -10,9 +10,9 @@ postgres:
   max_connections: 10
   log_statements: Enable
   application_name: kyogre-api
-meilisearch:
-  host: http://localhost:7700
-  api_key: test123
+# meilisearch:
+#   host: http://localhost:7700
+#   api_key: test123
 bw_settings:
   jwks_url: https://id.barentswatch.no/.well-known/openid-configuration/jwks
   audience: api
