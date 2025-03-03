@@ -1,5 +1,8 @@
-use std::ops::Deref;
-
+use super::BearerToken;
+use crate::{
+    error::{Error, error::MissingJWTSnafu},
+    states::Auth0State,
+};
 use actix_web::{FromRequest, http::header::AUTHORIZATION, web::Data};
 use futures::future::{Ready, ready};
 use kyogre_core::AisPermission;
@@ -8,17 +11,8 @@ use oasgen::{
     ParameterSchemaOrContent, RefOr,
 };
 use serde::{Deserialize, Serialize};
-use snafu::ResultExt;
 use strum::EnumIter;
 use tracing::warn;
-
-use crate::{
-    error::{
-        Error,
-        error::{MissingJWTSnafu, ParseJWTSnafu},
-    },
-    states::Auth0State,
-};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, EnumIter)]
 pub enum Auth0Permission {
@@ -36,9 +30,6 @@ pub struct Auth0Profile {
     pub exp: i64,
     pub permissions: Vec<Auth0Permission>,
 }
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct OptionAuth0Profile(Option<Auth0Profile>);
 
 impl From<&Auth0Profile> for AisPermission {
     fn from(v: &Auth0Profile) -> Self {
@@ -71,19 +62,6 @@ impl OaParameter for Auth0Profile {
     }
 }
 
-impl OaParameter for OptionAuth0Profile {
-    fn parameters() -> Vec<RefOr<Parameter>> {
-        Auth0Profile::parameters()
-            .into_iter()
-            .flat_map(|v| v.into_item())
-            .map(|mut v| {
-                v.required = false;
-                RefOr::Item(v)
-            })
-            .collect()
-    }
-}
-
 impl FromRequest for Auth0Profile {
     type Error = Error;
 
@@ -100,55 +78,23 @@ impl FromRequest for Auth0Profile {
     }
 }
 
-impl FromRequest for OptionAuth0Profile {
-    type Error = Error;
-
-    type Future = Ready<Result<Self, Self::Error>>;
-
-    fn from_request(
-        req: &actix_web::HttpRequest,
-        _payload: &mut actix_web::dev::Payload,
-    ) -> Self::Future {
-        ready(Ok(Self(
-            Auth0Profile::from_request_impl(req)
-                .inspect_err(|e| warn!("failed to extract auth0 profile: {e:?}"))
-                .ok(),
-        )))
-    }
-}
-
 impl Auth0Profile {
-    fn from_request_impl(req: &actix_web::HttpRequest) -> Result<Self, Error> {
+    pub fn from_request_and_bearer(
+        req: &actix_web::HttpRequest,
+        bearer: BearerToken<'_>,
+    ) -> Result<Self, Error> {
         // `Auth0State` should be provided on startup, so `unwrap` is safe
         let auth_state = req.app_data::<Data<Auth0State>>().unwrap();
 
-        match req
-            .headers()
-            .get("Authorization")
-            .map(|t| {
-                t.to_str()
-                    .context(ParseJWTSnafu)
-                    .map(|s| s.split_once(' ').map(|(_, t)| t.to_owned()))
-            })
-            .transpose()?
-            .flatten()
-        {
-            Some(t) => Ok(auth_state.decode::<Auth0Profile>(&t)?.claims),
-            None => MissingJWTSnafu.fail(),
-        }
+        Ok(auth_state.decode::<Auth0Profile>(&bearer)?.claims)
     }
-}
 
-impl OptionAuth0Profile {
-    pub fn ais_permission(&self) -> AisPermission {
-        self.0.as_ref().map(From::from).unwrap_or_default()
-    }
-}
+    pub fn from_request_impl(req: &actix_web::HttpRequest) -> Result<Self, Error> {
+        // `Auth0State` should be provided on startup, so `unwrap` is safe
+        let auth_state = req.app_data::<Data<Auth0State>>().unwrap();
 
-impl Deref for OptionAuth0Profile {
-    type Target = Option<Auth0Profile>;
+        let bearer = BearerToken::from_request(req)?.ok_or(MissingJWTSnafu.build())?;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
+        Ok(auth_state.decode::<Auth0Profile>(&bearer)?.claims)
     }
 }

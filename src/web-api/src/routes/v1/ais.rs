@@ -1,7 +1,7 @@
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Duration, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{AisPermission, DateRange, Mmsi, NavigationStatus};
+use kyogre_core::{DateRange, Mmsi, NavigationStatus};
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -14,7 +14,7 @@ use crate::{
         Result,
         error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
     },
-    extractors::{OptionAuth0Profile, OptionBwProfile},
+    extractors::UserAuth,
     response::{StreamResponse, ais_unfold},
     stream_response,
 };
@@ -40,8 +40,7 @@ pub async fn ais_track<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisTrackParameters>,
     path: Path<AisTrackPath>,
-    bw_profile: OptionBwProfile,
-    auth: OptionAuth0Profile,
+    user: UserAuth,
 ) -> Result<StreamResponse<AisPosition>> {
     let (start, end) = match (params.start, params.end) {
         (None, None) => {
@@ -57,19 +56,11 @@ pub async fn ais_track<T: Database + Send + Sync + 'static>(
         .fail(),
     }?;
 
-    let bw_policy = bw_profile.ais_permission();
-    let auth0_policy = auth.ais_permission();
-    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
-        AisPermission::All
-    } else {
-        AisPermission::Above15m
-    };
-
     let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
 
     let response = stream_response! {
         ais_unfold(
-            db.ais_positions(path.mmsi, &range, policy)
+            db.ais_positions(path.mmsi, &range, user.ais_permission())
                 .map_ok(AisPosition::from),
         )
     };

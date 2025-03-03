@@ -1,12 +1,10 @@
-use std::{collections::HashMap, ops::Deref, pin::Pin};
-
 use actix_web::{
     FromRequest,
-    http::header::ToStrError,
+    http::header::AUTHORIZATION,
     web::{self, Data},
 };
 use fiskeridir_rs::CallSign;
-use futures::Future;
+use futures::{Future, future::ready};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{AisPermission, BarentswatchUserId};
 use oasgen::{
@@ -14,15 +12,17 @@ use oasgen::{
     ParameterSchemaOrContent, RefOr,
 };
 use serde::{Deserialize, Serialize};
-use snafu::{ResultExt, location};
+use snafu::location;
+use std::{collections::HashMap, ops::Deref, pin::Pin};
 use strum::EnumIter;
 use tracing::warn;
 use uuid::Uuid;
 
+use super::BearerToken;
 use crate::{
     error::{
         Error, Result,
-        error::{MissingBwFiskInfoProfileSnafu, MissingJWTSnafu, ParseJWTSnafu},
+        error::{MissingBwFiskInfoProfileSnafu, MissingJWTSnafu},
     },
     settings::BW_PROFILES_URL,
     states::BwState,
@@ -119,7 +119,7 @@ impl OaParameter for BwProfile {
     fn parameters() -> Vec<RefOr<Parameter>> {
         vec![RefOr::Item(Parameter {
             data: ParameterData {
-                name: "bw-token".into(),
+                name: AUTHORIZATION.to_string(),
                 description: None,
                 required: true,
                 deprecated: None,
@@ -183,22 +183,23 @@ impl FromRequest for BwProfile {
         req: &actix_web::HttpRequest,
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
-        // `HttpClient` should be provided on startup, so `unwrap` is safe
-        let client = req.app_data::<Data<HttpClient>>().unwrap().clone();
-        // `BwState` should be provided on startup, so `unwrap` is safe
-        let state = req.app_data::<Data<BwState>>().unwrap().clone();
+        match BearerToken::from_request_owned(req) {
+            Ok(Some(bearer)) => {
+                // `HttpClient` should be provided on startup, so `unwrap` is safe
+                let client = req.app_data::<Data<HttpClient>>().unwrap().clone();
+                // `BwState` should be provided on startup, so `unwrap` is safe
+                let state = req.app_data::<Data<BwState>>().unwrap().clone();
 
-        let token = req
-            .headers()
-            .get("bw-token")
-            .map(|t| t.to_str().map(|s| s.to_owned()));
-        let query_string = req.query_string().to_string();
-
-        Box::pin(async move {
-            BwProfile::extract_impl(state, client, token, query_string)
-                .await
-                .inspect_err(|e| warn!("failed to extract barentswatch profile: {e:?}"))
-        })
+                let query_string = req.query_string().to_string();
+                Box::pin(async move {
+                    BwProfile::extract_impl(state, client, bearer, query_string)
+                        .await
+                        .inspect_err(|e| warn!("failed to extract barentswatch profile: {e:?}"))
+                })
+            }
+            Ok(None) => Box::pin(ready(MissingJWTSnafu.fail())),
+            Err(e) => Box::pin(ready(Err(e))),
+        }
     }
 }
 
@@ -217,17 +218,13 @@ impl FromRequest for OptionBwProfile {
 }
 
 impl BwProfile {
-    async fn extract_impl(
+    pub async fn extract_impl(
         state: Data<BwState>,
         client: Data<HttpClient>,
-        token: Option<std::result::Result<String, ToStrError>>,
+        bearer: BearerToken<'_>,
         query_string: String,
     ) -> Result<Self> {
-        let token = token
-            .ok_or_else(|| MissingJWTSnafu.build())?
-            .context(ParseJWTSnafu)?;
-
-        let claims = state.decode::<BwJwtClaims>(&token)?.claims;
+        let claims = state.decode::<BwJwtClaims>(&bearer)?.claims;
 
         let mut profile = if let Some(profile) = state.get_profile(&claims.id).await {
             profile
@@ -237,7 +234,7 @@ impl BwProfile {
 
             let profile: BwProfile = client
                 .get(url)
-                .header("Authorization", format!("Bearer {token}"))
+                .header("Authorization", format!("Bearer {}", bearer.token()))
                 .send()
                 .await
                 .map_err(|e| match e.status() {

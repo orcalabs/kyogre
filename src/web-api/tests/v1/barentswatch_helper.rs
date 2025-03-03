@@ -10,7 +10,7 @@ use rsa::{
 };
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
-use web_api::extractors::{BwPolicy, BwProfile, BwRole, BwUser, BwVesselInfo};
+use web_api::extractors::{AcceptedIssuer, BwPolicy, BwProfile, BwRole, BwUser, BwVesselInfo};
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
     matchers::{method, path},
@@ -115,12 +115,14 @@ impl BarentswatchHelper {
             aud: self.audience.clone(),
             policies: BwPolicy::iter().collect(),
             roles: BwRole::iter().collect(),
+            iss: AcceptedIssuer::Barentswatch.to_string(),
         };
         self.get_bw_token_impl(claims)
     }
 
     pub fn get_bw_token_with_full_ais_permission(&self) -> String {
         let claims = Claims {
+            iss: AcceptedIssuer::Barentswatch.to_string(),
             id: BarentswatchUserId::test_new(),
             exp: i64::MAX,
             aud: self.audience.clone(),
@@ -144,6 +146,7 @@ impl BarentswatchHelper {
         roles: Vec<BwRole>,
     ) -> String {
         let claims = Claims {
+            iss: AcceptedIssuer::Barentswatch.to_string(),
             id: BarentswatchUserId::test_new(),
             exp: i64::MAX,
             aud: self.audience.clone(),
@@ -155,6 +158,7 @@ impl BarentswatchHelper {
 
     pub fn get_bw_token_with_policies(&self, policies: Vec<BwPolicy>) -> String {
         let claims = Claims {
+            iss: AcceptedIssuer::Barentswatch.to_string(),
             id: BarentswatchUserId::test_new(),
             exp: i64::MAX,
             aud: self.audience.clone(),
@@ -171,6 +175,7 @@ impl BarentswatchHelper {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Claims {
+    iss: String,
     id: BarentswatchUserId,
     exp: i64,
     aud: String,
