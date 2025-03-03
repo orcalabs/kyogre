@@ -1,18 +1,19 @@
 use super::fishing_facility::FishingFacility;
 use crate::{
     error::{Result, error::StartAfterEndSnafu},
-    extractors::{OptionAuth0Profile, OptionBwProfile},
+    extractors::OptionBwProfile,
     response::{Response, ResponseOrStream, StreamResponse, ais_unfold},
     routes::v1::ais_vms::AisVmsPosition,
     stream_response, *,
 };
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
+use extractors::UserAuth;
 use fiskeridir_rs::{Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    AisPermission, FiskeridirVesselId, HasTrack, Ordering, Pagination, Tra, TripAssemblerId,
-    TripId, TripSorting, Trips, TripsQuery, VesselEventType,
+    FiskeridirVesselId, HasTrack, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting,
+    Trips, TripsQuery, VesselEventType,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -138,25 +139,14 @@ pub async fn current_trip<T: Database + 'static>(
 pub async fn current_trip_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     path: Path<CurrentTripPositionsPath>,
-    bw_profile: OptionBwProfile,
-    auth: OptionAuth0Profile,
+    user: UserAuth,
 ) -> Result<StreamResponse<AisVmsPosition>> {
-    let bw_policy = bw_profile.ais_permission();
-    let auth0_policy = auth.ais_permission();
-    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
-        AisPermission::All
-    } else {
-        AisPermission::Above15m
-    };
-
-    let response = stream_response! {
+    Ok(stream_response! {
         ais_unfold(
-            db.current_trip_positions(path.fiskeridir_vessel_id, policy)
+            db.current_trip_positions(path.fiskeridir_vessel_id, user.ais_permission())
                 .map_ok(AisVmsPosition::from),
         )
-    };
-
-    Ok(response)
+    })
 }
 
 #[serde_as]

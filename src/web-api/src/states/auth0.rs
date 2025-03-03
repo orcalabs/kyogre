@@ -3,6 +3,7 @@ use crate::{
         JWTDecodeError,
         jwt_decode_error::{DisabledSnafu, MissingValueSnafu},
     },
+    extractors::BearerToken,
     settings::Auth0Settings,
 };
 use http_client::HttpClient;
@@ -39,12 +40,15 @@ impl Auth0State {
         }
     }
 
-    pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>, JWTDecodeError> {
+    pub fn decode<T: DeserializeOwned>(
+        &self,
+        token: &BearerToken<'_>,
+    ) -> Result<TokenData<T>, JWTDecodeError> {
         let Self::Enabled { jwk_set, audience } = self else {
             return DisabledSnafu {}.fail();
         };
 
-        let header = decode_header(token)?;
+        let header = decode_header(token.token())?;
         let kid = header.kid.ok_or_else(|| MissingValueSnafu.build())?;
 
         let jwk = jwk_set
@@ -61,6 +65,6 @@ impl Auth0State {
         )?);
         validation.set_audience(&[&audience]);
 
-        Ok(decode(token, &key, &validation)?)
+        Ok(decode(token.token(), &key, &validation)?)
     }
 }

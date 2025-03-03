@@ -95,6 +95,13 @@ pub enum Error {
         #[snafu(implicit)]
         location: Location,
     },
+    #[snafu(display("The JWT issuer is unknown"))]
+    UnknownIssuer {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: strum::ParseError,
+    },
     #[snafu(display("JWT token is missing"))]
     MissingJWT {
         #[snafu(implicit)]
@@ -119,6 +126,11 @@ pub enum Error {
         #[snafu(implicit)]
         location: Location,
         source: JWTDecodeError,
+    },
+    #[snafu(display("The provided JWT token was invalid"))]
+    InvalidJWTParts {
+        #[snafu(implicit)]
+        location: Location,
     },
     #[snafu(display("The provided base64 data could not be decoded"))]
     Base64Decode {
@@ -192,7 +204,9 @@ impl ResponseError for Error {
             | CallSignDoesNotExist
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
-            MissingJWT | InvalidJWT | ParseJWT | JWTDecode => StatusCode::UNAUTHORIZED,
+            MissingJWT | InvalidJWT | ParseJWT | JWTDecode | UnknownIssuer | InvalidJWTParts => {
+                StatusCode::UNAUTHORIZED
+            }
             UpdateVesselNotFound | OrgNotFound => StatusCode::NOT_FOUND,
             Unexpected => StatusCode::INTERNAL_SERVER_ERROR,
         }

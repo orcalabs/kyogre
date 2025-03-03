@@ -15,7 +15,7 @@ use crate::{
         JWTDecodeError,
         jwt_decode_error::{DisabledSnafu, MissingValueSnafu},
     },
-    extractors::BwProfile,
+    extractors::{BearerToken, BwProfile},
     guards::BwGuard,
     settings::BwSettings,
 };
@@ -74,7 +74,10 @@ impl BwState {
         }
     }
 
-    pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>, JWTDecodeError> {
+    pub fn decode<T: DeserializeOwned>(
+        &self,
+        token: &BearerToken<'_>,
+    ) -> Result<TokenData<T>, JWTDecodeError> {
         match self {
             Self::Enabled(v) => v.decode(token),
             Self::Disabled => DisabledSnafu.fail(),
@@ -97,7 +100,11 @@ impl BwState {
 }
 
 impl Inner {
-    fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<TokenData<T>, JWTDecodeError> {
+    fn decode<T: DeserializeOwned>(
+        &self,
+        token: &BearerToken<'_>,
+    ) -> Result<TokenData<T>, JWTDecodeError> {
+        let token = token.token();
         let kid = decode_header(token)?
             .kid
             .ok_or_else(|| MissingValueSnafu.build())?;

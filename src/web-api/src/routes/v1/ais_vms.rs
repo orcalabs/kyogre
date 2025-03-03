@@ -3,8 +3,8 @@ use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::{
-    AisPermission, AisPosition, AisVmsParams, DateRange, FiskeridirVesselId, Mmsi,
-    NavigationStatus, TripId, TripPositionLayerId, VmsPosition,
+    AisPosition, AisVmsParams, DateRange, FiskeridirVesselId, Mmsi, NavigationStatus, TripId,
+    TripPositionLayerId, VmsPosition,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ use crate::{
         Result,
         error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
     },
-    extractors::{OptionAuth0Profile, OptionBwProfile},
+    extractors::UserAuth,
     response::{StreamResponse, ais_unfold},
     stream_response,
 };
@@ -50,19 +50,10 @@ pub struct CurrentPositionParameters {
 pub async fn current_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<CurrentPositionParameters>,
-    bw_profile: OptionBwProfile,
-    auth: OptionAuth0Profile,
+    user: UserAuth,
 ) -> StreamResponse<CurrentPosition> {
-    let bw_policy = bw_profile.ais_permission();
-    let auth0_policy = auth.ais_permission();
-    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
-        AisPermission::All
-    } else {
-        AisPermission::Above15m
-    };
-
     stream_response! {
-        db.current_positions(params.position_timestamp_limit, policy)
+        db.current_positions(params.position_timestamp_limit, user.ais_permission())
             .map_ok(From::from)
     }
 }
@@ -75,8 +66,7 @@ pub async fn current_positions<T: Database + Send + Sync + 'static>(
 pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisVmsParameters>,
-    bw_profile: OptionBwProfile,
-    auth: OptionAuth0Profile,
+    user: UserAuth,
 ) -> Result<StreamResponse<AisVmsPosition>> {
     let params = params.into_inner();
     if params.mmsi.is_none() && params.call_sign.is_none() && params.trip_id.is_none() {
@@ -109,22 +99,12 @@ pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
         }
     };
 
-    let bw_policy = bw_profile.ais_permission();
-    let auth0_policy = auth.ais_permission();
-    let policy = if bw_policy == AisPermission::All || auth0_policy == AisPermission::All {
-        AisPermission::All
-    } else {
-        AisPermission::Above15m
-    };
-
-    let response = stream_response! {
+    Ok(stream_response! {
         ais_unfold(
-            db.ais_vms_positions(params, policy)
+            db.ais_vms_positions(params, user.ais_permission())
                 .map_ok(AisVmsPosition::from),
         )
-    };
-
-    Ok(response)
+    })
 }
 
 #[serde_as]

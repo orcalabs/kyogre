@@ -107,7 +107,7 @@ impl ApiClient {
         };
 
         if let Some(token) = &self.current_token {
-            request = request.header("bw-token", token);
+            request = request.header("Authorization", format!("Bearer {token}"));
         }
 
         request.send().await
