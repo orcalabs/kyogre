@@ -3,6 +3,7 @@ use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use engine::*;
 use float_cmp::approx_eq;
 use kyogre_core::CreateFuelMeasurement;
+use kyogre_core::NaiveDateRange;
 use kyogre_core::TestHelperOutbound;
 use web_api::routes::v1::vessel::FuelParams;
 
@@ -63,8 +64,7 @@ async fn test_fuel_only_includes_measurments_within_given_range() {
         let fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -133,8 +133,7 @@ async fn test_fuel_excludes_fuel_measurement_when_more_than_half_of_period_is_ou
         let vessel_fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();

@@ -7,6 +7,7 @@ use fiskeridir_rs::OrgId;
 use float_cmp::approx_eq;
 use kyogre_core::CreateFuelMeasurement;
 use kyogre_core::DateRange;
+use kyogre_core::NaiveDateRange;
 use kyogre_core::TEST_SIGNED_IN_VESSEL_CALLSIGN;
 use kyogre_core::TestHelperOutbound;
 use web_api::routes::v1::vessel::FuelParams;
@@ -52,8 +53,7 @@ async fn test_setting_fuel_after_computes_correct_fuel_used() {
         let vessel_fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -63,8 +63,7 @@ async fn test_setting_fuel_after_computes_correct_fuel_used() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -142,8 +141,7 @@ async fn test_fuel_measurement_overlap_1() {
         let vessel_fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start_date),
-                end_date: Some(end_date),
+                range: NaiveDateRange::test_new(start_date, end_date),
             })
             .await
             .unwrap();
@@ -153,8 +151,7 @@ async fn test_fuel_measurement_overlap_1() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -228,8 +225,7 @@ async fn test_fuel_measurement_overlap_2() {
         let vessel_fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -239,8 +235,7 @@ async fn test_fuel_measurement_overlap_2() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -354,8 +349,7 @@ async fn test_fuel_measurement_overlap_3() {
         let vessel_fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -365,8 +359,7 @@ async fn test_fuel_measurement_overlap_3() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -468,8 +461,7 @@ async fn test_fuel_measurement_overlap_4() {
         let vessel_fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -479,8 +471,7 @@ async fn test_fuel_measurement_overlap_4() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -586,8 +577,7 @@ async fn test_fuel_measurement_overlap_5() {
         let vessel_fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -597,8 +587,7 @@ async fn test_fuel_measurement_overlap_5() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -697,8 +686,7 @@ async fn test_fuel_excludes_non_active_vessels() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -707,8 +695,7 @@ async fn test_fuel_excludes_non_active_vessels() {
         let vessel_fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();

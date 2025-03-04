@@ -171,6 +171,13 @@ pub enum DateRangeError {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     },
+    #[snafu(display("start of date range cannot be after end, '{start}', '{end}'"))]
+    OrderingDate {
+        #[snafu(implicit)]
+        location: Location,
+        start: NaiveDate,
+        end: NaiveDate,
+    },
     #[snafu(display("encountered and unexpected unbounded range"))]
     Unbounded {
         #[snafu(implicit)]

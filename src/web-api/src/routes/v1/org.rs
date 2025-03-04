@@ -1,10 +1,9 @@
 use super::vessel::FuelParams;
-use crate::error::error::{MissingDateRangeSnafu, OrgNotFoundSnafu};
+use crate::error::error::OrgNotFoundSnafu;
 use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web::{self, Path};
-use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::{CallSign, OrgId};
-use kyogre_core::{FuelEntry, OrgBenchmarkQuery, OrgBenchmarks};
+use kyogre_core::{DateTimeRange, FuelEntry, OrgBenchmarkQuery, OrgBenchmarks};
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -12,8 +11,8 @@ use serde_qs::actix::QsQuery as Query;
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct OrgBenchmarkParameters {
-    pub start: Option<DateTime<Utc>>,
-    pub end: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: DateTimeRange<30>,
 }
 #[derive(Debug, Clone, OaSchema, Deserialize)]
 pub struct OrgBenchmarkPath {
@@ -34,10 +33,8 @@ pub async fn benchmarks<T: Database + 'static>(
     params: Query<OrgBenchmarkParameters>,
     path: Path<OrgBenchmarkPath>,
 ) -> Result<Response<OrgBenchmarks>> {
-    let call_sign = bw_profile.call_sign()?;
-    let query = params
-        .into_inner()
-        .into_query(call_sign.clone(), path.org_id)?;
+    let call_sign = bw_profile.into_call_sign()?;
+    let query = params.into_inner().into_query(call_sign, path.org_id);
 
     match db.org_benchmarks(&query).await? {
         Some(b) => Ok(Response::new(b)),
@@ -60,8 +57,8 @@ pub async fn fuel<T: Database + Send + Sync + 'static>(
     params: Query<FuelParams>,
     path: Path<OrgFuelPath>,
 ) -> Result<Response<Vec<FuelEntry>>> {
-    let call_sign = profile.call_sign()?;
-    let query = params.into_inner().to_query(call_sign.clone())?;
+    let call_sign = profile.into_call_sign()?;
+    let query = params.into_inner().to_query(call_sign);
 
     let org_id = path.into_inner().org_id;
     match db.fuel_estimation_by_org(&query, org_id).await? {
@@ -71,24 +68,12 @@ pub async fn fuel<T: Database + Send + Sync + 'static>(
 }
 
 impl OrgBenchmarkParameters {
-    pub fn into_query(self, call_sign: CallSign, org_id: OrgId) -> Result<OrgBenchmarkQuery> {
-        let (start, end) = match (self.start, self.end) {
-            (None, None) => {
-                let now = Utc::now();
-                Ok((now - Duration::days(30), now))
-            }
-            (Some(s), Some(e)) => Ok((s, e)),
-            _ => MissingDateRangeSnafu {
-                start: self.start.is_some(),
-                end: self.end.is_some(),
-            }
-            .fail(),
-        }?;
-        Ok(OrgBenchmarkQuery {
-            start,
-            end,
+    pub fn into_query(self, call_sign: CallSign, org_id: OrgId) -> OrgBenchmarkQuery {
+        OrgBenchmarkQuery {
+            start: self.range.start(),
+            end: self.range.end(),
             call_sign,
             org_id,
-        })
+        }
     }
 }

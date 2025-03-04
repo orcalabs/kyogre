@@ -1,4 +1,4 @@
-use crate::error::error::{MissingDateRangeSnafu, UpdateVesselNotFoundSnafu};
+use crate::error::error::UpdateVesselNotFoundSnafu;
 use crate::{
     Database,
     error::Result,
@@ -7,12 +7,12 @@ use crate::{
     stream_response,
 };
 use actix_web::web::{self};
-use chrono::{DateTime, Duration, NaiveDate, Utc};
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
     DEFAULT_LIVE_FUEL_THRESHOLD, FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi,
-    VesselCurrentTrip,
+    NaiveDateRange, VesselCurrentTrip,
 };
 use kyogre_core::{LiveFuel, UpdateVessel};
 use oasgen::{OaSchema, oasgen};
@@ -25,8 +25,8 @@ pub mod benchmarks;
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelParams {
-    pub start_date: Option<NaiveDate>,
-    pub end_date: Option<NaiveDate>,
+    #[serde(flatten)]
+    pub range: NaiveDateRange<30>,
 }
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
@@ -81,8 +81,8 @@ pub async fn fuel<T: Database + Send + Sync + 'static>(
     profile: BwProfile,
     params: Query<FuelParams>,
 ) -> Result<Response<f64>> {
-    let call_sign = profile.call_sign()?;
-    let query = params.into_inner().to_query(call_sign.clone())?;
+    let call_sign = profile.into_call_sign()?;
+    let query = params.into_inner().to_query(call_sign);
 
     Ok(Response::new(db.fuel_estimation(&query).await?))
 }
@@ -169,34 +169,13 @@ impl LiveFuelParams {
 }
 
 impl FuelParams {
-    pub fn to_query(self, call_sign: CallSign) -> Result<FuelQuery> {
-        let Self {
-            start_date,
-            end_date,
-        } = self;
-
-        let (start_date, end_date) = match (start_date, end_date) {
-            (Some(s), Some(e)) => (s, e),
-            (None, None) => {
-                let now = Utc::now();
-                let start = (now - Duration::days(30)).naive_utc().date();
-
-                (start, now.naive_utc().date())
-            }
-            _ => {
-                return MissingDateRangeSnafu {
-                    start: start_date.is_some(),
-                    end: end_date.is_some(),
-                }
-                .fail();
-            }
-        };
-
-        Ok(FuelQuery {
+    pub fn to_query(self, call_sign: CallSign) -> FuelQuery {
+        let Self { range } = self;
+        FuelQuery {
             call_sign,
-            start_date,
-            end_date,
-        })
+            start_date: range.start(),
+            end_date: range.end(),
+        }
     }
 }
 

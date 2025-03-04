@@ -1,9 +1,11 @@
-use crate::date_range_error::InvalidCalendarDateSnafu;
-use crate::{DateRangeError, date_range_error::OrderingSnafu};
+use super::ERS_LANDING_COVERAGE_OFFSET;
+use crate::{
+    DateRangeError,
+    date_range_error::{InvalidCalendarDateSnafu, OrderingDateSnafu, OrderingSnafu},
+};
 use chrono::TimeZone;
 use chrono::{DateTime, Duration, NaiveDate, Utc};
-
-use super::ERS_LANDING_COVERAGE_OFFSET;
+use serde::{Deserialize, Serialize, de};
 
 #[derive(Debug, Clone)]
 pub struct DateRange {
@@ -34,6 +36,7 @@ impl DateRange {
         range.set_end_bound(Bound::Exclusive);
         Ok(range)
     }
+
     // Defaults to both start and end being inclusive
     pub fn new(start: DateTime<Utc>, end: DateTime<Utc>) -> Result<DateRange, DateRangeError> {
         if start > end {
@@ -139,6 +142,157 @@ impl PartialEq for DateRange {
 
 impl Eq for DateRange {}
 
+#[derive(Debug, Clone, Serialize)]
+pub struct NaiveDateRange<const DAYS: u8> {
+    start: NaiveDate,
+    end: NaiveDate,
+}
+
+#[derive(Debug, Serialize)]
+pub struct DateTimeRange<const DAYS: u8> {
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+}
+impl<const T: u8> NaiveDateRange<T> {
+    #[cfg(feature = "test")]
+    pub fn test_new(start: NaiveDate, end: NaiveDate) -> Self {
+        Self { start, end }
+    }
+
+    fn calc_start(end: NaiveDate) -> NaiveDate {
+        end - Duration::days(T as i64)
+    }
+
+    fn now() -> NaiveDate {
+        chrono::Utc::now().naive_utc().date()
+    }
+
+    pub fn start(&self) -> NaiveDate {
+        self.start
+    }
+
+    pub fn end(&self) -> NaiveDate {
+        self.end
+    }
+}
+
+impl<const T: u8> DateTimeRange<T> {
+    #[cfg(feature = "test")]
+    pub fn test_new(start: DateTime<Utc>, end: DateTime<Utc>) -> Self {
+        Self { start, end }
+    }
+
+    fn calc_start(end: DateTime<Utc>) -> DateTime<Utc> {
+        end - Duration::days(T as i64)
+    }
+
+    pub fn start(&self) -> DateTime<Utc> {
+        self.start
+    }
+
+    pub fn end(&self) -> DateTime<Utc> {
+        self.end
+    }
+}
+
+impl<const T: u8> Default for DateTimeRange<T> {
+    fn default() -> Self {
+        let end = chrono::Utc::now();
+        Self {
+            start: Self::calc_start(end),
+            end,
+        }
+    }
+}
+
+impl<const T: u8> Default for NaiveDateRange<T> {
+    fn default() -> Self {
+        let end = chrono::Utc::now().naive_utc().date();
+        Self {
+            start: Self::calc_start(end),
+            end,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+struct NaiveDateRangeInner {
+    start: Option<NaiveDate>,
+    end: Option<NaiveDate>,
+}
+
+impl<'de, const DAYS: u8> Deserialize<'de> for NaiveDateRange<DAYS> {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let inner = NaiveDateRangeInner::deserialize(deserializer)?;
+
+        let (start, end) = match (inner.start, inner.end) {
+            (None, None) => {
+                let end = Self::now();
+                Ok((Self::calc_start(end), end))
+            }
+            (Some(start), Some(end)) => {
+                if start > end {
+                    OrderingDateSnafu { start, end }.fail()
+                } else {
+                    Ok((start, end))
+                }
+            }
+            (Some(start), None) => Ok((start, Self::now())),
+            (None, Some(end)) => Ok((Self::calc_start(end), end)),
+        }
+        .map_err(|e| de::Error::custom(format!("{e}")))?;
+
+        Ok(NaiveDateRange { start, end })
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+struct DateTimeRangeInner {
+    start: Option<DateTime<Utc>>,
+    end: Option<DateTime<Utc>>,
+}
+
+impl<'de, const DAYS: u8> Deserialize<'de> for DateTimeRange<DAYS> {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let inner = DateTimeRangeInner::deserialize(deserializer)?;
+
+        let (start, end) = match (inner.start, inner.end) {
+            (None, None) => {
+                let end = chrono::Utc::now();
+                Ok((Self::calc_start(end), end))
+            }
+            (Some(start), Some(end)) => {
+                if start > end {
+                    OrderingSnafu { start, end }.fail()
+                } else {
+                    Ok((start, end))
+                }
+            }
+            (Some(start), None) => Ok((start, chrono::Utc::now())),
+            (None, Some(end)) => Ok((Self::calc_start(end), end)),
+        }
+        .map_err(|e| de::Error::custom(format!("{e}")))?;
+
+        Ok(DateTimeRange { start, end })
+    }
+}
+
+impl<const DAYS: u8> From<DateTimeRange<DAYS>> for DateRange {
+    fn from(value: DateTimeRange<DAYS>) -> Self {
+        // 'DateTimeRange' validation is a superset of 'DateRange' validation so the unwrap is
+        // safe
+        DateRange::new(value.start, value.end).unwrap()
+    }
+}
+
 #[cfg(feature = "sqlx")]
 mod _sqlx {
     use sqlx::{
@@ -201,6 +355,33 @@ mod _sqlx {
             let pg_range = PgRange::<DateTime<Utc>>::decode(value)?;
             let date_range = pg_range.try_into()?;
             Ok(date_range)
+        }
+    }
+}
+
+#[cfg(feature = "oasgen")]
+mod _oasgen {
+    use oasgen::{OaSchema, Schema};
+
+    use super::*;
+
+    impl<const T: u8> OaSchema for super::NaiveDateRange<T> {
+        fn schema_ref() -> oasgen::ReferenceOr<Schema> {
+            NaiveDateRangeInner::schema_ref()
+        }
+
+        fn schema() -> Schema {
+            NaiveDateRangeInner::schema()
+        }
+    }
+
+    impl<const T: u8> OaSchema for super::DateTimeRange<T> {
+        fn schema_ref() -> oasgen::ReferenceOr<Schema> {
+            DateTimeRangeInner::schema_ref()
+        }
+
+        fn schema() -> Schema {
+            DateTimeRangeInner::schema()
         }
     }
 }

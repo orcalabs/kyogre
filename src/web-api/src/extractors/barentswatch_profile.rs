@@ -268,6 +268,12 @@ impl BwProfile {
             .map(|v| &v.ircs)
             .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
     }
+
+    pub fn into_call_sign(self) -> Result<CallSign> {
+        self.fisk_info_profile
+            .map(|v| v.ircs)
+            .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
+    }
 }
 
 impl OptionBwProfile {

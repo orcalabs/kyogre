@@ -1,29 +1,24 @@
-use actix_web::web::{self, Path};
-use chrono::{DateTime, Duration, Utc};
-use futures::TryStreamExt;
-use kyogre_core::{DateRange, Mmsi, NavigationStatus};
-use oasgen::{OaSchema, oasgen};
-use serde::{Deserialize, Serialize};
-use serde_qs::actix::QsQuery as Query;
-use serde_with::{DisplayFromStr, serde_as};
-use snafu::ResultExt;
-
 use crate::{
     Database,
-    error::{
-        Result,
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
-    },
+    error::Result,
     extractors::UserAuth,
     response::{StreamResponse, ais_unfold},
     stream_response,
 };
+use actix_web::web::{self, Path};
+use chrono::{DateTime, Utc};
+use futures::TryStreamExt;
+use kyogre_core::{DateTimeRange, Mmsi, NavigationStatus};
+use oasgen::{OaSchema, oasgen};
+use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
+use serde_with::{DisplayFromStr, serde_as};
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AisTrackParameters {
-    pub start: Option<DateTime<Utc>>,
-    pub end: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: DateTimeRange<1>,
 }
 
 #[derive(Debug, Deserialize, OaSchema)]
@@ -42,30 +37,12 @@ pub async fn ais_track<T: Database + Send + Sync + 'static>(
     path: Path<AisTrackPath>,
     user: UserAuth,
 ) -> Result<StreamResponse<AisPosition>> {
-    let (start, end) = match (params.start, params.end) {
-        (None, None) => {
-            let end = chrono::Utc::now();
-            let start = end - Duration::hours(24);
-            Ok((start, end))
-        }
-        (Some(start), Some(end)) => Ok((start, end)),
-        _ => MissingDateRangeSnafu {
-            start: params.start.is_some(),
-            end: params.end.is_some(),
-        }
-        .fail(),
-    }?;
-
-    let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
-
-    let response = stream_response! {
+    Ok(stream_response! {
         ais_unfold(
-            db.ais_positions(path.mmsi, &range, user.ais_permission())
+            db.ais_positions(path.mmsi, &(params.into_inner().range.into()), user.ais_permission())
                 .map_ok(AisPosition::from),
         )
-    };
-
-    Ok(response)
+    })
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
