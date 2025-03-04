@@ -106,13 +106,17 @@ impl App {
 
     pub async fn run(self) {
         if self.local_processing_vessels.is_some() {
-            let step = crate::Step::initial(
+            FisheryEngine::Trips(crate::Step::initial(
                 crate::TripsState,
                 self.shared_state,
                 Box::new(self.transition_log),
-            );
-            let engine = FisheryEngine::Trips(step);
-            engine.run_single().await;
+            ))
+            // Run Trips
+            .run_single()
+            .await
+            // Run Benchmark
+            .run_single()
+            .await;
         } else if let Some(start_state) = self.single_state_run {
             match start_state {
                 FisheryDiscriminants::Scrape => {

@@ -25,7 +25,11 @@ impl machine::State for BenchmarkState {
 
 #[instrument(skip_all)]
 async fn state_impl(shared_state: &SharedState) -> Result<(), Error> {
-    let trips = shared_state.benchmark_outbound.trips_to_benchmark().await?;
+    let mut trips = shared_state.benchmark_outbound.trips_to_benchmark().await?;
+
+    if let Some(vessel_ids) = &shared_state.local_processing_vessels {
+        trips.retain(|v| vessel_ids.contains(&v.vessel_id));
+    }
 
     let mut outputs = Vec::with_capacity(trips.len());
 
