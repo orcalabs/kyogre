@@ -566,7 +566,8 @@ INSERT INTO
         haul_gear_ids,
         tra,
         has_track,
-        benchmark_status
+        benchmark_status,
+        first_arrival
     )
 SELECT
     t.trip_id,
@@ -779,7 +780,8 @@ SELECT
         AND MAX(fv.fiskeridir_length_group_id) <= $1 THEN 2
         ELSE 1
     END AS has_track,
-    $2
+    $2,
+    t.first_arrival
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -817,7 +819,8 @@ SET
     haul_gear_group_ids = excluded.haul_gear_group_ids,
     haul_gear_ids = excluded.haul_gear_ids,
     tra = excluded.tra,
-    benchmark_status = excluded.benchmark_status
+    benchmark_status = excluded.benchmark_status,
+    first_arrival = excluded.first_arrival
             "#,
             VesselLengthGroup::ElevenToFifteen as i32,
             ProcessingStatus::Unprocessed as i32,
@@ -1051,7 +1054,8 @@ SELECT
     t.target_species_fao_id,
     t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
     t.track_coverage,
-    t.has_track AS "has_track: HasTrack"
+    t.has_track AS "has_track: HasTrack",
+    t.first_arrival
 FROM
     trips_detailed AS t
 WHERE
@@ -1173,7 +1177,8 @@ SELECT
     t.target_species_fao_id,
     t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
     t.track_coverage,
-    t.has_track AS "has_track: HasTrack"
+    t.has_track AS "has_track: HasTrack",
+    t.first_arrival
 FROM
     trips_detailed AS t
 WHERE
@@ -1305,11 +1310,11 @@ VALUES
     }
 
     pub(crate) async fn add_trip_set_impl(&self, value: TripSet) -> Result<()> {
-        let earliest_trip_period = value
+        let earliest_trip = value
             .values
             .iter()
-            .map(|v| &v.trip.period)
-            .min_by_key(|v| v.start())
+            .map(|t| &t.trip)
+            .min_by_key(|t| t.period.start())
             .unwrap()
             .clone();
 
@@ -1351,7 +1356,7 @@ VALUES
         if let Err(e) = self
             .add_trips_inner(
                 new_trips,
-                earliest_trip_period,
+                &earliest_trip,
                 trip_positions,
                 value.fiskeridir_vessel_id,
                 value.trip_assembler_id,
@@ -1372,7 +1377,7 @@ VALUES
     pub(crate) async fn add_trips_inner(
         &self,
         new_trips: Vec<NewTrip>,
-        earliest_trip_range: DateRange,
+        earliest_trip: &kyogre_core::NewTrip,
         trip_positions: Vec<TripPositionsOutput>,
         vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
@@ -1380,8 +1385,8 @@ VALUES
         new_trip_calculation_time: DateTime<Utc>,
         queued_reset: bool,
     ) -> Result<()> {
-        let earliest_trip_start = earliest_trip_range.start();
-        let earliest_trip_period = PgRange::from(&earliest_trip_range);
+        let earliest_trip_start = earliest_trip.period.start();
+        let earliest_trip_period = PgRange::from(&earliest_trip.period);
 
         let mut trip_positions_insert_mapping: HashMap<i64, TripId> = HashMap::new();
 
@@ -1475,8 +1480,11 @@ RETURNING
     LOWER(period) AS ts
                 "#,
                 // The start of our earliest trip's landing_coverage is the end of the prior trips
-                // landing_coverage
-                earliest_trip_range.ers_landing_coverage_start(),
+                // landing_coverage.
+                // 'first_arrival' should always be set by this assembler.
+                earliest_trip
+                    .period
+                    .ers_landing_coverage_start(earliest_trip.first_arrival.unwrap()),
                 vessel_id.into_inner(),
                 earliest_trip_period,
             )
@@ -1742,7 +1750,8 @@ SELECT
     start_port_id,
     end_port_id,
     target_species_fiskeridir_id,
-    target_species_fao_id
+    target_species_fao_id,
+    first_arrival
 FROM
     trips
 WHERE
@@ -1790,7 +1799,8 @@ SELECT
     start_port_id,
     end_port_id,
     target_species_fiskeridir_id,
-    target_species_fao_id
+    target_species_fao_id,
+    first_arrival
 FROM
     trips
 WHERE
@@ -1822,7 +1832,8 @@ SELECT
     start_port_id,
     end_port_id,
     target_species_fiskeridir_id,
-    target_species_fao_id
+    target_species_fao_id,
+    first_arrival
 FROM
     trips
 WHERE
@@ -1854,7 +1865,8 @@ SELECT
     start_port_id,
     end_port_id,
     target_species_fiskeridir_id,
-    target_species_fao_id
+    target_species_fao_id,
+    first_arrival
 FROM
     trips
 WHERE
@@ -1886,7 +1898,8 @@ SELECT
     start_port_id,
     end_port_id,
     target_species_fiskeridir_id,
-    target_species_fao_id
+    target_species_fao_id,
+    first_arrival
 FROM
     trips
 WHERE
@@ -1918,7 +1931,8 @@ SELECT
     start_port_id,
     end_port_id,
     target_species_fiskeridir_id,
-    target_species_fao_id
+    target_species_fao_id,
+    first_arrival
 FROM
     trips
 WHERE

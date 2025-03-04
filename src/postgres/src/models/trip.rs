@@ -26,6 +26,7 @@ pub struct Trip {
     pub trip_assembler_id: TripAssemblerId,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
+    pub first_arrival: Option<DateTime<Utc>>,
     pub target_species_fiskeridir_id: Option<i32>,
     pub target_species_fao_id: Option<String>,
 }
@@ -65,6 +66,7 @@ pub struct NewTripAssemblerLogEntry<'a> {
     returning = "trip_id:TripId, period, landing_coverage, fiskeridir_vessel_id"
 )]
 pub struct NewTrip {
+    pub first_arrival: Option<DateTime<Utc>>,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub trip_assembler_id: TripAssemblerId,
     #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
@@ -167,6 +169,7 @@ impl From<&TripProcessingUnit> for NewTrip {
                     period,
                     period_extended,
                     landing_coverage,
+                    first_arrival,
                     start_port_code: _,
                     end_port_code: _,
                 },
@@ -238,6 +241,7 @@ impl From<&TripProcessingUnit> for NewTrip {
             position_layers_status: ProcessingStatus::Successful,
             trip_position_cargo_weight_distribution_status: ProcessingStatus::Successful,
             trip_position_fuel_consumption_distribution_status: ProcessingStatus::Successful,
+            first_arrival: *first_arrival,
         }
     }
 }
@@ -289,6 +293,7 @@ pub struct TripDetailed {
     pub vessel_events: String,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
+    pub first_arrival: Option<DateTime<Utc>>,
     pub trip_assembler_id: TripAssemblerId,
     pub distance: Option<f64>,
     pub cache_version: i64,
@@ -322,6 +327,7 @@ impl From<Trip> for kyogre_core::Trip {
             end_port_id,
             target_species_fiskeridir_id,
             target_species_fao_id,
+            first_arrival,
         } = value;
 
         Self {
@@ -336,6 +342,7 @@ impl From<Trip> for kyogre_core::Trip {
             end_port_code: end_port_id,
             target_species_fiskeridir_id: target_species_fiskeridir_id.map(|v| v as u32),
             target_species_fao_id,
+            first_arrival,
         }
     }
 }
@@ -435,6 +442,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             fuel_consumption_liter,
             track_coverage,
             has_track,
+            first_arrival,
         } = value;
 
         Ok(kyogre_core::TripDetailed {
@@ -480,6 +488,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                 .map(kyogre_core::Tra::from)
                 .collect(),
             has_track,
+            first_arrival,
         })
     }
 }

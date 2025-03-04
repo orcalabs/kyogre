@@ -16,8 +16,8 @@ use kyogre_core::{Bound, DateRange, NewTrip};
 /// We use this estimated timestamp to define the ordering of DEP/POR messages and on tiebreaks use
 /// ERS message number (num_sent_message within a given year).
 ///
-/// Landing coverage for a trip is defined as (where `POR` is the trip's POR estimated timestamp
-/// `POR(N)` is the next trip's POR estimated timestamp): `POR - 6 hours -> POR(N) - 6 hours`
+/// Landing coverage for a trip is defined as (where `POR` is the trip's *FIRST* POR message's estimated timestamp
+/// `POR(N)` is the next trip's *FIRST* POR message's estimated timestamp): `POR - 6 hours -> POR(N) - 6 hours`
 /// - If a trip is shorter than 6 hours `POR` is used as start.
 /// - If the next trip is shorter than 6 hours `POR(N)` is used as end.
 /// - The latest trip which has no next trip has the end `POR + 3 days`.
@@ -35,6 +35,10 @@ use kyogre_core::{Bound, DateRange, NewTrip};
 ///         fish at multiple locations) leading to placing landings on wrong trips.
 ///
 /// Previously tested approaches for landing coverage:
+/// - `POR - 6 hours -> POR(N) - 6 hours` (Where POR and POR(N) were the *LAST* POR messages on their
+///         respective trips)
+///     - We observed that several incidents where landings were registered prior or close to
+///         earlier POR messages on the trip which then escaped the last POR - 6 hours threshold.
 /// - `POR -> POR(N)`
 ///     - We observed that several incidents where landings were registered a short duration prior
 ///         to POR resulting in them being registered on the prior trip instead of the current trip.
@@ -45,6 +49,7 @@ use kyogre_core::{Bound, DateRange, NewTrip};
 #[derive(Debug)]
 pub struct ErsStatemachine {
     current_departure: Departure,
+    first_arrival: Option<Arrival>,
     current_arrival: Option<Arrival>,
     new_trips: Vec<NewTrip>,
 }
@@ -54,6 +59,7 @@ impl ErsStatemachine {
         ErsStatemachine {
             current_departure: departure,
             current_arrival: None,
+            first_arrival: None,
             new_trips: vec![],
         }
     }
@@ -77,7 +83,13 @@ impl ErsStatemachine {
         if let Some(prior_trip) = self.new_trips.last_mut() {
             let mut prior_trip_new_landing_coverage = DateRange::new(
                 prior_trip.landing_coverage.start(),
-                new_trip_period.ers_landing_coverage_start(),
+                // Safe as this is always set within this mod
+                new_trip_period.ers_landing_coverage_start(
+                    self.first_arrival
+                        .as_ref()
+                        .map(|a| a.estimated_timestamp)
+                        .unwrap(),
+                ),
             )?;
 
             if prior_trip_new_landing_coverage.equal_start_and_end() {
@@ -96,7 +108,12 @@ impl ErsStatemachine {
         }
 
         let mut new_trip_landing_coverage = DateRange::new(
-            new_trip_period.ers_landing_coverage_start(),
+            new_trip_period.ers_landing_coverage_start(
+                self.first_arrival
+                    .as_ref()
+                    .map(|a| a.estimated_timestamp)
+                    .unwrap(),
+            ),
             ers_last_trip_landing_coverage_end(&new_trip_period.end()),
         )?;
 
@@ -109,6 +126,7 @@ impl ErsStatemachine {
         }
 
         self.new_trips.push(NewTrip {
+            first_arrival: self.first_arrival.as_ref().map(|a| a.estimated_timestamp),
             period: new_trip_period,
             period_extended: new_trip_period_extended,
             landing_coverage: new_trip_landing_coverage,
@@ -127,12 +145,17 @@ impl ErsStatemachine {
                     port_id: event.port_id,
                     message_timestamp: event.message_timestamp,
                 });
+
+                if self.first_arrival.is_none() {
+                    self.first_arrival = self.current_arrival.clone();
+                }
                 Ok(())
             }
             ErsEventType::Departure => {
                 if let Some(arrival) = self.current_arrival.take() {
                     self.add_trip(arrival)?;
                     self.current_departure = Departure::from(event);
+                    self.first_arrival = None;
                 }
                 Ok(())
             }
@@ -158,7 +181,7 @@ pub struct Departure {
     port_id: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 struct Arrival {
     estimated_timestamp: DateTime<Utc>,

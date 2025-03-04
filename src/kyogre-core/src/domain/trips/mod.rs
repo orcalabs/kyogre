@@ -39,6 +39,7 @@ pub struct Trip {
     pub assembler_id: TripAssemblerId,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
+    pub first_arrival: Option<DateTime<Utc>>,
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao_id: Option<String>,
 }
@@ -145,6 +146,8 @@ pub struct VesselCurrentTrip {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NewTrip {
+    // Only set by ERS assembler
+    pub first_arrival: Option<DateTime<Utc>>,
     pub period: DateRange,
     pub period_extended: DateRange,
     pub landing_coverage: DateRange,
@@ -213,6 +216,7 @@ pub struct TripDetailed {
     pub delivery: Delivery,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
+    pub first_arrival: Option<DateTime<Utc>>,
     pub assembler_id: TripAssemblerId,
     pub vessel_events: Vec<VesselEvent>,
     pub landing_ids: Vec<LandingId>,
@@ -489,6 +493,7 @@ impl From<TripDetailed> for Trip {
             end_port_code: value.end_port_id,
             target_species_fiskeridir_id: value.target_species_fiskeridir_id,
             target_species_fao_id: value.target_species_fao_id,
+            first_arrival: value.first_arrival,
         }
     }
 }
