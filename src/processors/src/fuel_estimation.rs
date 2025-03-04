@@ -299,7 +299,6 @@ impl FuelEstimator {
     }
 }
 
-#[instrument(skip(receiver, adapter))]
 async fn vessel_task(
     receiver: async_channel::Receiver<VesselToProcess>,
     adapter: Arc<dyn FuelEstimation>,
@@ -310,6 +309,7 @@ async fn vessel_task(
     }
 }
 
+#[instrument(skip(adapter))]
 async fn process_vessel(
     vessel: &VesselToProcess,
     adapter: &dyn FuelEstimation,
@@ -363,6 +363,7 @@ async fn process_vessel_impl(
     Ok(())
 }
 
+#[instrument(skip(adapter))]
 async fn process_day(
     vessel: &VesselToProcess,
     adapter: &dyn FuelEstimation,
