@@ -297,6 +297,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             fuel_consumption_liter,
             track_coverage,
             has_track,
+            first_arrival: _,
         } = value;
 
         let period = period_precision.unwrap_or(period);
@@ -434,6 +435,7 @@ impl PartialEq<Trip> for kyogre_core::Trip {
             end_port_code,
             target_species_fiskeridir_id,
             target_species_fao_id,
+            first_arrival: _,
         } = self;
 
         *trip_id == other.trip_id

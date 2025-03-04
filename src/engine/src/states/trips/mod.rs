@@ -590,6 +590,7 @@ async fn process_unprocessed_trips(
                 landing_coverage: t.landing_coverage.clone(),
                 start_port_code: t.start_port_code.clone(),
                 end_port_code: t.end_port_code.clone(),
+                first_arrival: t.first_arrival,
             },
             position_layers_output: None,
             trip_id: Some(t.trip_id),

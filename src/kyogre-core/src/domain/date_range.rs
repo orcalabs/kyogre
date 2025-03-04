@@ -111,11 +111,11 @@ impl DateRange {
         self.end - self.start
     }
 
-    pub fn ers_landing_coverage_start(&self) -> DateTime<Utc> {
-        if self.duration() < ERS_LANDING_COVERAGE_OFFSET {
-            self.end()
+    pub fn ers_landing_coverage_start(&self, first_arrival: DateTime<Utc>) -> DateTime<Utc> {
+        if first_arrival - self.start < ERS_LANDING_COVERAGE_OFFSET {
+            first_arrival
         } else {
-            self.end() - ERS_LANDING_COVERAGE_OFFSET
+            first_arrival - ERS_LANDING_COVERAGE_OFFSET
         }
     }
 
