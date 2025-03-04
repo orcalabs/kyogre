@@ -61,7 +61,7 @@ FROM
     ) u
                 "#,
         )
-        .fetch_one(self.ais_pool())
+        .fetch_one(self.no_plan_cache_pool())
         .await?
         .date)
     }
@@ -338,7 +338,7 @@ ORDER BY
             PositionType::Ais as i32,
             PositionType::Vms as i32,
         )
-        .fetch_all(self.ais_pool())
+        .fetch_all(self.no_plan_cache_pool())
         .await?;
 
         Ok(ais)

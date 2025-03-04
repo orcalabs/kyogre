@@ -22,7 +22,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
     pub(crate) pool: PgPool,
-    ais_pool: Option<PgPool>,
+    no_plan_cache_pool: Option<PgPool>,
     pub(crate) ignored_conflict_call_signs: Vec<String>,
     pub(crate) environment: Environment,
 }
@@ -87,20 +87,20 @@ impl PostgresAdapter {
             opts = opts.ssl_mode(PgSslMode::Disable);
         }
 
-        let ais_pool = match environment {
+        let no_plan_cache_pool = match environment {
             Environment::Development | Environment::Production | Environment::Local => {
-                let ais_opts = opts
+                let opts = opts
                     .clone()
                     .options([("plan_cache_mode", "force_custom_plan")]);
 
-                let ais_pool = PgPoolOptions::new()
+                let pool = PgPoolOptions::new()
                     .min_connections(1)
                     .max_connections(connections_per_pool)
                     .acquire_timeout(std::time::Duration::from_secs(60))
-                    .connect_with(ais_opts)
+                    .connect_with(opts)
                     .await?;
 
-                Some(ais_pool)
+                Some(pool)
             }
             Environment::OnPremise | Environment::Test => None,
         };
@@ -118,7 +118,7 @@ impl PostgresAdapter {
 
         Ok(PostgresAdapter {
             pool,
-            ais_pool,
+            no_plan_cache_pool,
             ignored_conflict_call_signs,
             environment,
         })
@@ -128,12 +128,12 @@ impl PostgresAdapter {
         self.pool.close().await
     }
 
-    pub(crate) fn ais_pool(&self) -> &PgPool {
+    pub(crate) fn no_plan_cache_pool(&self) -> &PgPool {
         match self.environment {
             Environment::Production
             | Environment::Development
             | Environment::OnPremise
-            | Environment::Local => self.ais_pool.as_ref().unwrap(),
+            | Environment::Local => self.no_plan_cache_pool.as_ref().unwrap(),
             Environment::Test => &self.pool,
         }
     }
