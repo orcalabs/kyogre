@@ -19,8 +19,10 @@ async fn test_ais_vms_positions_fails_without_mmsi_or_call_sign() {
             .get_ais_vms_positions(AisVmsParameters {
                 mmsi: None,
                 call_sign: None,
-                start: Some(Utc.timestamp_opt(100, 0).unwrap()),
-                end: Some(Utc.timestamp_opt(200, 0).unwrap()),
+                range: DateTimeRange::test_new(
+                    Utc.timestamp_opt(100, 0).unwrap(),
+                    Utc.timestamp_opt(200, 0).unwrap(),
+                ),
                 trip_id: None,
             })
             .await
@@ -49,8 +51,10 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
             .get_ais_vms_positions(AisVmsParameters {
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
-                start: Some(pos.timestamp - Duration::seconds(1)),
-                end: Some(pos5.timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos.timestamp - Duration::seconds(1),
+                    pos5.timestamp + Duration::seconds(1),
+                ),
                 trip_id: None,
             })
             .await
@@ -80,8 +84,10 @@ async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
                 mmsi: state.vessels[0].mmsi(),
                 trip_id: None,
                 call_sign: None,
-                start: Some(pos.timestamp - Duration::seconds(1)),
-                end: Some(pos5.timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos.timestamp - Duration::seconds(1),
+                    pos5.timestamp + Duration::seconds(1),
+                ),
             })
             .await
             .unwrap();
@@ -109,8 +115,10 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
                 mmsi: None,
                 trip_id: None,
                 call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
-                start: Some(pos.timestamp - Duration::seconds(1)),
-                end: Some(pos5.timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos.timestamp - Duration::seconds(1),
+                    pos5.timestamp + Duration::seconds(1),
+                ),
             })
             .await
             .unwrap();
@@ -138,8 +146,8 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data(
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
                 trip_id: None,
-                start: Some(state.ais_vms_positions[0].timestamp - Duration::seconds(1)),
-                end: Some(
+                range: DateTimeRange::test_new(
+                    state.ais_vms_positions[0].timestamp - Duration::seconds(1),
                     state.ais_vms_positions[state.ais_vms_positions.len() - 1].timestamp
                         + Duration::seconds(1),
                 ),
@@ -186,8 +194,10 @@ async fn test_ais_vms_returns_positions_of_leisure_vessels_under_45_meters_with_
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[0].mmsi(),
                 trip_id: None,
                 call_sign: None,
@@ -198,8 +208,10 @@ async fn test_ais_vms_returns_positions_of_leisure_vessels_under_45_meters_with_
         let positions2 = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[1].mmsi(),
                 trip_id: None,
                 call_sign: None,
@@ -234,8 +246,10 @@ async fn test_ais_vms_does_not_return_ais_positions_of_vessels_with_unknown_ship
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[0].mmsi(),
                 trip_id: None,
                 call_sign: None,
@@ -270,8 +284,10 @@ async fn test_ais_vms_returns_ais_positions_of_vessels_with_unknown_ship_type_un
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[0].mmsi(),
                 trip_id: None,
                 call_sign: None,
@@ -305,8 +321,10 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[0].mmsi(),
                 trip_id: None,
                 call_sign: None,
@@ -317,8 +335,10 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
         let positions2 = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[1].mmsi(),
                 trip_id: None,
                 call_sign: None,
@@ -349,8 +369,10 @@ async fn test_ais_vms_does_not_return_positions_of_vessel_with_unknown_ship_type
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[0].mmsi(),
                 trip_id: None,
                 call_sign: None,
@@ -384,8 +406,10 @@ async fn test_ais_vms_prioritizes_fiskeridir_length_over_ais_length_in_leisure_v
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: None,
                 trip_id: None,
@@ -417,8 +441,10 @@ async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_withou
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: None,
                 trip_id: None,
@@ -452,8 +478,10 @@ async fn test_ais_vms_return_positions_for_vessels_under_15m_with_full_ais_permi
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 trip_id: None,
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: None,
@@ -491,8 +519,10 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 trip_id: None,
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: None,
@@ -529,8 +559,10 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: Some(pos_timestamp - Duration::seconds(1)),
-                end: Some(pos_timestamp + Duration::seconds(1)),
+                range: DateTimeRange::test_new(
+                    pos_timestamp - Duration::seconds(1),
+                    pos_timestamp + Duration::seconds(1),
+                ),
                 trip_id: None,
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: None,
@@ -570,11 +602,8 @@ async fn test_ais_vms_by_trip_returns_only_positions_within_trip() {
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -608,11 +637,8 @@ async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_wi
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -643,11 +669,8 @@ async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_wi
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -675,11 +698,8 @@ async fn test_ais_vms_by_trip_return_positions_for_vessels_under_15m_with_full_a
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -706,11 +726,8 @@ async fn test_ais_vms_by_trip_does_not_return_ais_positions_for_vessels_under_15
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
-                mmsi: None,
-                call_sign: None,
                 trip_id: Some(state.trips[0].trip_id),
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -737,11 +754,8 @@ async fn test_ais_vms_by_trip_prioritizes_fiskeridir_length_over_ais_length_in_l
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
-                mmsi: None,
-                call_sign: None,
                 trip_id: Some(state.trips[0].trip_id),
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -765,11 +779,8 @@ async fn test_ais_vms_by_trip_does_not_return_positions_of_vessel_with_unknown_s
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
-                mmsi: None,
-                call_sign: None,
                 trip_id: Some(state.trips[0].trip_id),
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -796,11 +807,8 @@ async fn test_ais_vms_by_trip_does_not_return_positions_of_leisure_vessels_under
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -808,11 +816,8 @@ async fn test_ais_vms_by_trip_does_not_return_positions_of_leisure_vessels_under
         let positions2 = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -837,11 +842,8 @@ async fn test_ais_vms_by_trip_returns_vms_data_regardless_of_ais_access_restrict
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -871,11 +873,8 @@ async fn test_ais_vms_by_trip_does_not_return_positions_with_unrealistic_movemen
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                mmsi: None,
-                call_sign: None,
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -911,11 +910,8 @@ async fn test_ais_vms_by_trip_does_not_return_vms_right_next_to_ais() {
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                mmsi: None,
-                call_sign: None,
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -960,11 +956,8 @@ async fn test_ais_vms_by_trip_contains_positions_added_post_trip_creation() {
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                mmsi: None,
-                call_sign: None,
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -994,11 +987,8 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -1039,11 +1029,8 @@ async fn test_ais_vms_by_trip_returns_cumulative_cargo_weight() {
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -1107,11 +1094,8 @@ async fn test_ais_vms_by_trip_spreads_cargo_weight_evenly_among_positions_within
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -1178,11 +1162,8 @@ async fn tests_cumulative_cargo_weight_is_recomputed_with_new_data() {
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -1250,11 +1231,8 @@ async fn tests_cumulative_cargo_weight_includes_departures() {
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -1317,11 +1295,8 @@ async fn tests_cumulative_cargo_weight_combines_hauls_and_departures() {
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                start: None,
-                end: None,
                 trip_id: Some(state.trips[0].trip_id),
-                mmsi: None,
-                call_sign: None,
+                ..Default::default()
             })
             .await
             .unwrap();

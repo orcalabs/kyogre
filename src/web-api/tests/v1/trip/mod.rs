@@ -1121,8 +1121,7 @@ async fn test_trips_are_reprocessed_if_extended() {
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
                 trip_id: Some(state.trips[0].trip_id),
-                start: None,
-                end: None,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -1159,8 +1158,7 @@ async fn test_trips_ending_in_the_future_has_their_track_updated_on_each_run() {
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
                 trip_id: Some(state.trips[0].trip_id),
-                start: None,
-                end: None,
+                ..Default::default()
             })
             .await
             .unwrap();

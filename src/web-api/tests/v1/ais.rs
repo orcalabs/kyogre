@@ -1,10 +1,8 @@
 use super::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
-use http_client::StatusCode;
 use kyogre_core::*;
 use web_api::{
-    error::ErrorDiscriminants,
     extractors::{BwPolicy, BwRole},
     response::{AIS_DETAILS_INTERVAL, MISSING_DATA_DURATION},
     routes::v1::ais::AisTrackParameters,
@@ -20,8 +18,10 @@ async fn test_ais_track_filters_by_start_and_end() {
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
-                    end: Some(state.ais_positions.last().unwrap().msgtime - Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        state.ais_positions[0].msgtime + Duration::seconds(1),
+                        state.ais_positions.last().unwrap().msgtime - Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -43,8 +43,7 @@ async fn test_ais_track_returns_a_details_on_first_and_last_point() {
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos.msgtime),
-                    end: Some(pos2.msgtime),
+                    range: DateTimeRange::test_new(pos.msgtime, pos2.msgtime),
                 },
             )
             .await
@@ -77,8 +76,7 @@ async fn test_ais_track_returns_a_details_every_interval() {
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(first.msgtime),
-                    end: Some(last.msgtime),
+                    range: DateTimeRange::test_new(first.msgtime, last.msgtime),
                 },
             )
             .await
@@ -116,8 +114,7 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos.msgtime),
-                    end: Some(pos3.msgtime),
+                    range: DateTimeRange::test_new(pos.msgtime, pos3.msgtime),
                 },
             )
             .await
@@ -125,29 +122,6 @@ async fn test_ais_track_returns_missing_data_if_time_between_points_exceeds_limi
 
         assert_eq!(positions.len(), 3);
         assert!(positions[1].clone().det.unwrap().missing_data);
-    })
-    .await;
-}
-
-#[tokio::test]
-async fn test_ais_track_returns_bad_request_with_only_start_and_no_end_specified() {
-    test(|helper, builder| async move {
-        let state = builder.vessels(1).build().await;
-
-        let error = helper
-            .app
-            .get_ais_track(
-                state.vessels[0].mmsi().unwrap(),
-                AisTrackParameters {
-                    start: Some(chrono::Utc::now()),
-                    end: None,
-                },
-            )
-            .await
-            .unwrap_err();
-
-        assert_eq!(error.status, StatusCode::BAD_REQUEST);
-        assert_eq!(error.error, ErrorDiscriminants::MissingDateRange);
     })
     .await;
 }
@@ -165,13 +139,7 @@ async fn test_ais_track_returns_24h_of_data_when_no_start_and_end_are_specified(
 
         let positions = helper
             .app
-            .get_ais_track(
-                state.vessels[0].mmsi().unwrap(),
-                AisTrackParameters {
-                    start: None,
-                    end: None,
-                },
-            )
+            .get_ais_track(state.vessels[0].mmsi().unwrap(), Default::default())
             .await
             .unwrap();
 
@@ -203,8 +171,10 @@ async fn test_ais_does_not_return_positions_of_leisure_vessels_under_45_meters_w
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        pos_timestamp - Duration::seconds(1),
+                        pos_timestamp + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -215,8 +185,10 @@ async fn test_ais_does_not_return_positions_of_leisure_vessels_under_45_meters_w
             .get_ais_track(
                 state.vessels[1].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        pos_timestamp - Duration::seconds(1),
+                        pos_timestamp + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -253,8 +225,10 @@ async fn test_ais_track_returns_positions_of_leisure_vessels_under_45_meters_wit
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        pos_timestamp - Duration::seconds(1),
+                        pos_timestamp + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -265,8 +239,10 @@ async fn test_ais_track_returns_positions_of_leisure_vessels_under_45_meters_wit
             .get_ais_track(
                 state.vessels[1].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        pos_timestamp - Duration::seconds(1),
+                        pos_timestamp + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -301,8 +277,10 @@ async fn test_ais_track_does_not_return_positions_of_vessels_with_unknown_ship_t
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(state.ais_positions[0].msgtime - Duration::seconds(1)),
-                    end: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        state.ais_positions[0].msgtime - Duration::seconds(1),
+                        state.ais_positions[0].msgtime + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -338,8 +316,10 @@ async fn test_ais_track_returns_positions_of_vessels_with_unknown_ship_type_unde
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(state.ais_positions[0].msgtime - Duration::seconds(1)),
-                    end: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        state.ais_positions[0].msgtime - Duration::seconds(1),
+                        state.ais_positions[0].msgtime + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -369,8 +349,10 @@ async fn test_ais_track_prioritizes_fiskeridir_length_over_ais_length_in_leisure
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(state.ais_positions[0].msgtime - Duration::seconds(1)),
-                    end: Some(state.ais_positions[0].msgtime + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        state.ais_positions[0].msgtime - Duration::seconds(1),
+                        state.ais_positions[0].msgtime + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -402,8 +384,10 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_without_
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        pos_timestamp - Duration::seconds(1),
+                        pos_timestamp + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -437,8 +421,10 @@ async fn test_ais_track_return_positions_for_vessels_under_15m_with_full_ais_per
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        pos_timestamp - Duration::seconds(1),
+                        pos_timestamp + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -476,8 +462,10 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        pos_timestamp - Duration::seconds(1),
+                        pos_timestamp + Duration::seconds(1),
+                    ),
                 },
             )
             .await
@@ -514,8 +502,10 @@ async fn test_ais_track_does_not_return_positions_for_vessels_under_15m_with_cor
             .get_ais_track(
                 state.vessels[0].mmsi().unwrap(),
                 AisTrackParameters {
-                    start: Some(pos_timestamp - Duration::seconds(1)),
-                    end: Some(pos_timestamp + Duration::seconds(1)),
+                    range: DateTimeRange::test_new(
+                        pos_timestamp - Duration::seconds(1),
+                        pos_timestamp + Duration::seconds(1),
+                    ),
                 },
             )
             .await

@@ -1,28 +1,23 @@
-use actix_web::web::{self, Path};
-use chrono::{DateTime, Duration, Utc};
-use fiskeridir_rs::CallSign;
-use futures::TryStreamExt;
-use kyogre_core::DateRange;
-use oasgen::{OaSchema, oasgen};
-use serde::{Deserialize, Serialize};
-use serde_qs::actix::QsQuery as Query;
-use snafu::ResultExt;
-
 use crate::{
     Database,
-    error::{
-        Result,
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu},
-    },
+    error::Result,
     response::{StreamResponse, ais_unfold},
     stream_response,
 };
+use actix_web::web::{self, Path};
+use chrono::{DateTime, Utc};
+use fiskeridir_rs::CallSign;
+use futures::TryStreamExt;
+use kyogre_core::DateTimeRange;
+use oasgen::{OaSchema, oasgen};
+use serde::{Deserialize, Serialize};
+use serde_qs::actix::QsQuery as Query;
 
-#[derive(Debug, Deserialize, Serialize, OaSchema)]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct VmsParameters {
-    pub start: Option<DateTime<Utc>>,
-    pub end: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: DateTimeRange<1>,
 }
 
 #[derive(Debug, Deserialize, Serialize, OaSchema)]
@@ -39,30 +34,13 @@ pub async fn vms_positions<T: Database + Send + Sync + 'static>(
     params: Query<VmsParameters>,
     path: Path<VmsPath>,
 ) -> Result<StreamResponse<VmsPosition>> {
-    let (start, end) = match (params.start, params.end) {
-        (None, None) => {
-            let end = chrono::Utc::now();
-            let start = end - Duration::hours(24);
-            Ok((start, end))
-        }
-        (Some(start), Some(end)) => Ok((start, end)),
-        _ => MissingDateRangeSnafu {
-            start: params.start.is_some(),
-            end: params.end.is_some(),
-        }
-        .fail(),
-    }?;
-
-    let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
-
-    let response = stream_response! {
+    let range = params.into_inner().range.into();
+    Ok(stream_response! {
         ais_unfold(
             db.vms_positions(&path.call_sign, &range)
                 .map_ok(VmsPosition::from),
         )
-    };
-
-    Ok(response)
+    })
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]

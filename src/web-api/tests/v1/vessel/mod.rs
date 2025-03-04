@@ -5,13 +5,13 @@ use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup};
 use float_cmp::approx_eq;
 use http_client::StatusCode;
-use kyogre_core::FuelEstimation;
 use kyogre_core::ScraperInboundPort;
 use kyogre_core::{
     ActiveVesselConflict, FiskeridirVesselId, Mmsi, ProcessingStatus, TestHelperOutbound,
     UpdateVessel, VesselSource,
 };
 use kyogre_core::{DEFAULT_LIVE_FUEL_THRESHOLD, TEST_SIGNED_IN_VESSEL_CALLSIGN};
+use kyogre_core::{FuelEstimation, NaiveDateRange};
 use web_api::routes::v1::vessel::{FuelParams, LiveFuelParams};
 
 pub mod benchmarks;
@@ -599,8 +599,10 @@ async fn test_fuel_is_estimated() {
         let fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(state.ais_vms_positions[0].timestamp.naive_utc().date()),
-                end_date: Some(state.ais_vms_positions[9].timestamp.naive_utc().date()),
+                range: NaiveDateRange::test_new(
+                    state.ais_vms_positions[0].timestamp.naive_utc().date(),
+                    state.ais_vms_positions[9].timestamp.naive_utc().date(),
+                ),
             })
             .await
             .unwrap();
@@ -627,8 +629,10 @@ async fn test_fuel_is_equal_to_trip_fuel_estimation() {
         let fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(state.ais_vms_positions[0].timestamp.naive_utc().date()),
-                end_date: Some(state.ais_vms_positions[9].timestamp.naive_utc().date()),
+                range: NaiveDateRange::test_new(
+                    state.ais_vms_positions[0].timestamp.naive_utc().date(),
+                    state.ais_vms_positions[9].timestamp.naive_utc().date(),
+                ),
             })
             .await
             .unwrap();
@@ -682,8 +686,10 @@ async fn test_fuel_is_not_recalculated_with_new_hauls_with_passive_gear_types() 
         let fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(state.vms_positions[0].timestamp.naive_utc().date()),
-                end_date: Some(state.vms_positions[9].timestamp.naive_utc().date()),
+                range: NaiveDateRange::test_new(
+                    state.ais_vms_positions[0].timestamp.naive_utc().date(),
+                    state.ais_vms_positions[9].timestamp.naive_utc().date(),
+                ),
             })
             .await
             .unwrap();
@@ -709,8 +715,7 @@ async fn test_fuel_is_not_recalculated_with_new_hauls_with_passive_gear_types() 
         let fuel2 = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -746,8 +751,7 @@ async fn test_fuel_is_recalculated_with_new_hauls() {
         let fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -773,8 +777,7 @@ async fn test_fuel_is_recalculated_with_new_hauls() {
         let fuel2 = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -818,8 +821,7 @@ async fn test_fuel_is_recalculated_with_new_vms_data() {
         let fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -843,8 +845,7 @@ async fn test_fuel_is_recalculated_with_new_vms_data() {
         let fuel2 = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -941,8 +942,7 @@ async fn test_update_vessel_with_engine_info_recomputes_fuel_for_trips_and_day_e
         let fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -986,8 +986,7 @@ async fn test_update_vessel_with_engine_info_recomputes_fuel_for_trips_and_day_e
         let fuel2 = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -1023,8 +1022,7 @@ async fn test_update_vessel_with_engine_info_stops_fuel_estimation_from_comittin
         let fuel = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();
@@ -1065,8 +1063,7 @@ async fn test_update_vessel_with_engine_info_stops_fuel_estimation_from_comittin
         let fuel2 = helper
             .app
             .get_vessel_fuel(FuelParams {
-                start_date: Some(start.date_naive()),
-                end_date: Some(end.date_naive()),
+                range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
             })
             .await
             .unwrap();

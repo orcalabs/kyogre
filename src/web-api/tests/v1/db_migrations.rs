@@ -1,7 +1,7 @@
 use crate::v1::helper::test_with_master_db;
 use chrono::{TimeZone, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{ActiveHaulsFilter, ActiveLandingFilter, Mmsi, TripId};
+use kyogre_core::{ActiveHaulsFilter, ActiveLandingFilter, DateTimeRange, Mmsi, TripId};
 use web_api::routes::v1::{
     ais::AisTrackParameters,
     ais_vms::AisVmsParameters,
@@ -66,8 +66,10 @@ async fn test_existing_ais_succeeds_with_new_migration() {
             .get_ais_track(
                 Mmsi::test_new(1),
                 AisTrackParameters {
-                    start: Some(Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap()),
-                    end: Some(Utc.with_ymd_and_hms(2011, 2, 5, 10, 0, 0).unwrap()),
+                    range: DateTimeRange::test_new(
+                        Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
+                        Utc.with_ymd_and_hms(2011, 2, 5, 10, 0, 0).unwrap(),
+                    ),
                 },
             )
             .await
@@ -88,8 +90,10 @@ async fn test_existing_ais_vms_succeeds_with_new_migration() {
                 mmsi: Some(Mmsi::test_new(1)),
                 call_sign: Some(CallSign::try_from("CS1").unwrap()),
                 trip_id: None,
-                start: Some(Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap()),
-                end: Some(Utc.with_ymd_and_hms(2011, 2, 5, 10, 0, 0).unwrap()),
+                range: DateTimeRange::test_new(
+                    Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
+                    Utc.with_ymd_and_hms(2011, 2, 5, 10, 0, 0).unwrap(),
+                ),
             })
             .await
             .unwrap();
@@ -107,10 +111,8 @@ async fn test_existing_ais_vms_by_trip_succeeds_with_new_migration() {
             .app
             .get_ais_vms_positions(AisVmsParameters {
                 mmsi: Some(Mmsi::test_new(1)),
-                call_sign: None,
                 trip_id: Some(TripId::test_new(1)),
-                start: None,
-                end: None,
+                ..Default::default()
             })
             .await
             .unwrap();

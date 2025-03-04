@@ -6,7 +6,10 @@ use fiskeridir_rs::{
 };
 use float_cmp::approx_eq;
 use http_client::StatusCode;
-use kyogre_core::{CreateFuelMeasurement, TEST_SIGNED_IN_VESSEL_CALLSIGN, TestHelperOutbound};
+use kyogre_core::{
+    CreateFuelMeasurement, DateTimeRange, NaiveDateRange, TEST_SIGNED_IN_VESSEL_CALLSIGN,
+    TestHelperOutbound,
+};
 use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
 use std::str::FromStr;
 use web_api::routes::v1::{org::OrgBenchmarkParameters, user::User, vessel::FuelParams};
@@ -109,8 +112,10 @@ async fn test_vessel_org_benchmarks_works_with_trips_with_different_amount_of_la
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    start: state.trips.iter().map(|t| t.period.start()).min(),
-                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                    range: DateTimeRange::test_new(
+                        state.trips.iter().map(|t| t.period.start()).min().unwrap(),
+                        state.trips.iter().map(|t| t.period.end()).max().unwrap(),
+                    ),
                 },
             )
             .await
@@ -144,8 +149,10 @@ async fn test_vessel_org_benchmarks_works_with_trips_without_landings() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    start: state.trips.iter().map(|t| t.period.start()).min(),
-                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                    range: DateTimeRange::test_new(
+                        state.trips.iter().map(|t| t.period.start()).min().unwrap(),
+                        state.trips.iter().map(|t| t.period.end()).max().unwrap(),
+                    ),
                 },
             )
             .await
@@ -185,8 +192,10 @@ async fn test_vessel_org_benchmarks_returns_not_found_on_org_not_associated_with
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    start: state.trips.iter().map(|t| t.period.start()).min(),
-                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                    range: DateTimeRange::test_new(
+                        state.trips.iter().map(|t| t.period.start()).min().unwrap(),
+                        state.trips.iter().map(|t| t.period.end()).max().unwrap(),
+                    ),
                 },
             )
             .await
@@ -233,8 +242,10 @@ async fn test_vessel_org_benchmarks_sums_species_per_vessel() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    start: state.trips.iter().map(|t| t.period.start()).min(),
-                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                    range: DateTimeRange::test_new(
+                        state.trips.iter().map(|t| t.period.start()).min().unwrap(),
+                        state.trips.iter().map(|t| t.period.end()).max().unwrap(),
+                    ),
                 },
             )
             .await
@@ -275,8 +286,10 @@ async fn test_vessel_org_benchmarks_works() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    start: state.trips.iter().map(|t| t.period.start()).min(),
-                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                    range: DateTimeRange::test_new(
+                        state.trips.iter().map(|t| t.period.start()).min().unwrap(),
+                        state.trips.iter().map(|t| t.period.end()).max().unwrap(),
+                    ),
                 },
             )
             .await
@@ -319,8 +332,10 @@ async fn test_vessel_org_benchmarks_filters_by_org() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    start: state.trips.iter().map(|t| t.period.start()).min(),
-                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                    range: DateTimeRange::test_new(
+                        state.trips.iter().map(|t| t.period.start()).min().unwrap(),
+                        state.trips.iter().map(|t| t.period.end()).max().unwrap(),
+                    ),
                 },
             )
             .await
@@ -361,8 +376,10 @@ async fn test_vessel_org_benchmarks_filters_by_dates() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    start: Some(state.trips[1].period.start()),
-                    end: state.trips.iter().map(|t| t.period.end()).max(),
+                    range: DateTimeRange::test_new(
+                        state.trips[1].period.start(),
+                        state.trips.iter().map(|t| t.period.end()).max().unwrap(),
+                    ),
                 },
             )
             .await
@@ -399,16 +416,20 @@ async fn test_org_fuel_returns_not_found_for_non_logged_in_users() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: state
-                        .trips
-                        .iter()
-                        .map(|t| t.period.start().date_naive())
-                        .min(),
-                    end_date: state
-                        .trips
-                        .iter()
-                        .map(|t| t.period.end().date_naive())
-                        .max(),
+                    range: NaiveDateRange::test_new(
+                        state
+                            .trips
+                            .iter()
+                            .map(|t| t.period.start().date_naive())
+                            .min()
+                            .unwrap(),
+                        state
+                            .trips
+                            .iter()
+                            .map(|t| t.period.end().date_naive())
+                            .max()
+                            .unwrap(),
+                    ),
                 },
             )
             .await
@@ -449,16 +470,20 @@ async fn test_get_org_fuel_for_org_user_is_not_part_of_returns_not_found() {
             .get_org_fuel(
                 org_id2,
                 FuelParams {
-                    start_date: state
-                        .trips
-                        .iter()
-                        .map(|t| t.period.start().date_naive())
-                        .min(),
-                    end_date: state
-                        .trips
-                        .iter()
-                        .map(|t| t.period.end().date_naive())
-                        .max(),
+                    range: NaiveDateRange::test_new(
+                        state
+                            .trips
+                            .iter()
+                            .map(|t| t.period.start().date_naive())
+                            .min()
+                            .unwrap(),
+                        state
+                            .trips
+                            .iter()
+                            .map(|t| t.period.end().date_naive())
+                            .max()
+                            .unwrap(),
+                    ),
                 },
             )
             .await
@@ -500,16 +525,20 @@ async fn test_org_fuel_filter_by_orgs() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: state
-                        .trips
-                        .iter()
-                        .map(|t| t.period.start().date_naive())
-                        .min(),
-                    end_date: state
-                        .trips
-                        .iter()
-                        .map(|t| t.period.end().date_naive())
-                        .max(),
+                    range: NaiveDateRange::test_new(
+                        state
+                            .trips
+                            .iter()
+                            .map(|t| t.period.start().date_naive())
+                            .min()
+                            .unwrap(),
+                        state
+                            .trips
+                            .iter()
+                            .map(|t| t.period.end().date_naive())
+                            .max()
+                            .unwrap(),
+                    ),
                 },
             )
             .await
@@ -562,8 +591,10 @@ async fn test_org_fuel_returns_empty_response_with_no_data() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some((now - Duration::days(10)).date_naive()),
-                    end_date: Some(now.date_naive()),
+                    range: NaiveDateRange::test_new(
+                        (now - Duration::days(10)).date_naive(),
+                        now.date_naive(),
+                    ),
                 },
             )
             .await
@@ -644,8 +675,7 @@ async fn test_org_fuel_only_includes_measurments_within_given_range() {
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -730,8 +760,7 @@ async fn test_org_fuel_excludes_fuel_measurement_when_more_than_half_of_period_i
             .get_org_fuel(
                 org_id,
                 FuelParams {
-                    start_date: Some(start.date_naive()),
-                    end_date: Some(end.date_naive()),
+                    range: NaiveDateRange::test_new(start.date_naive(), end.date_naive()),
                 },
             )
             .await
@@ -799,8 +828,7 @@ async fn test_org_benchmarks_excludes_non_active_vessels() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    start: Some(start),
-                    end: Some(end),
+                    range: DateTimeRange::test_new(start, end),
                 },
             )
             .await

@@ -1,27 +1,22 @@
+use crate::{
+    Database,
+    error::{Result, error::MissingMmsiOrCallSignOrTripIdSnafu},
+    extractors::UserAuth,
+    response::{StreamResponse, ais_unfold},
+    stream_response,
+};
 use actix_web::web;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::{
-    AisPosition, AisVmsParams, DateRange, FiskeridirVesselId, Mmsi, NavigationStatus, TripId,
+    AisPosition, AisVmsParams, DateTimeRange, FiskeridirVesselId, Mmsi, NavigationStatus, TripId,
     TripPositionLayerId, VmsPosition,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{DisplayFromStr, serde_as, skip_serializing_none};
-use snafu::ResultExt;
-
-use crate::{
-    Database,
-    error::{
-        Result,
-        error::{InvalidDateRangeSnafu, MissingDateRangeSnafu, MissingMmsiOrCallSignOrTripIdSnafu},
-    },
-    extractors::UserAuth,
-    response::{StreamResponse, ais_unfold},
-    stream_response,
-};
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
@@ -32,8 +27,8 @@ pub struct AisVmsParameters {
     pub call_sign: Option<CallSign>,
     /// Trip to retrive the track for, all other filter parameters are ignored if provided
     pub trip_id: Option<TripId>,
-    pub start: Option<DateTime<Utc>>,
-    pub end: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: DateTimeRange<1>,
 }
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
@@ -76,26 +71,10 @@ pub async fn ais_vms_positions<T: Database + Send + Sync + 'static>(
     let params = if let Some(trip_id) = params.trip_id {
         AisVmsParams::Trip(trip_id)
     } else {
-        let (start, end) = match (params.start, params.end) {
-            (None, None) => {
-                let end = chrono::Utc::now();
-                let start = end - Duration::hours(24);
-                Ok((start, end))
-            }
-            (Some(start), Some(end)) => Ok((start, end)),
-            _ => MissingDateRangeSnafu {
-                start: params.start.is_some(),
-                end: params.end.is_some(),
-            }
-            .fail(),
-        }?;
-
-        let range = DateRange::new(start, end).context(InvalidDateRangeSnafu { start, end })?;
-
         AisVmsParams::Range {
+            range: params.range.into(),
             mmsi: params.mmsi,
             call_sign: params.call_sign,
-            range,
         }
     };
 
