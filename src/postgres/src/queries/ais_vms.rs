@@ -60,7 +60,31 @@ ORDER BY
         call_sign: Option<&CallSign>,
         range: &DateRange,
     ) -> Result<Vec<DailyFuelEstimationPosition>> {
-        Ok(sqlx::query_as!(
+        match (mmsi, call_sign) {
+            (Some(mmsi), Some(call_sign)) => {
+                self.fuel_estimation_positions_mmsi_and_call_sign(vessel_id, mmsi, call_sign, range)
+                    .await
+            }
+            (Some(mmsi), None) => {
+                self.fuel_estimation_positions_mmsi(vessel_id, mmsi, range)
+                    .await
+            }
+            (None, Some(call_sign)) => {
+                self.fuel_estimation_positions_call_sign(vessel_id, call_sign, range)
+                    .await
+            }
+            (None, None) => Ok(vec![]),
+        }
+    }
+
+    async fn fuel_estimation_positions_mmsi_and_call_sign(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Mmsi,
+        call_sign: &CallSign,
+        range: &DateRange,
+    ) -> Result<Vec<DailyFuelEstimationPosition>> {
+        sqlx::query_as!(
             DailyFuelEstimationPosition,
             r#"
 WITH
@@ -141,12 +165,167 @@ ORDER BY
             range.start(),
             range.end(),
             PositionType::Ais as i32,
-            mmsi as Option<Mmsi>,
+            mmsi as Mmsi,
             PositionType::Vms as i32,
-            call_sign as Option<&CallSign>,
+            call_sign as &CallSign,
         )
-        .fetch_all(self.ais_pool())
-        .await?)
+        .fetch_all(self.no_plan_cache_pool())
+        .await
+        .map_err(|e| e.into())
+    }
+
+    async fn fuel_estimation_positions_mmsi(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Mmsi,
+        range: &DateRange,
+    ) -> Result<Vec<DailyFuelEstimationPosition>> {
+        sqlx::query_as!(
+            DailyFuelEstimationPosition,
+            r#"
+WITH
+    overlapping_trips AS (
+        SELECT
+            ARRAY_AGG(trip_id) AS trip_ids,
+            RANGE_AGG(period) AS periods
+        FROM
+            trips_detailed
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND period && TSTZRANGE ($2, $3, '[)')
+    )
+SELECT
+    u.trip_id AS "trip_id: TripId",
+    u.latitude AS "latitude!",
+    u.longitude AS "longitude!",
+    u.timestamp AS "timestamp!",
+    u.speed,
+    u.position_type_id AS "position_type_id!: PositionType",
+    COALESCE(u.cumulative_cargo_weight, 0) AS "cumulative_cargo_weight!",
+    COALESCE(u.cumulative_fuel_consumption_liter, 0) AS "cumulative_fuel_consumption_liter!"
+FROM
+    (
+        SELECT
+            p.trip_id,
+            p.latitude,
+            p.longitude,
+            p.timestamp,
+            p.speed,
+            p.position_type_id,
+            p.trip_cumulative_cargo_weight AS cumulative_cargo_weight,
+            p.trip_cumulative_fuel_consumption_liter AS cumulative_fuel_consumption_liter
+        FROM
+            trip_positions p
+            INNER JOIN overlapping_trips t ON p.trip_id = ANY (t.trip_ids)
+        WHERE
+            p.timestamp BETWEEN $2 AND $3
+        UNION ALL
+        SELECT
+            NULL AS trip_id,
+            latitude,
+            longitude,
+            "timestamp",
+            speed_over_ground AS speed,
+            $4::INT AS position_type_id,
+            NULL AS cumulative_cargo_weight,
+            NULL AS cumulative_fuel_consumption_liter
+        FROM
+            ais_positions a
+            LEFT JOIN overlapping_trips t ON a.timestamp <@ t.periods
+        WHERE
+            mmsi = $5
+            AND "timestamp" BETWEEN $2 AND $3
+            AND t.trip_ids IS NULL
+    ) u
+ORDER BY
+    u.timestamp ASC
+            "#,
+            vessel_id.into_inner(),
+            range.start(),
+            range.end(),
+            PositionType::Ais as i32,
+            mmsi as Mmsi,
+        )
+        .fetch_all(self.no_plan_cache_pool())
+        .await
+        .map_err(|e| e.into())
+    }
+
+    async fn fuel_estimation_positions_call_sign(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        call_sign: &CallSign,
+        range: &DateRange,
+    ) -> Result<Vec<DailyFuelEstimationPosition>> {
+        sqlx::query_as!(
+            DailyFuelEstimationPosition,
+            r#"
+WITH
+    overlapping_trips AS (
+        SELECT
+            ARRAY_AGG(trip_id) AS trip_ids,
+            RANGE_AGG(period) AS periods
+        FROM
+            trips_detailed
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND period && TSTZRANGE ($2, $3, '[)')
+    )
+SELECT
+    u.trip_id AS "trip_id: TripId",
+    u.latitude AS "latitude!",
+    u.longitude AS "longitude!",
+    u.timestamp AS "timestamp!",
+    u.speed,
+    u.position_type_id AS "position_type_id!: PositionType",
+    COALESCE(u.cumulative_cargo_weight, 0) AS "cumulative_cargo_weight!",
+    COALESCE(u.cumulative_fuel_consumption_liter, 0) AS "cumulative_fuel_consumption_liter!"
+FROM
+    (
+        SELECT
+            p.trip_id,
+            p.latitude,
+            p.longitude,
+            p.timestamp,
+            p.speed,
+            p.position_type_id,
+            p.trip_cumulative_cargo_weight AS cumulative_cargo_weight,
+            p.trip_cumulative_fuel_consumption_liter AS cumulative_fuel_consumption_liter
+        FROM
+            trip_positions p
+            INNER JOIN overlapping_trips t ON p.trip_id = ANY (t.trip_ids)
+        WHERE
+            p.timestamp BETWEEN $2 AND $3
+        UNION ALL
+        SELECT
+            NULL AS trip_id,
+            latitude,
+            longitude,
+            "timestamp",
+            speed,
+            $4::INT AS position_type_id,
+            NULL AS cumulative_cargo_weight,
+            NULL AS cumulative_fuel_consumption_liter
+        FROM
+            vms_positions v
+            LEFT JOIN overlapping_trips t ON v.timestamp <@ t.periods
+        WHERE
+            call_sign = $5
+            AND "timestamp" BETWEEN $2 AND $3
+            AND t.trip_ids IS NULL
+    ) u
+ORDER BY
+    u.timestamp ASC
+            "#,
+            vessel_id.into_inner(),
+            range.start(),
+            range.end(),
+            PositionType::Vms as i32,
+            call_sign as &CallSign,
+        )
+        .fetch_all(self.no_plan_cache_pool())
+        .await
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn earliest_position_impl(
@@ -178,7 +357,7 @@ FROM
             mmsi.map(|m| m.into_inner()),
             call_sign.map(|c| c.as_ref())
         )
-        .fetch_one(self.ais_pool())
+        .fetch_one(self.no_plan_cache_pool())
         .await?
         .min_date)
     }
@@ -279,7 +458,7 @@ ORDER BY
             PositionType::Ais as i32,
             PositionType::Vms as i32,
         )
-        .fetch(self.ais_pool())
+        .fetch(self.no_plan_cache_pool())
         .map_err(|e| e.into())
     }
 
@@ -370,7 +549,7 @@ ORDER BY
             PositionType::Vms as i32,
             call_sign.map(|c| c.as_ref()),
         )
-        .fetch(self.ais_pool())
+        .fetch(self.no_plan_cache_pool())
         .map_err(|e| e.into())
     }
 

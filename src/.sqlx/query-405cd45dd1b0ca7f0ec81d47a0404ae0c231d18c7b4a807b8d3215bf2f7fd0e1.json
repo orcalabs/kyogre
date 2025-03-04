@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    overlapping_trips AS (\n        SELECT\n            ARRAY_AGG(trip_id) AS trip_ids,\n            RANGE_AGG(period) AS periods\n        FROM\n            trips_detailed\n        WHERE\n            fiskeridir_vessel_id = $1\n            AND period && TSTZRANGE ($2, $3, '[)')\n    )\nSELECT\n    u.trip_id AS \"trip_id: TripId\",\n    u.latitude AS \"latitude!\",\n    u.longitude AS \"longitude!\",\n    u.timestamp AS \"timestamp!\",\n    u.speed,\n    u.position_type_id AS \"position_type_id!: PositionType\",\n    COALESCE(u.cumulative_cargo_weight, 0) AS \"cumulative_cargo_weight!\",\n    COALESCE(u.cumulative_fuel_consumption_liter, 0) AS \"cumulative_fuel_consumption_liter!\"\nFROM\n    (\n        SELECT\n            p.trip_id,\n            p.latitude,\n            p.longitude,\n            p.timestamp,\n            p.speed,\n            p.position_type_id,\n            p.trip_cumulative_cargo_weight AS cumulative_cargo_weight,\n            p.trip_cumulative_fuel_consumption_liter AS cumulative_fuel_consumption_liter\n        FROM\n            trip_positions p\n            INNER JOIN overlapping_trips t ON p.trip_id = ANY (t.trip_ids)\n        WHERE\n            p.timestamp BETWEEN $2 AND $3\n        UNION ALL\n        SELECT\n            NULL AS trip_id,\n            latitude,\n            longitude,\n            \"timestamp\",\n            speed,\n            $4::INT AS position_type_id,\n            NULL AS cumulative_cargo_weight,\n            NULL AS cumulative_fuel_consumption_liter\n        FROM\n            vms_positions v\n            LEFT JOIN overlapping_trips t ON v.timestamp <@ t.periods\n        WHERE\n            call_sign = $5\n            AND \"timestamp\" BETWEEN $2 AND $3\n            AND t.trip_ids IS NULL\n    ) u\nORDER BY\n    u.timestamp ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id: TripId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "position_type_id!: PositionType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "cumulative_cargo_weight!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "cumulative_fuel_consumption_liter!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "405cd45dd1b0ca7f0ec81d47a0404ae0c231d18c7b4a807b8d3215bf2f7fd0e1"
+}

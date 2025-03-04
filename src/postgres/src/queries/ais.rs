@@ -70,7 +70,7 @@ ORDER BY
             LEISURE_VESSEL_SHIP_TYPES.as_slice(),
             LEISURE_VESSEL_LENGTH_AIS_BOUNDARY as i32,
         )
-        .fetch(self.ais_pool())
+        .fetch(self.no_plan_cache_pool())
         .map_err(|e| e.into())
     }
 
@@ -120,7 +120,7 @@ ORDER BY
             start,
             end,
         )
-        .fetch_all(self.ais_pool())
+        .fetch_all(self.no_plan_cache_pool())
         .await
         .map_err(|e| e.into())
     }
