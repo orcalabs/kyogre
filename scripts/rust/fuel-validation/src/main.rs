@@ -1,18 +1,19 @@
-use anyhow::Result;
-use calamine::{open_workbook_from_rs, Data, DataType, RangeDeserializerBuilder, Reader, Xlsx};
-use chrono::{Datelike, Duration};
-use clap::{Parser, ValueEnum};
-use serde::de::DeserializeOwned;
-use sqlx::{
-    postgres::{PgConnectOptions, PgPoolOptions},
-    types::chrono::NaiveDate,
-    PgPool,
-};
 use std::{
     collections::HashMap,
     fmt::Display,
     fs::File,
-    io::{stdout, Cursor, Write},
+    io::{Cursor, Write, stdout},
+};
+
+use anyhow::Result;
+use calamine::{Data, DataType, RangeDeserializerBuilder, Reader, Xlsx, open_workbook_from_rs};
+use chrono::{Datelike, Duration, Months};
+use clap::{Parser, ValueEnum};
+use serde::de::DeserializeOwned;
+use sqlx::{
+    PgPool,
+    postgres::{PgConnectOptions, PgPoolOptions},
+    types::chrono::NaiveDate,
 };
 
 #[derive(Debug, Clone)]
@@ -27,15 +28,11 @@ pub struct TripEntry {
     pub fuel: f64,
     pub num_ais_positions: i32,
     pub num_vms_positions: i32,
-    pub distance: Option<f64>,
 }
 
 impl Trip {
     pub fn fuel_total(&self) -> f64 {
         self.entries.iter().map(|v| v.fuel).sum()
-    }
-    pub fn distance_total(&self) -> f64 {
-        self.entries.iter().filter_map(|v| v.distance).sum()
     }
     pub fn ais_total(&self) -> i32 {
         self.entries.iter().map(|v| v.num_ais_positions).sum()
@@ -45,7 +42,12 @@ impl Trip {
     }
 }
 
-async fn temp(pool: &PgPool, vessel_id: i64, start: NaiveDate, end: NaiveDate) -> Result<Trip> {
+async fn get_estimates(
+    pool: &PgPool,
+    vessel_id: i64,
+    start: NaiveDate,
+    end: NaiveDate,
+) -> Result<Trip> {
     let entries = sqlx::query_as!(
         TripEntry,
         r#"
@@ -53,8 +55,7 @@ SELECT
     e.date::DATE AS "date!",
     e.estimate_liter AS fuel,
     num_ais_positions,
-    num_vms_positions,
-    distance
+    num_vms_positions
 FROM
     fuel_estimates e
 WHERE
@@ -76,6 +77,69 @@ ORDER BY
     })
 }
 
+#[allow(dead_code)]
+async fn get_trip_estimates(
+    pool: &PgPool,
+    vessel_id: i64,
+    start: NaiveDate,
+    end: NaiveDate,
+) -> Result<Trip> {
+    let entries = sqlx::query_as!(
+        TripEntry,
+        r#"
+WITH
+    trip AS (
+        SELECT
+            ARRAY_AGG(t.trip_id) AS trip_ids,
+            SUM(t.benchmark_fuel_consumption_liter) AS benchmark_fuel_consumption_liter
+        FROM
+            trips_detailed t
+        WHERE
+            t.fiskeridir_vessel_id = $1::BIGINT
+            AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (
+                t.period,
+                TSTZRANGE (
+                    $2::DATE::TIMESTAMPTZ,
+                    ($3::DATE + 1)::TIMESTAMPTZ,
+                    '[)'
+                )
+            ) > 0.5
+    )
+SELECT
+    p.timestamp::DATE AS "date!",
+    COALESCE(
+        MAX(p.trip_cumulative_fuel_consumption_liter) - MIN(p.trip_cumulative_fuel_consumption_liter),
+        0
+    ) AS "fuel!",
+    COUNT(*) FILTER (
+        WHERE
+            p.position_type_id = 1
+    )::INT AS "num_ais_positions!",
+    COUNT(*) FILTER (
+        WHERE
+            p.position_type_id = 2
+    )::INT AS "num_vms_positions!"
+FROM
+    trip_positions p
+    INNER JOIN trip t ON p.trip_id = ANY (t.trip_ids)
+GROUP BY
+    p.timestamp::DATE
+ORDER BY
+    p.timestamp::DATE
+        "#,
+        vessel_id,
+        start,
+        end,
+    )
+    .fetch_all(pool)
+    .await?;
+
+    Ok(Trip {
+        name: format!("Estimate from {start} to {end}"),
+        entries,
+    })
+}
+
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
 enum Vessels {
     Ramoen,
@@ -83,6 +147,7 @@ enum Vessels {
     Nergaard,
     Heroyfjord,
     Eros,
+    SilleMarie,
 }
 
 /// Run fuel validation on vessels
@@ -116,7 +181,70 @@ async fn main() -> Result<()> {
             );
             run_heroyfjord_eros(bytes, vessel_id, name).await
         }
+        Vessels::SilleMarie => run_sille_marie().await,
     }
+}
+
+async fn run_sille_marie() -> Result<()> {
+    let bytes = [
+        include_bytes!("../Produksjonsoversikt Sille Marie 2025.xlsx") as &[u8],
+        include_bytes!("../Produksjonsoversikt Sille Marie 2024.xlsx") as &[u8],
+        include_bytes!("../Produksjonsoversikt Sille Marie 2023.xlsx") as &[u8],
+    ];
+    let vessel_id = 2023124435;
+
+    let mut trips = decode_sille_marie(&bytes)?;
+
+    let pool = connect().await;
+
+    let mut diffs = Vec::with_capacity(trips.len());
+    let mut stdout = stdout().lock();
+
+    write_header(&mut stdout)?;
+
+    trips.sort_by_key(|t| t.entries[0].date);
+    for trip in trips {
+        if trip.entries.is_empty() {
+            continue;
+        }
+
+        let start = trip.entries[0].date;
+        let end = trip.entries.last().unwrap().date;
+
+        let estimated = get_trip_estimates(&pool, vessel_id, start, end).await?;
+
+        let total = trip.fuel_total();
+        let estimated_total = estimated.fuel_total();
+        let ais_total = estimated.ais_total();
+        let vms_total = estimated.vms_total();
+
+        let diff_percent = write_stats(
+            &mut stdout,
+            &trip.name,
+            ais_total,
+            vms_total,
+            estimated_total,
+            total,
+        )?;
+
+        diffs.push(diff_percent.abs());
+    }
+
+    let n = diffs.len() as f64;
+    let mean = diffs.iter().sum::<f64>() / n;
+
+    let sd = (diffs
+        .iter()
+        .map(|v| ((v - mean).abs().powf(2.)))
+        .sum::<f64>()
+        / n)
+        .sqrt();
+
+    println!();
+    println!("Mean diff percent: {mean:.0}");
+    println!("SD:                {sd:.2}");
+
+    Ok(())
 }
 
 async fn run_ramoen() -> Result<()> {
@@ -140,11 +268,10 @@ async fn run_ramoen() -> Result<()> {
         let start = trip.entries[0].date;
         let end = trip.entries.last().unwrap().date;
 
-        let estimated = temp(&pool, vessel_id, start, end).await?;
+        let estimated = get_estimates(&pool, vessel_id, start, end).await?;
 
         let total = trip.fuel_total();
         let estimated_total = estimated.fuel_total();
-        let distance_total = estimated.distance_total();
         let ais_total = estimated.ais_total();
         let vms_total = estimated.vms_total();
 
@@ -155,7 +282,6 @@ async fn run_ramoen() -> Result<()> {
             vms_total,
             estimated_total,
             total,
-            distance_total,
         )?;
 
         diffs.push(diff_percent.abs());
@@ -196,13 +322,16 @@ async fn run_heroyfjord_eros(bytes: &[u8], vessel_id: i64, name: &str) -> Result
         let start = trip.entries[0].date;
         let end = trip.entries.last().unwrap().date;
 
-        let estimated = temp(&pool, vessel_id, start, end).await?;
+        let estimated = get_estimates(&pool, vessel_id, start, end).await?;
 
         let total = trip.fuel_total();
         let estimated_total = estimated.fuel_total();
-        let distance_total = estimated.distance_total();
         let ais_total = estimated.ais_total();
         let vms_total = estimated.vms_total();
+
+        if ais_total + vms_total == 0 {
+            continue;
+        }
 
         let diff_percent = write_stats(
             &mut stdout,
@@ -211,7 +340,6 @@ async fn run_heroyfjord_eros(bytes: &[u8], vessel_id: i64, name: &str) -> Result
             vms_total,
             estimated_total,
             total,
-            distance_total,
         )?;
 
         diffs.push(diff_percent.abs());
@@ -246,7 +374,7 @@ async fn run_nergard() -> Result<()> {
 
     write_header(&mut stdout)?;
 
-    for trip in trips {
+    for mut trip in trips {
         if trip.entries.is_empty() {
             continue;
         }
@@ -254,11 +382,36 @@ async fn run_nergard() -> Result<()> {
         let start = trip.entries[0].date;
         let end = trip.entries.last().unwrap().date;
 
-        let estimated = temp(&pool, vessel_id, start, end).await?;
+        let mut estimated = get_estimates(&pool, vessel_id, start, end).await?;
+
+        let Some((start_idx, _)) = estimated
+            .entries
+            .iter()
+            .enumerate()
+            .find(|(_, v)| v.fuel > 0.)
+        else {
+            continue;
+        };
+        let Some((end_idx, _)) = estimated
+            .entries
+            .iter()
+            .enumerate()
+            .rev()
+            .find(|(_, v)| v.fuel > 0.)
+        else {
+            continue;
+        };
+
+        let mut keep_iter = (0..trip.entries.len()).map(|v| v >= start_idx && v <= end_idx);
+        trip.entries.retain(|_| keep_iter.next().unwrap());
+
+        let mut keep_iter = (0..estimated.entries.len()).map(|v| v >= start_idx && v <= end_idx);
+        estimated.entries.retain(|_| keep_iter.next().unwrap());
+
+        assert_eq!(trip.entries.len(), estimated.entries.len());
 
         let total = trip.fuel_total();
         let estimated_total = estimated.fuel_total();
-        let distance_total = estimated.distance_total();
         let ais_total = estimated.ais_total();
         let vms_total = estimated.vms_total();
 
@@ -269,7 +422,6 @@ async fn run_nergard() -> Result<()> {
             vms_total,
             estimated_total,
             total,
-            distance_total,
         )?;
 
         diffs.push(diff_percent.abs());
@@ -284,7 +436,6 @@ async fn run_nergard() -> Result<()> {
             vms_total,
             estimated_total,
             total,
-            distance_total,
         )?;
         write_line(&mut file)?;
 
@@ -296,7 +447,6 @@ async fn run_nergard() -> Result<()> {
                 estimate.num_vms_positions,
                 estimate.fuel,
                 entry.fuel,
-                estimate.distance.unwrap_or(0.),
             )?;
         }
         file.flush()?;
@@ -322,8 +472,8 @@ async fn run_nergard() -> Result<()> {
 pub fn write_header(writer: &mut impl Write) -> Result<()> {
     writeln!(
         writer,
-        "{0: <35} | {1: <10} | {2: <10} | {3: <10} | {4: <10} | {5: <10} | {6: <10} | {7: <10}",
-        "Date/Trip", "AIS", "VMS", "Estimate", "Fuel", "Diff", "Diff %", "Distance",
+        "{0: <35} | {1: <10} | {2: <10} | {3: <10} | {4: <10} | {5: <10} | {6: <10}",
+        "Date/Trip", "AIS", "VMS", "Estimate", "Fuel", "Diff", "Diff %",
     )?;
     write_line(writer)?;
     Ok(())
@@ -332,7 +482,7 @@ pub fn write_header(writer: &mut impl Write) -> Result<()> {
 pub fn write_line(writer: &mut impl Write) -> Result<()> {
     writeln!(
         writer,
-        "{0:-<35}---{0:-<10}---{0:-<10}---{0:-<10}---{0:-<10}---{0:-<10}---{0:-<10}---{0:-<10}",
+        "{0:-<35}---{0:-<10}---{0:-<10}---{0:-<10}---{0:-<10}---{0:-<10}---{0:-<10}",
         "",
     )?;
     Ok(())
@@ -345,14 +495,13 @@ pub fn write_stats(
     vms_positions: i32,
     estimate: f64,
     total: f64,
-    distance: f64,
 ) -> Result<f64> {
     let diff = estimate - total;
     let diff_percent = (100. * diff) / total;
 
     writeln!(
         writer,
-        "{0: <35} | {1:<10.0} | {2:<10.0} | {3:<10.0} | {4:<10.0} | {5:<10.0} | {6:<10.0} | {7:<10.0}",
+        "{0: <35} | {1:<10.0} | {2:<10.0} | {3:<10.0} | {4:<10.0} | {5:<10.0} | {6:<10.0}",
         ident.to_string(),
         ais_positions,
         vms_positions,
@@ -360,10 +509,60 @@ pub fn write_stats(
         total,
         diff,
         diff_percent,
-        distance,
     )?;
 
     Ok(diff_percent)
+}
+
+pub fn decode_sille_marie(inputs: &[impl AsRef<[u8]>]) -> Result<Vec<Trip>> {
+    let mut vec = Vec::new();
+    for input in inputs {
+        vec.extend(decode_sille_marie_impl(input)?);
+    }
+    Ok(vec)
+}
+
+pub fn decode_sille_marie_impl(input: impl AsRef<[u8]>) -> Result<Vec<Trip>> {
+    let mut doc: Xlsx<_> = open_workbook_from_rs(Cursor::new(input))?;
+
+    let (_, range) = doc.worksheets().into_iter().nth(1).unwrap();
+
+    let mut trips = Vec::new();
+
+    for row in range.rows().skip(1) {
+        let Some(Data::DateTime(start)) = row.get(4) else {
+            continue;
+        };
+        let Some(Data::DateTime(end)) = row.get(6) else {
+            continue;
+        };
+        let Some(Data::Float(fuel)) = row.get(14) else {
+            continue;
+        };
+
+        let start = start.as_datetime().unwrap().date();
+        let end = end.as_datetime().unwrap().date();
+
+        trips.push(Trip {
+            name: format!("Trip from {start} to {end}"),
+            entries: vec![
+                TripEntry {
+                    date: start,
+                    fuel: 0.,
+                    num_ais_positions: 0,
+                    num_vms_positions: 0,
+                },
+                TripEntry {
+                    date: end,
+                    fuel: *fuel,
+                    num_ais_positions: 0,
+                    num_vms_positions: 0,
+                },
+            ],
+        });
+    }
+
+    Ok(trips)
 }
 
 pub fn decode_ramoen(input: impl AsRef<[u8]>) -> Result<Vec<Trip>> {
@@ -432,14 +631,12 @@ pub fn decode_ramoen(input: impl AsRef<[u8]>) -> Result<Vec<Trip>> {
                             fuel: 0.,
                             num_ais_positions: 0,
                             num_vms_positions: 0,
-                            distance: None,
                         },
                         TripEntry {
                             date: end,
                             fuel,
                             num_ais_positions: 0,
                             num_vms_positions: 0,
-                            distance: None,
                         },
                     ],
                 });
@@ -499,7 +696,12 @@ pub fn decode_heroyfjord_eros(input: impl AsRef<[u8]>, name: &str) -> Result<Vec
         };
 
         let start = parse_date(start.trim(), year);
-        let end = parse_date(end.trim(), year);
+        let mut end = parse_date(end.trim(), year);
+
+        if end < start {
+            // Special case, currently only found for Eros
+            end = end.checked_add_months(Months::new(1)).unwrap()
+        }
 
         let fuel = match row[col] {
             Data::Float(v) => v,
@@ -515,14 +717,12 @@ pub fn decode_heroyfjord_eros(input: impl AsRef<[u8]>, name: &str) -> Result<Vec
                     fuel: 0.,
                     num_ais_positions: 0,
                     num_vms_positions: 0,
-                    distance: None,
                 },
                 TripEntry {
                     date: end,
                     fuel: fuel * 1_000.,
                     num_ais_positions: 0,
                     num_vms_positions: 0,
-                    distance: None,
                 },
             ],
         });
@@ -544,6 +744,17 @@ pub fn decode_nergard(input: impl AsRef<[u8]>) -> Result<Vec<Trip>> {
     let mut vec = Vec::new();
 
     for (name, range) in doc.worksheets() {
+        if name.contains("reke")
+            || name.contains("Reke")
+            || name.contains("3 2022")
+            || name.contains("4 2022")
+            || name.contains("8 2023")
+            || name.contains("ØstGr")
+            || name.contains("4 OG 5")
+        {
+            continue;
+        }
+
         let mut rows = range.rows();
 
         let Some(first_row) = rows.next() else {
@@ -600,7 +811,6 @@ pub fn decode_nergard(input: impl AsRef<[u8]>) -> Result<Vec<Trip>> {
                 date: date.as_datetime().unwrap().date(),
                 num_ais_positions: 0,
                 num_vms_positions: 0,
-                distance: None,
             })
         }
 
