@@ -635,6 +635,9 @@ where
     }
 }
 
+// Equations for `load_factor`, `sfc`, `kwh`, and `fuel_consumption` taken from:
+// <https://www.kystverket.no/contentassets/b89ed30e45a5488189612722f8239a1a/method-description-maru_rev.0.pdf/download>
+// Section 3.2 and 3.3
 fn estimate_fuel_between_points(
     first: &FuelItem,
     second: &FuelItem,
@@ -643,17 +646,19 @@ fn estimate_fuel_between_points(
     degree_of_electrification: f64,
     max_cargo_weight: Option<f64>,
 ) -> Option<f64> {
-    let time_ms = (second.timestamp - first.timestamp).num_milliseconds() as f64;
+    let time_ms = (second.timestamp - first.timestamp).num_milliseconds();
 
-    if time_ms <= 0. {
+    if time_ms <= 0 {
         return None;
     }
+
+    let time_secs = time_ms as f64 / 1_000.;
 
     let first_loc = Location::new(first.latitude, first.longitude);
     let second_loc = Location::new(second.latitude, second.longitude);
 
     let empty_service_speed = service_speed;
-    let full_service_speed = empty_service_speed * 0.75;
+    let full_service_speed = empty_service_speed * 0.95;
     let degree_of_electrification = 1. - degree_of_electrification;
 
     let service_speed = match max_cargo_weight {
@@ -669,7 +674,7 @@ fn estimate_fuel_between_points(
     };
 
     let speed = match first_loc.distance_to(&second_loc) {
-        Ok(v) => (v.meters() / (time_ms / 1000.)) * METER_PER_SECONDS_TO_KNOTS,
+        Ok(v) => (v.meters() / time_secs) * METER_PER_SECONDS_TO_KNOTS,
         Err(e) => {
             warn!("failed to calculate distance: {e:?}");
             match (first.speed, second.speed) {
@@ -681,17 +686,29 @@ fn estimate_fuel_between_points(
         }
     };
 
-    let mut load_factor = ((speed / service_speed).powf(3.) * 0.85).clamp(0., 0.98);
+    let load_factor = (speed / service_speed).powf(3.).clamp(0., 0.98);
 
-    if first.is_inside_haul_and_active_gear || second.is_inside_haul_and_active_gear {
-        load_factor *= HAUL_LOAD_FACTOR;
-    }
+    let haul_factor =
+        if first.is_inside_haul_and_active_gear || second.is_inside_haul_and_active_gear {
+            HAUL_LOAD_FACTOR
+        } else {
+            1.
+        };
 
     let fuel = engines
         .iter()
         .map(|e| {
-            let kwh = load_factor * e.power_kw * time_ms * degree_of_electrification / 3_600_000.;
-            e.sfc * kwh * DIESEL_GRAM_TO_LITER
+            let kwh = load_factor
+                * e.power_kw
+                * time_secs
+                * degree_of_electrification
+                * haul_factor
+                * 0.85
+                / 3_600.;
+
+            let sfc = e.sfc * (0.455 * load_factor.powf(2.) - 0.71 * load_factor + 1.28);
+
+            sfc * kwh * DIESEL_GRAM_TO_LITER
         })
         .sum();
 
