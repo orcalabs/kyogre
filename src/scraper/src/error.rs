@@ -61,13 +61,6 @@ pub enum Error {
         #[snafu(implicit)]
         location: Location,
     },
-    #[snafu(display("Regex error"))]
-    Regex {
-        #[snafu(implicit)]
-        location: Location,
-        #[snafu(source)]
-        error: regex::Error,
-    },
     #[snafu(display("Data conversion error"))]
     #[stack_error(
         opaque_stack = [
