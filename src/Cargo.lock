@@ -5250,7 +5250,6 @@ dependencies = [
  "num-traits",
  "orca-core",
  "pyo3",
- "regex",
  "serde",
  "serde_json",
  "serde_with",
