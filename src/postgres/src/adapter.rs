@@ -572,7 +572,6 @@ impl FuelEstimation for PostgresAdapter {
         Ok(retry(|| self.dates_to_estimate_impl(vessel_id, call_sign, mmsi, end_date)).await?)
     }
 
-    #[instrument(skip(self))]
     async fn fuel_estimation_positions(
         &self,
         vessel_id: FiskeridirVesselId,
