@@ -3,8 +3,11 @@ use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt, future::ready};
 use kyogre_core::*;
 use sqlx::{Pool, Postgres, postgres::types::PgRange};
+use tracing::instrument;
 
 use crate::{PostgresAdapter, error::Result, models::Haul};
+
+static ADD_HAUL_MATRIX_CHUNK_SIZE: usize = 1000;
 
 impl PostgresAdapter {
     pub(crate) async fn haul_weights_from_range_impl(
@@ -902,13 +905,15 @@ RETURNING
         Ok(event_ids)
     }
 
+    #[instrument(skip_all, fields(num_message_ids = message_ids.len()))]
     pub(crate) async fn add_hauls_matrix<'a>(
         &'a self,
         message_ids: &[i64],
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        sqlx::query!(
-            r#"
+        for chunk in message_ids.chunks(ADD_HAUL_MATRIX_CHUNK_SIZE) {
+            sqlx::query!(
+                r#"
 INSERT INTO
     hauls_matrix (
         haul_id,
@@ -952,10 +957,11 @@ GROUP BY
     b.species_group_id,
     l.catch_location_id;
             "#,
-            message_ids,
-        )
-        .execute(&mut **tx)
-        .await?;
+                chunk,
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
 
         Ok(())
     }
