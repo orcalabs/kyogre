@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
-use futures::{Stream, TryStreamExt, future::ready};
+use futures::{Stream, StreamExt, TryStreamExt, future::ready};
 use kyogre_core::*;
 use sqlx::{Pool, Postgres, postgres::types::PgRange};
 use tracing::instrument;
@@ -599,8 +599,24 @@ GROUP BY
     }
 
     pub(crate) async fn hauls_with_incorrect_catches(&self) -> Result<Vec<i64>> {
-        Ok(sqlx::query!(
+        let mut stream = sqlx::query!(
             r#"
+SELECT
+    haul_id
+FROM
+    hauls
+            "#
+        )
+        .fetch(&self.pool)
+        .map_ok(|r| r.haul_id)
+        .chunks(50000);
+
+        let mut incorrect_message_ids = Vec::new();
+
+        while let Some(haul_id_chunk) = stream.next().await {
+            let ids: Vec<i64> = haul_id_chunk.into_iter().flatten().collect();
+            let mut message_ids = sqlx::query!(
+                r#"
 SELECT
     COALESCE(h.message_id, c.message_id) AS "message_id!"
 FROM
@@ -610,6 +626,8 @@ FROM
             JSONB_ARRAY_ELEMENTS(catches) AS catch
         FROM
             hauls
+        WHERE
+            haul_id = ANY ($1)
     ) h
     FULL JOIN (
         SELECT
@@ -656,12 +674,18 @@ WHERE
     h.message_id IS NULL
     OR c.message_id IS NULL
     OR (h.catch ->> 'living_weight')::INT != c.living_weight
-            "#
-        )
-        .fetch(&self.pool)
-        .map_ok(|r| r.message_id)
-        .try_collect()
-        .await?)
+            "#,
+                &ids
+            )
+            .fetch(&self.pool)
+            .map_ok(|r| r.message_id)
+            .try_collect()
+            .await?;
+
+            incorrect_message_ids.append(&mut message_ids);
+        }
+
+        Ok(incorrect_message_ids)
     }
 
     pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(&self) -> Result<i64> {

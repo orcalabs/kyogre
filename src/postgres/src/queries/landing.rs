@@ -1,3 +1,4 @@
+use futures::StreamExt;
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
@@ -232,6 +233,7 @@ FROM
 
         let existing_landings = self.existing_landings(data_year, &mut tx).await?;
 
+        let mut all_vessel_ids = HashSet::new();
         let mut existing_landing_ids = HashSet::new();
         let mut inserted_landing_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
@@ -254,6 +256,9 @@ FROM
                 Ok(v) => {
                     num_landings += 1;
                     existing_landing_ids.insert(v.id.clone());
+                    if let Some(vessel_id) = v.vessel.id {
+                        all_vessel_ids.insert(vessel_id);
+                    }
 
                     if existing_landings
                         .get(&v.id)
@@ -304,7 +309,8 @@ FROM
         .await?;
         self.connect_trip_to_events(&vessel_event_ids, VesselEventType::Landing, &mut tx)
             .await?;
-        self.add_vessel_gear_and_species_groups(&mut tx).await?;
+        self.add_vessel_gear_and_species_groups(all_vessel_ids, &mut tx)
+            .await?;
 
         self.set_landing_vessels_call_signs(&mut tx).await?;
         self.refresh_vessel_mappings(&mut tx).await?;
@@ -638,20 +644,45 @@ WHERE
     }
 
     pub(crate) async fn landing_matrix_vs_landings_living_weight(&self) -> Result<i64> {
-        let row = sqlx::query!(
+        let mut stream = sqlx::query!(
             r#"
+SELECT
+    landing_id
+FROM
+    landings
+            "#
+        )
+        .fetch(&self.pool)
+        .map_ok(|r| r.landing_id)
+        .chunks(100000);
+
+        let mut sum = 0;
+        while let Some(landing_id_chunk) = stream.next().await {
+            let ids: Vec<String> = landing_id_chunk.into_iter().flatten().collect();
+            sum += sqlx::query!(
+                r#"
+WITH
+    landings_to_check AS (
+        SELECT
+            landing_id,
+            living_weight
+        FROM
+            landing_entries
+        WHERE
+            landing_id = ANY ($1)
+    )
 SELECT
     COALESCE(
         (
             SELECT
                 SUM(living_weight)
             FROM
-                landing_entries
+                landings_to_check
         ) - (
             SELECT
                 SUM(e.living_weight)
             FROM
-                landing_entries e
+                landings_to_check e
                 LEFT JOIN landing_matrix l ON l.landing_id = e.landing_id
             WHERE
                 l.landing_id IS NULL
@@ -663,12 +694,15 @@ SELECT
         ),
         0
     )::BIGINT AS "sum!"
-            "#
-        )
-        .fetch_one(&self.pool)
-        .await?;
+            "#,
+                &ids
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .sum;
+        }
 
-        Ok(row.sum)
+        Ok(sum)
     }
 
     async fn add_landing_matrix<'a>(
