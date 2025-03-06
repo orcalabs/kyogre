@@ -11,7 +11,7 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    DEFAULT_LIVE_FUEL_THRESHOLD, FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi,
+    DEFAULT_LIVE_FUEL_THRESHOLD, EngineType, FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi,
     NaiveDateRange, VesselCurrentTrip,
 };
 use kyogre_core::{LiveFuel, UpdateVessel};
@@ -146,6 +146,9 @@ pub struct FiskeridirVessel {
     pub auxiliary_engine_building_year: Option<u32>,
     pub boiler_engine_power: Option<u32>,
     pub boiler_engine_building_year: Option<u32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub engine_type: Option<EngineType>,
+    pub engine_rpm: Option<u32>,
     pub degree_of_electrification: Option<f64>,
     pub service_speed: Option<f64>,
 }
@@ -236,6 +239,8 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             boiler_engine_power,
             auxiliary_engine_building_year,
             boiler_engine_building_year,
+            engine_type,
+            engine_rpm,
             engine_version: _,
             degree_of_electrification,
             service_speed,
@@ -257,6 +262,8 @@ impl From<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             auxiliary_engine_building_year,
             boiler_engine_power,
             boiler_engine_building_year,
+            engine_type,
+            engine_rpm,
             degree_of_electrification,
             service_speed,
         }
@@ -281,6 +288,8 @@ impl PartialEq<fiskeridir_rs::Vessel> for FiskeridirVessel {
             boiler_engine_power: _,
             auxiliary_engine_building_year: _,
             boiler_engine_building_year: _,
+            engine_type: _,
+            engine_rpm: _,
             degree_of_electrification: _,
             service_speed: _,
         } = self;
@@ -328,6 +337,8 @@ impl PartialEq<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             boiler_engine_power,
             auxiliary_engine_building_year,
             boiler_engine_building_year,
+            engine_type,
+            engine_rpm,
             degree_of_electrification,
             service_speed,
         } = self;
@@ -345,6 +356,8 @@ impl PartialEq<kyogre_core::FiskeridirVessel> for FiskeridirVessel {
             && *auxiliary_engine_building_year == other.auxiliary_engine_building_year
             && *boiler_engine_power == other.boiler_engine_power
             && *boiler_engine_building_year == other.boiler_engine_building_year
+            && *engine_type == other.engine_type
+            && *engine_rpm == other.engine_rpm
             && *degree_of_electrification == other.degree_of_electrification
             && *service_speed == other.service_speed
     }
@@ -377,6 +390,8 @@ impl PartialEq<UpdateVessel> for Vessel {
             boiler_engine_power,
             auxiliary_engine_building_year,
             boiler_engine_building_year,
+            engine_type,
+            engine_rpm,
             degree_of_electrification,
             service_speed,
         } = other;
@@ -387,6 +402,8 @@ impl PartialEq<UpdateVessel> for Vessel {
             && self.fiskeridir.auxiliary_engine_building_year == *auxiliary_engine_building_year
             && self.fiskeridir.boiler_engine_power == *boiler_engine_power
             && self.fiskeridir.boiler_engine_building_year == *boiler_engine_building_year
+            && self.fiskeridir.engine_type == *engine_type
+            && self.fiskeridir.engine_rpm == *engine_rpm
             && self.fiskeridir.degree_of_electrification == *degree_of_electrification
             && self.fiskeridir.service_speed == *service_speed
     }

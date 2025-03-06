@@ -2,7 +2,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    DateRange, FiskeridirVesselId, FuelQuery, LiveFuelQuery, LiveFuelVessel, Mmsi,
+    DateRange, EngineType, FiskeridirVesselId, FuelQuery, LiveFuelQuery, LiveFuelVessel, Mmsi,
     NewFuelDayEstimate, NewLiveFuel, ProcessingStatus,
 };
 use sqlx::postgres::types::PgRange;
@@ -73,6 +73,8 @@ SELECT
     f.auxiliary_engine_building_year AS "auxiliary_engine_building_year?",
     f.boiler_engine_power AS "boiler_engine_power?",
     f.boiler_engine_building_year AS "boiler_engine_building_year?",
+    f.engine_type_manual AS "engine_type: EngineType",
+    f.engine_rpm_manual AS engine_rpm,
     f.service_speed AS "service_speed?",
     f.degree_of_electrification AS "degree_of_electrification?",
     t.departure_timestamp AS "current_trip_start?",

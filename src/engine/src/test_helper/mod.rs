@@ -694,6 +694,8 @@ impl TestStateBuilder {
                                             engine_building_year: Some(2000),
                                             auxiliary_engine_building_year: Some(2000),
                                             boiler_engine_building_year: Some(2000),
+                                            engine_type: None,
+                                            engine_rpm: None,
                                             degree_of_electrification: None,
                                             service_speed: None,
                                         },

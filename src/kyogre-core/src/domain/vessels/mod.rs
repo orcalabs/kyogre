@@ -7,7 +7,8 @@ use fiskeridir_rs::{
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum::{AsRefStr, EnumString};
+use serde_with::{DisplayFromStr, serde_as};
+use strum::{AsRefStr, Display, EnumString};
 
 mod benchmark;
 
@@ -22,6 +23,7 @@ pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 /// ignore.
 pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
 
+#[serde_as]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,6 +34,9 @@ pub struct UpdateVessel {
     pub auxiliary_engine_building_year: Option<u32>,
     pub boiler_engine_power: Option<u32>,
     pub boiler_engine_building_year: Option<u32>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub engine_type: Option<EngineType>,
+    pub engine_rpm: Option<u32>,
     pub degree_of_electrification: Option<f64>,
     pub service_speed: Option<f64>,
 }
@@ -42,44 +47,30 @@ pub struct LiveFuelVessel {
     pub vessel_id: FiskeridirVesselId,
     pub current_trip_start: Option<DateTime<Utc>>,
     pub latest_position_timestamp: Option<DateTime<Utc>>,
+    pub engine_power: i32,
     pub engine_building_year: i32,
-    pub engine_power: f64,
     pub auxiliary_engine_power: Option<i32>,
     pub auxiliary_engine_building_year: Option<i32>,
     pub boiler_engine_power: Option<i32>,
     pub boiler_engine_building_year: Option<i32>,
+    pub engine_type: Option<EngineType>,
+    pub engine_rpm: Option<i32>,
     pub service_speed: Option<f64>,
     pub degree_of_electrification: Option<f64>,
 }
 
 impl LiveFuelVessel {
     pub fn engines(&self) -> Vec<VesselEngine> {
-        let mut vessels = vec![VesselEngine {
-            power_kw: self.engine_power * HP_TO_KW,
-            sfc: sfc(self.engine_building_year as u32),
-            engine_type: EngineType::Main,
-        }];
-
-        if let (Some(p), Some(b)) = (
-            self.auxiliary_engine_power,
-            self.auxiliary_engine_building_year,
-        ) {
-            vessels.push(VesselEngine {
-                power_kw: p as f64 * HP_TO_KW,
-                sfc: sfc(b as u32),
-                engine_type: EngineType::Auxiliary,
-            });
-        };
-
-        if let (Some(p), Some(b)) = (self.boiler_engine_power, self.boiler_engine_building_year) {
-            vessels.push(VesselEngine {
-                power_kw: p as f64 * HP_TO_KW,
-                sfc: sfc(b as u32),
-                engine_type: EngineType::Boiler,
-            });
-        };
-
-        vessels
+        engines(
+            Some(self.engine_power as f64),
+            Some(self.engine_building_year as u32),
+            self.auxiliary_engine_power.map(|v| v as f64),
+            self.auxiliary_engine_building_year.map(|v| v as u32),
+            self.boiler_engine_power.map(|v| v as f64),
+            self.boiler_engine_building_year.map(|v| v as u32),
+            self.engine_type,
+            self.engine_rpm.map(|v| v as u32),
+        )
     }
 }
 
@@ -207,24 +198,71 @@ pub struct FiskeridirVessel {
     pub auxiliary_engine_building_year: Option<u32>,
     pub boiler_engine_power: Option<u32>,
     pub boiler_engine_building_year: Option<u32>,
+    pub engine_type: Option<EngineType>,
+    pub engine_rpm: Option<u32>,
     pub engine_version: u32,
     pub degree_of_electrification: Option<f64>,
     pub service_speed: Option<f64>,
 }
 
+#[allow(clippy::too_many_arguments)]
+pub fn engines(
+    engine_power: Option<f64>,
+    engine_building_year: Option<u32>,
+    aux_engine_power: Option<f64>,
+    aux_engine_building_year: Option<u32>,
+    boil_engine_power: Option<f64>,
+    boil_engine_building_year: Option<u32>,
+    engine_type: Option<EngineType>,
+    engine_rpm: Option<u32>,
+) -> Vec<VesselEngine> {
+    use EngineVariant::*;
+
+    let mut engines = Vec::with_capacity(3);
+
+    let mut f = |p, b, v| {
+        if let (Some(p), Some(b)) = (p, b) {
+            engines.push(VesselEngine {
+                power_kw: p * HP_TO_KW,
+                sfc: sfc(b, engine_type, engine_rpm),
+                variant: v,
+            });
+        }
+    };
+
+    f(engine_power, engine_building_year, Main);
+    f(aux_engine_power, aux_engine_building_year, Auxiliary);
+    f(boil_engine_power, boil_engine_building_year, Boiler);
+
+    engines
+}
+
 /// Specific Fuel Consumption in `g/kwh` for an engine with the given building year.
-pub fn sfc(engine_building_year: u32) -> f64 {
+pub fn sfc(engine_building_year: u32, engine_type: Option<EngineType>, rpm: Option<u32>) -> f64 {
     // Specific Fuel Consumption `MDO (Marine Diesel Oil)`
     // Source: https://wwwcdn.imo.org/localresources/en/OurWork/Environment/Documents/Fourth%20IMO%20GHG%20Study%202020%20-%20Full%20report%20and%20annexes.pdf
     //         Annex B.2, Table 4
-    match engine_building_year {
+    let sfcs = match engine_building_year {
         ..1984 => [190., 200., 210.],
         1984..2001 => [175., 185., 190.],
         2001.. => [165., 175., 185.],
+    };
+
+    if let Some(typ) = engine_type {
+        match typ {
+            EngineType::SSD => sfcs[0],
+            EngineType::MSD => sfcs[1],
+            EngineType::HSD => sfcs[2],
+        }
+    } else if let Some(rpm) = rpm {
+        match rpm {
+            0..=300 => sfcs[0],
+            301..=900 => sfcs[1],
+            901.. => sfcs[2],
+        }
+    } else {
+        sfcs.into_iter().mean().unwrap()
     }
-    .into_iter()
-    .mean()
-    .unwrap()
 }
 
 impl Vessel {
@@ -239,56 +277,44 @@ impl Vessel {
     }
 
     pub fn engines(&self) -> Vec<VesselEngine> {
-        let mut vessels = Vec::with_capacity(3);
-
-        if let (Some(p), Some(b)) = (
-            self.fiskeridir.engine_power,
+        engines(
+            self.fiskeridir.engine_power.map(|v| v as f64),
             self.fiskeridir.engine_building_year,
-        ) {
-            vessels.push(VesselEngine {
-                power_kw: p as f64 * HP_TO_KW,
-                sfc: sfc(b),
-                engine_type: EngineType::Main,
-            });
-        };
-
-        if let (Some(p), Some(b)) = (
-            self.fiskeridir.auxiliary_engine_power,
+            self.fiskeridir.auxiliary_engine_power.map(|v| v as f64),
             self.fiskeridir.auxiliary_engine_building_year,
-        ) {
-            vessels.push(VesselEngine {
-                power_kw: p as f64 * HP_TO_KW,
-                sfc: sfc(b),
-                engine_type: EngineType::Auxiliary,
-            });
-        };
-
-        if let (Some(p), Some(b)) = (
-            self.fiskeridir.boiler_engine_power,
+            self.fiskeridir.boiler_engine_power.map(|v| v as f64),
             self.fiskeridir.boiler_engine_building_year,
-        ) {
-            vessels.push(VesselEngine {
-                power_kw: p as f64 * HP_TO_KW,
-                sfc: sfc(b),
-                engine_type: EngineType::Boiler,
-            });
-        };
-
-        vessels
+            self.fiskeridir.engine_type,
+            self.fiskeridir.engine_rpm,
+        )
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum EngineType {
+pub enum EngineVariant {
     Main,
     Auxiliary,
     Boiler,
 }
+
+#[repr(i32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, AsRefStr, EnumString)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub enum EngineType {
+    /// Slow-Speed Diesel
+    SSD = 1,
+    /// Medium-Speed Diesel
+    MSD = 2,
+    /// High-Speed Diesel
+    HSD = 3,
+}
+
 #[derive(Debug, Clone)]
 pub struct VesselEngine {
     pub power_kw: f64,
     pub sfc: f64,
-    pub engine_type: EngineType,
+    pub variant: EngineVariant,
 }
 
 #[derive(
@@ -327,6 +353,28 @@ impl VesselEventType {
             VesselEventType::ErsDep => "ers_dep",
             VesselEventType::ErsPor => "ers_por",
             VesselEventType::Haul => "haul",
+        }
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl UpdateVessel {
+        pub fn test_new() -> Self {
+            Self {
+                engine_power: Some(2000),
+                engine_building_year: Some(2000),
+                auxiliary_engine_power: Some(2000),
+                auxiliary_engine_building_year: Some(2000),
+                boiler_engine_power: Some(2000),
+                boiler_engine_building_year: Some(2000),
+                degree_of_electrification: Some(0.5),
+                service_speed: Some(15.0),
+                engine_type: Some(EngineType::MSD),
+                engine_rpm: Some(700),
+            }
         }
     }
 }

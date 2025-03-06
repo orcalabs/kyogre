@@ -462,16 +462,7 @@ async fn test_update_vessel_succeeds() {
     test(|mut helper, builder| async move {
         let state = builder.vessels(1).set_logged_in().build().await;
 
-        let update = UpdateVessel {
-            engine_power: Some(2000),
-            engine_building_year: Some(1233231),
-            auxiliary_engine_power: Some(100),
-            boiler_engine_power: Some(50),
-            auxiliary_engine_building_year: Some(1233231),
-            boiler_engine_building_year: Some(1233231),
-            degree_of_electrification: Some(0.5),
-            service_speed: Some(15.0),
-        };
+        let update = UpdateVessel::test_new();
         helper.app.login_user();
         let new_vessel = helper.app.update_vessel(&update).await.unwrap();
         let vessels = helper
@@ -501,16 +492,7 @@ async fn test_update_vessel_resets_benchmarks() {
             .build()
             .await;
 
-        let update = UpdateVessel {
-            engine_power: Some(2000),
-            engine_building_year: Some(1233231),
-            auxiliary_engine_power: Some(100),
-            boiler_engine_power: Some(50),
-            auxiliary_engine_building_year: Some(1233231),
-            boiler_engine_building_year: Some(1233231),
-            degree_of_electrification: Some(0.5),
-            service_speed: Some(15.0),
-        };
+        let update = UpdateVessel::test_new();
         helper.app.login_user();
         helper.app.update_vessel(&update).await.unwrap();
 
@@ -537,16 +519,7 @@ async fn test_update_vessel_resets_fuel_estimation() {
             .build()
             .await;
 
-        let update = UpdateVessel {
-            engine_power: Some(2000),
-            engine_building_year: Some(1233231),
-            auxiliary_engine_power: Some(100),
-            boiler_engine_power: Some(50),
-            auxiliary_engine_building_year: Some(1233231),
-            boiler_engine_building_year: Some(1233231),
-            degree_of_electrification: Some(0.5),
-            service_speed: Some(15.0),
-        };
+        let update = UpdateVessel::test_new();
         helper.app.login_user();
         helper.app.update_vessel(&update).await.unwrap();
 
@@ -959,16 +932,7 @@ async fn test_update_vessel_with_engine_info_recomputes_fuel_for_trips_and_day_e
 
         helper
             .app
-            .update_vessel(&UpdateVessel {
-                engine_power: Some(2000),
-                engine_building_year: Some(2000),
-                auxiliary_engine_power: Some(2000),
-                auxiliary_engine_building_year: Some(2000),
-                boiler_engine_power: Some(2000),
-                boiler_engine_building_year: Some(2000),
-                degree_of_electrification: Some(0.5),
-                service_speed: Some(15.0),
-            })
+            .update_vessel(&UpdateVessel::test_new())
             .await
             .unwrap();
 
@@ -1032,16 +996,7 @@ async fn test_update_vessel_with_engine_info_stops_fuel_estimation_from_comittin
 
         helper
             .app
-            .update_vessel(&UpdateVessel {
-                engine_power: Some(2000),
-                engine_building_year: Some(2000),
-                auxiliary_engine_power: Some(2000),
-                auxiliary_engine_building_year: Some(2000),
-                boiler_engine_power: Some(2000),
-                boiler_engine_building_year: Some(2000),
-                degree_of_electrification: Some(0.5),
-                service_speed: Some(15.0),
-            })
+            .update_vessel(&UpdateVessel::test_new())
             .await
             .unwrap();
 

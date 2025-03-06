@@ -8,7 +8,8 @@ use crate::{
 use fiskeridir_rs::{CallSign, GearGroup, OrgId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    ActiveVesselConflict, FiskeridirVesselId, HasTrack, Mmsi, TripAssemblerId, Vessel, VesselSource,
+    ActiveVesselConflict, EngineType, FiskeridirVesselId, HasTrack, Mmsi, TripAssemblerId, Vessel,
+    VesselSource,
 };
 use std::collections::HashMap;
 
@@ -58,6 +59,8 @@ SELECT
     f.engine_version AS fiskeridir_engine_version,
     f.boiler_engine_power AS fiskeridir_boiler_engine_power,
     f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,
+    f.engine_type_manual AS "fiskeridir_engine_type: EngineType",
+    f.engine_rpm_manual AS "fiskeridir_engine_rpm",
     f.service_speed AS fiskeridir_service_speed,
     f.degree_of_electrification AS fiskeridir_degree_of_electrification,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",
@@ -113,9 +116,11 @@ SET
     boiler_engine_building_year = $6,
     service_speed = $7,
     degree_of_electrification = $8,
+    engine_type_manual = $9,
+    engine_rpm_manual = $10,
     engine_version = engine_version + 1
 WHERE
-    call_sign = $9
+    call_sign = $11
 RETURNING
     fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId"
             "#,
@@ -127,6 +132,8 @@ RETURNING
             update.boiler_engine_building_year.map(|e| e as i32),
             update.service_speed,
             update.degree_of_electrification,
+            update.engine_type.map(|v| v as i32),
+            update.engine_rpm.map(|v| v as i32),
             call_sign
         )
         .fetch_optional(&mut *tx)
@@ -482,6 +489,8 @@ SELECT
     f.engine_version AS fiskeridir_engine_version,
     f.boiler_engine_power AS fiskeridir_boiler_engine_power,
     f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,
+    f.engine_type_manual AS "fiskeridir_engine_type: EngineType",
+    f.engine_rpm_manual AS "fiskeridir_engine_rpm",
     f.service_speed AS fiskeridir_service_speed,
     f.degree_of_electrification AS fiskeridir_degree_of_electrification,
     f.gear_group_ids AS "gear_group_ids!: Vec<GearGroup>",

@@ -2,9 +2,9 @@ use fiskeridir_rs::CallSign;
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
-    DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone, FiskeridirVesselId,
-    METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi, ProcessingStatus, TripBenchmarksQuery,
-    TripId, TripWithBenchmark,
+    DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone, EngineType,
+    FiskeridirVesselId, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi, ProcessingStatus,
+    TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 
 use crate::{PostgresAdapter, error::Result, models::TripBenchmarkOutput};
@@ -83,6 +83,8 @@ SELECT
     f.auxiliary_engine_building_year,
     f.boiler_engine_power,
     f.boiler_engine_building_year,
+    f.engine_type_manual AS "engine_type: EngineType",
+    f.engine_rpm_manual AS engine_rpm,
     f.service_speed,
     f.degree_of_electrification,
     w.call_sign AS "call_sign: CallSign",
