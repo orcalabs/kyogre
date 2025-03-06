@@ -8,7 +8,7 @@ use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use serde_with::{DisplayFromStr, serde_as};
-use strum::{AsRefStr, Display, EnumString};
+use strum::{AsRefStr, Display, EnumIter, EnumString};
 
 mod benchmark;
 
@@ -165,6 +165,7 @@ pub struct DepartureWeight {
     strum::Display,
     AsRefStr,
     EnumString,
+    EnumIter,
 )]
 pub enum VesselEventType {
     Landing = 1,

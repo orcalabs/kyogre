@@ -2,6 +2,7 @@ use crate::{PostgresAdapter, error::Result, models::VesselEventDetailed};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{FiskeridirVesselId, VesselEventType};
+use strum::IntoEnumIterator;
 
 impl PostgresAdapter {
     pub(crate) fn all_landing_events(
@@ -346,30 +347,120 @@ ORDER BY
     }
 
     pub(crate) async fn dangling_vessel_events(&self) -> Result<i64> {
-        let row = sqlx::query!(
-            r#"
+        let mut count = 0;
+        for e in VesselEventType::iter() {
+            match e {
+                VesselEventType::Landing => {
+                    count += sqlx::query!(
+                        r#"
 SELECT
     COUNT(*) AS "count!"
 FROM
     vessel_events v
     LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
-    LEFT JOIN ers_dca e ON e.vessel_event_id = v.vessel_event_id
-    LEFT JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
-    LEFT JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
-    LEFT JOIN ers_tra t ON t.vessel_event_id = v.vessel_event_id
-    LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
 WHERE
     l.landing_id IS NULL
-    AND e.message_id IS NULL
-    AND d.message_id IS NULL
-    AND a.message_id IS NULL
-    AND t.message_id IS NULL
-    AND h.haul_id IS NULL
-            "#
-        )
-        .fetch_one(&self.pool)
-        .await?;
+    AND v.vessel_event_type_id = $1
+            "#,
+                        e as i32
+                    )
+                    .fetch_one(&self.pool)
+                    .await?
+                    .count;
+                }
+                VesselEventType::ErsDca => {
+                    count += sqlx::query!(
+                        r#"
+SELECT
+    COUNT(*) AS "count!"
+FROM
+    vessel_events v
+    LEFT JOIN ers_dca e ON e.vessel_event_id = v.vessel_event_id
+WHERE
+    e.message_id IS NULL
+    AND v.vessel_event_type_id = $1
+            "#,
+                        e as i32
+                    )
+                    .fetch_one(&self.pool)
+                    .await?
+                    .count;
+                }
+                VesselEventType::ErsPor => {
+                    count += sqlx::query!(
+                        r#"
+SELECT
+    COUNT(*) AS "count!"
+FROM
+    vessel_events v
+    LEFT JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
+WHERE
+    a.message_id IS NULL
+    AND v.vessel_event_type_id = $1
+            "#,
+                        e as i32
+                    )
+                    .fetch_one(&self.pool)
+                    .await?
+                    .count;
+                }
+                VesselEventType::ErsDep => {
+                    count += sqlx::query!(
+                        r#"
+SELECT
+    COUNT(*) AS "count!"
+FROM
+    vessel_events v
+    LEFT JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
+WHERE
+    d.message_id IS NULL
+    AND v.vessel_event_type_id = $1
+            "#,
+                        e as i32
+                    )
+                    .fetch_one(&self.pool)
+                    .await?
+                    .count;
+                }
+                VesselEventType::ErsTra => {
+                    count += sqlx::query!(
+                        r#"
+SELECT
+    COUNT(*) AS "count!"
+FROM
+    vessel_events v
+    LEFT JOIN ers_tra t ON t.vessel_event_id = v.vessel_event_id
+WHERE
+    t.message_id IS NULL
+    AND v.vessel_event_type_id = $1
+            "#,
+                        e as i32
+                    )
+                    .fetch_one(&self.pool)
+                    .await?
+                    .count;
+                }
+                VesselEventType::Haul => {
+                    count += sqlx::query!(
+                        r#"
+SELECT
+    COUNT(*) AS "count!"
+FROM
+    vessel_events v
+    LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
+WHERE
+    h.haul_id IS NULL
+    AND v.vessel_event_type_id = $1
+            "#,
+                        e as i32
+                    )
+                    .fetch_one(&self.pool)
+                    .await?
+                    .count;
+                }
+            }
+        }
 
-        Ok(row.count)
+        Ok(count)
     }
 }

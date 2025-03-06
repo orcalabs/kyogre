@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COUNT(*) AS \"count!\"\nFROM\n    vessel_events v\n    LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id\nWHERE\n    l.landing_id IS NULL\n    AND v.vessel_event_type_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ec69690555be191195f96d4962b711dfd4bc6581d43113983b46b9ee5d9bcf0c"
+}
