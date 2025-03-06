@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, Gear};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -23,7 +23,7 @@ pub struct AisVmsPosition {
     pub trip_cumulative_fuel_consumption_liter: f64,
 
     // This field should only be populated when fetching positions for trip processing
-    pub is_inside_haul_and_active_gear: bool,
+    pub active_gear: Option<Gear>,
 }
 
 #[derive(Debug, Clone)]

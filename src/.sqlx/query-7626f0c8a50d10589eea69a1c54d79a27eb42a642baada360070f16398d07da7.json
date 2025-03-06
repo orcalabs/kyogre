@@ -1,0 +1,106 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    overlapping_haul_ranges AS (\n        SELECT\n            MIN(h.fiskeridir_vessel_id) AS fiskeridir_vessel_id,\n            UNNEST(RANGE_AGG(h.period)) AS range\n        FROM\n            hauls h\n            INNER JOIN trips t ON h.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND h.period && t.period\n            AND h.gear_group_id = ANY ($1)\n        WHERE\n            t.trip_id = $2\n    ),\n    overlapping_hauls AS (\n        SELECT DISTINCT\n            ON (r.range) r.range,\n            h.gear_id\n        FROM\n            hauls h\n            INNER JOIN overlapping_haul_ranges r ON h.fiskeridir_vessel_id = r.fiskeridir_vessel_id\n            AND h.period && r.range\n            AND h.gear_group_id = ANY ($1)\n        ORDER BY\n            r.range,\n            LEN_OF_RANGE (h.period) DESC\n    )\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    \"timestamp\" AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    true_heading,\n    distance_to_shore AS \"distance_to_shore!\",\n    position_type_id AS \"position_type: PositionType\",\n    pruned_by AS \"pruned_by: TripPositionLayerId\",\n    trip_cumulative_fuel_consumption_liter,\n    trip_cumulative_cargo_weight,\n    h.gear_id AS \"active_gear?: Gear\"\nFROM\n    trip_positions p\n    LEFT JOIN overlapping_hauls h ON p.timestamp <@ h.range\nWHERE\n    trip_id = $2\n    AND (\n        trip_id IN (\n            SELECT\n                t.trip_id\n            FROM\n                trips t\n                INNER JOIN all_vessels a ON t.fiskeridir_vessel_id = a.fiskeridir_vessel_id\n            WHERE\n                t.trip_id = $2\n                AND CASE\n                    WHEN $3 = 0 THEN TRUE\n                    WHEN $3 = 1 THEN (\n                        length >= $4\n                        AND (\n                            ship_type IS NOT NULL\n                            AND NOT (ship_type = ANY ($5::INT[]))\n                            OR length > $6\n                        )\n                    )\n                END\n        )\n        OR position_type_id = $7\n    )\nORDER BY\n    \"timestamp\" ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "course_over_ground",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "navigational_status: NavigationStatus",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "rate_of_turn",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "true_heading",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "distance_to_shore!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "position_type: PositionType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "pruned_by: TripPositionLayerId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "trip_cumulative_fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "trip_cumulative_cargo_weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 13,
+        "name": "active_gear?: Gear",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int8",
+        "Int4",
+        "Float8",
+        "Int4Array",
+        "Float8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7626f0c8a50d10589eea69a1c54d79a27eb42a642baada360070f16398d07da7"
+}
