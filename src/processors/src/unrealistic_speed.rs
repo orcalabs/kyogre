@@ -182,7 +182,7 @@ mod tests {
             pruned_by: None,
             trip_cumulative_fuel_consumption_liter: 0.,
             trip_cumulative_cargo_weight: 0.,
-            is_inside_haul_and_active_gear: false,
+            active_gear: None,
         };
 
         let second = AisVmsPosition {
@@ -199,7 +199,7 @@ mod tests {
             pruned_by: None,
             trip_cumulative_fuel_consumption_liter: 0.,
             trip_cumulative_cargo_weight: 0.,
-            is_inside_haul_and_active_gear: false,
+            active_gear: None,
         };
 
         let res = estimated_speed_between_points(&first, &second).unwrap();

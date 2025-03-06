@@ -1,13 +1,10 @@
 use chrono::NaiveDate;
-use fiskeridir_rs::CallSign;
-use fiskeridir_rs::DeliveryPointId;
+use fiskeridir_rs::{CallSign, DeliveryPointId, Gear};
 use futures::{Stream, StreamExt, TryStreamExt};
-use kyogre_core::DateRange;
-use kyogre_core::FuelMeasurementRange;
 use kyogre_core::{
-    AisVmsPosition, Arrival, DeliveryPoint, Departure, FiskeridirVesselId, Mmsi, NavigationStatus,
-    NewVesselConflict, PortDockPoint, PositionType, ProcessingStatus, TripPositionLayerId,
-    VesselEventType,
+    AisVmsPosition, Arrival, DateRange, DeliveryPoint, Departure, FiskeridirVesselId,
+    FuelMeasurementRange, Mmsi, NavigationStatus, NewVesselConflict, PortDockPoint, PositionType,
+    ProcessingStatus, TripPositionLayerId, VesselEventType,
 };
 
 use crate::{
@@ -301,7 +298,7 @@ SELECT
     NULL AS "pruned_by: TripPositionLayerId",
     0 AS "trip_cumulative_fuel_consumption_liter!",
     0 AS "trip_cumulative_cargo_weight!",
-    FALSE AS "is_inside_haul_and_active_gear!"
+    NULL AS "active_gear?: Gear"
 FROM
     (
         SELECT

@@ -180,7 +180,7 @@ impl From<kyogre_core::AisVmsPosition> for AisVmsPosition {
             pruned_by,
             trip_cumulative_fuel_consumption_liter,
             trip_cumulative_cargo_weight,
-            is_inside_haul_and_active_gear: _,
+            active_gear: _,
         } = v;
 
         AisVmsPosition {

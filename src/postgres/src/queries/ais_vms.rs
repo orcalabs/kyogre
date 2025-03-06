@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use fiskeridir_rs::{CallSign, GearGroup};
+use fiskeridir_rs::{CallSign, Gear, GearGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     AisPermission, AisVmsPosition, DailyFuelEstimationPosition, DateRange, FiskeridirVesselId,
@@ -386,7 +386,7 @@ SELECT
     NULL AS "pruned_by: TripPositionLayerId",
     0 AS "trip_cumulative_fuel_consumption_liter!",
     0 AS "trip_cumulative_cargo_weight!",
-    FALSE AS "is_inside_haul_and_active_gear!"
+    NULL AS "active_gear?: Gear"
 FROM
     (
         SELECT
@@ -473,15 +473,29 @@ ORDER BY
             AisVmsPosition,
             r#"
 WITH
-    overlapping_hauls AS (
+    overlapping_haul_ranges AS (
         SELECT
-            RANGE_AGG(h.period) AS haul_range
+            MIN(h.fiskeridir_vessel_id) AS fiskeridir_vessel_id,
+            UNNEST(RANGE_AGG(h.period)) AS range
         FROM
             hauls h
         WHERE
             h.fiskeridir_vessel_id = $1::BIGINT
             AND h.period && TSTZRANGE ($2, $3, '[]')
             AND h.gear_group_id = ANY ($4::INT[])
+    ),
+    overlapping_hauls AS (
+        SELECT DISTINCT
+            ON (r.range) r.range,
+            h.gear_id
+        FROM
+            hauls h
+            INNER JOIN overlapping_haul_ranges r ON h.fiskeridir_vessel_id = r.fiskeridir_vessel_id
+            AND h.period && r.range
+            AND h.gear_group_id = ANY ($4)
+        ORDER BY
+            r.range,
+            LEN_OF_RANGE (h.period) DESC
     )
 SELECT
     latitude AS "latitude!",
@@ -497,7 +511,7 @@ SELECT
     NULL AS "pruned_by: TripPositionLayerId",
     0 AS "trip_cumulative_fuel_consumption_liter!",
     0 AS "trip_cumulative_cargo_weight!",
-    h.haul_range IS NOT NULL AS "is_inside_haul_and_active_gear!"
+    h.gear_id AS "active_gear?: Gear"
 FROM
     (
         SELECT
@@ -534,7 +548,7 @@ FROM
             $8::TEXT IS NOT NULL
             AND call_sign = $8
     ) q
-    LEFT JOIN overlapping_hauls h ON q.timestamp <@ h.haul_range
+    LEFT JOIN overlapping_hauls h ON q.timestamp <@ h.range
 WHERE
     "timestamp" BETWEEN $2 AND $3
 ORDER BY
@@ -562,9 +576,10 @@ ORDER BY
             AisVmsPosition,
             r#"
 WITH
-    overlapping_hauls AS (
+    overlapping_haul_ranges AS (
         SELECT
-            RANGE_AGG(h.period) AS haul_range
+            MIN(h.fiskeridir_vessel_id) AS fiskeridir_vessel_id,
+            UNNEST(RANGE_AGG(h.period)) AS range
         FROM
             hauls h
             INNER JOIN trips t ON h.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -572,6 +587,19 @@ WITH
             AND h.gear_group_id = ANY ($1)
         WHERE
             t.trip_id = $2
+    ),
+    overlapping_hauls AS (
+        SELECT DISTINCT
+            ON (r.range) r.range,
+            h.gear_id
+        FROM
+            hauls h
+            INNER JOIN overlapping_haul_ranges r ON h.fiskeridir_vessel_id = r.fiskeridir_vessel_id
+            AND h.period && r.range
+            AND h.gear_group_id = ANY ($1)
+        ORDER BY
+            r.range,
+            LEN_OF_RANGE (h.period) DESC
     )
 SELECT
     latitude AS "latitude!",
@@ -587,10 +615,10 @@ SELECT
     pruned_by AS "pruned_by: TripPositionLayerId",
     trip_cumulative_fuel_consumption_liter,
     trip_cumulative_cargo_weight,
-    h.haul_range IS NOT NULL AS "is_inside_haul_and_active_gear!"
+    h.gear_id AS "active_gear?: Gear"
 FROM
     trip_positions p
-    LEFT JOIN overlapping_hauls h ON p.timestamp <@ h.haul_range
+    LEFT JOIN overlapping_hauls h ON p.timestamp <@ h.range
 WHERE
     trip_id = $2
     AND (

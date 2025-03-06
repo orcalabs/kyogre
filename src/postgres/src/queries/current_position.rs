@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, Gear};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     AisPermission, AisVmsPosition, CurrentPosition, CurrentPositionVessel, CurrentPositionsUpdate,
@@ -89,7 +89,7 @@ SELECT
     NULL AS "pruned_by: TripPositionLayerId",
     0 AS "trip_cumulative_fuel_consumption_liter!",
     0 AS "trip_cumulative_cargo_weight!",
-    FALSE AS "is_inside_haul_and_active_gear!"
+    NULL AS "active_gear?: Gear"
 FROM
     current_trip_positions c
     INNER JOIN active_vessels m ON m.fiskeridir_vessel_id = c.fiskeridir_vessel_id

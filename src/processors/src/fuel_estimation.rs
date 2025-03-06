@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use core::f64;
+use fiskeridir_rs::Gear;
 use geoutils::Location;
 use kyogre_core::{
     AisPosition, AisVmsPosition, ComputedFuelEstimation, DIESEL_GRAM_TO_LITER,
@@ -21,7 +22,6 @@ static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
 
 static RUN_INTERVAL: Duration = Duration::hours(5);
 static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
-static HAUL_LOAD_FACTOR: f64 = 10.75;
 static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
 
 #[derive(Debug)]
@@ -507,7 +507,7 @@ pub struct FuelItem {
     pub longitude: f64,
     pub timestamp: DateTime<Utc>,
     pub position_type_id: PositionType,
-    pub is_inside_haul_and_active_gear: bool,
+    pub active_gear: Option<Gear>,
     pub cumulative_cargo_weight: f64,
 }
 
@@ -520,7 +520,7 @@ impl From<&DailyFuelEstimationPosition> for FuelItem {
             timestamp: value.timestamp,
             position_type_id: value.position_type_id,
             cumulative_cargo_weight: value.cumulative_cargo_weight,
-            is_inside_haul_and_active_gear: false,
+            active_gear: None,
         }
     }
 }
@@ -534,7 +534,7 @@ impl From<&AisVmsPosition> for FuelItem {
             timestamp: value.timestamp,
             position_type_id: value.position_type,
             cumulative_cargo_weight: value.trip_cumulative_cargo_weight,
-            is_inside_haul_and_active_gear: value.is_inside_haul_and_active_gear,
+            active_gear: value.active_gear,
         }
     }
 }
@@ -547,7 +547,7 @@ impl From<&AisPosition> for FuelItem {
             longitude: value.longitude,
             timestamp: value.msgtime,
             position_type_id: PositionType::Ais,
-            is_inside_haul_and_active_gear: false,
+            active_gear: None,
             cumulative_cargo_weight: 0.,
         }
     }
@@ -688,12 +688,11 @@ fn estimate_fuel_between_points(
 
     let load_factor = (speed / service_speed).powf(3.).clamp(0., 0.98);
 
-    let haul_factor =
-        if first.is_inside_haul_and_active_gear || second.is_inside_haul_and_active_gear {
-            HAUL_LOAD_FACTOR
-        } else {
-            1.
-        };
+    let haul_factor = match (first.active_gear, second.active_gear) {
+        (Some(a), Some(b)) => (a.haul_load_factor() + b.haul_load_factor()) / 2.,
+        (Some(v), None) | (None, Some(v)) => v.haul_load_factor(),
+        (None, None) => 1.,
+    };
 
     let fuel = engines
         .iter()
