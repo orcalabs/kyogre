@@ -11,7 +11,7 @@ use kyogre_core::{
     ActiveVesselConflict, EngineType, FiskeridirVesselId, HasTrack, Mmsi, TripAssemblerId, Vessel,
     VesselSource,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 impl PostgresAdapter {
     pub(crate) async fn queue_vessel_trip_reset(
@@ -520,6 +520,7 @@ WHERE
 
     pub(crate) async fn add_vessel_gear_and_species_groups<'a>(
         &'a self,
+        vessel_ids: HashSet<FiskeridirVesselId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
@@ -538,13 +539,15 @@ FROM
             landings l
             LEFT JOIN landing_entries e ON l.landing_id = e.landing_id
         WHERE
-            fiskeridir_vessel_id IS NOT NULL
+            fiskeridir_vessel_id = ANY($1)
         GROUP BY
             fiskeridir_vessel_id
     ) q
 WHERE
     v.fiskeridir_vessel_id = q.fiskeridir_vessel_id
             "#,
+            &(vessel_ids.into_iter().collect::<Vec<FiskeridirVesselId>>())
+                as &[FiskeridirVesselId],
         )
         .execute(&mut **tx)
         .await?;
