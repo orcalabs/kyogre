@@ -8,7 +8,7 @@ use fiskeridir_rs::{
     VesselType,
 };
 use kyogre_core::{
-    AisVessel, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month, TripAssemblerId,
+    AisVessel, EngineType, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month, TripAssemblerId,
     VesselCurrentTrip, VesselSource,
 };
 use serde::Deserialize;
@@ -306,6 +306,8 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_auxiliary_engine_building_year: Option<i32>,
     pub fiskeridir_boiler_engine_power: Option<i32>,
     pub fiskeridir_boiler_engine_building_year: Option<i32>,
+    pub fiskeridir_engine_type: Option<EngineType>,
+    pub fiskeridir_engine_rpm: Option<i32>,
     pub fiskeridir_engine_version: i32,
     pub fiskeridir_degree_of_electrification: Option<f64>,
     pub fiskeridir_service_speed: Option<f64>,
@@ -345,6 +347,8 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             fiskeridir_auxiliary_engine_power,
             fiskeridir_auxiliary_engine_building_year,
             fiskeridir_boiler_engine_building_year,
+            fiskeridir_engine_type,
+            fiskeridir_engine_rpm,
             fiskeridir_engine_version,
             fiskeridir_degree_of_electrification,
             fiskeridir_service_speed,
@@ -374,6 +378,8 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
                 .map(|v| v as u32),
             boiler_engine_power: fiskeridir_boiler_engine_power.map(|v| v as u32),
             boiler_engine_building_year: fiskeridir_boiler_engine_building_year.map(|v| v as u32),
+            engine_type: fiskeridir_engine_type,
+            engine_rpm: fiskeridir_engine_rpm.map(|v| v as u32),
             engine_version: fiskeridir_engine_version as u32,
             degree_of_electrification: fiskeridir_degree_of_electrification,
             service_speed: fiskeridir_service_speed,

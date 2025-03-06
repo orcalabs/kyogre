@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    MAX(v.call_sign) AS \"fiskeridir_call_sign: CallSign\",\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.owners::TEXT AS \"fiskeridir_owners!\",\n    f.engine_building_year_final AS fiskeridir_engine_building_year,\n    f.engine_power_final AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.auxiliary_engine_power AS fiskeridir_auxiliary_engine_power,\n    f.auxiliary_engine_building_year AS fiskeridir_auxiliary_engine_building_year,\n    f.engine_version AS fiskeridir_engine_version,\n    f.boiler_engine_power AS fiskeridir_boiler_engine_power,\n    f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,\n    f.service_speed AS fiskeridir_service_speed,\n    f.degree_of_electrification AS fiskeridir_degree_of_electrification,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?: Mmsi\",\n    a.call_sign AS \"ais_call_sign: CallSign\",\n    a.name AS ais_name,\n    MAX(c.departure_timestamp) AS current_trip_departure_timestamp,\n    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id,\n    BOOL_OR(v.is_active) AS \"is_active!\"\nFROM\n    all_vessels AS v\n    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\n    LEFT JOIN current_trips AS c ON v.fiskeridir_vessel_id = c.fiskeridir_vessel_id\nWHERE\n    (\n        SELECT\n            COUNT(*)\n        FROM\n            trips_detailed t\n        WHERE\n            t.fiskeridir_vessel_id = v.fiskeridir_vessel_id\n            AND t.has_track > $1\n    ) >= $2\nGROUP BY\n    f.fiskeridir_vessel_id,\n    a.mmsi\n            ",
+  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    MAX(v.call_sign) AS \"fiskeridir_call_sign: CallSign\",\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.owners::TEXT AS \"fiskeridir_owners!\",\n    f.engine_building_year_final AS fiskeridir_engine_building_year,\n    f.engine_power_final AS fiskeridir_engine_power,\n    f.building_year AS fiskeridir_building_year,\n    f.auxiliary_engine_power AS fiskeridir_auxiliary_engine_power,\n    f.auxiliary_engine_building_year AS fiskeridir_auxiliary_engine_building_year,\n    f.engine_version AS fiskeridir_engine_version,\n    f.boiler_engine_power AS fiskeridir_boiler_engine_power,\n    f.boiler_engine_building_year AS fiskeridir_boiler_engine_building_year,\n    f.engine_type_manual AS \"fiskeridir_engine_type: EngineType\",\n    f.engine_rpm_manual AS \"fiskeridir_engine_rpm\",\n    f.service_speed AS fiskeridir_service_speed,\n    f.degree_of_electrification AS fiskeridir_degree_of_electrification,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?: Mmsi\",\n    a.call_sign AS \"ais_call_sign: CallSign\",\n    a.name AS ais_name,\n    MAX(c.departure_timestamp) AS current_trip_departure_timestamp,\n    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id,\n    BOOL_OR(v.is_active) AS \"is_active!\"\nFROM\n    all_vessels AS v\n    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\n    LEFT JOIN current_trips AS c ON v.fiskeridir_vessel_id = c.fiskeridir_vessel_id\nWHERE\n    (\n        SELECT\n            COUNT(*)\n        FROM\n            trips_detailed t\n        WHERE\n            t.fiskeridir_vessel_id = v.fiskeridir_vessel_id\n            AND t.has_track > $1\n    ) >= $2\nGROUP BY\n    f.fiskeridir_vessel_id,\n    a.mmsi\n            ",
   "describe": {
     "columns": [
       {
@@ -90,51 +90,61 @@
       },
       {
         "ordinal": 17,
+        "name": "fiskeridir_engine_type: EngineType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 18,
+        "name": "fiskeridir_engine_rpm",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 19,
         "name": "fiskeridir_service_speed",
         "type_info": "Float8"
       },
       {
-        "ordinal": 18,
+        "ordinal": 20,
         "name": "fiskeridir_degree_of_electrification",
         "type_info": "Float8"
       },
       {
-        "ordinal": 19,
+        "ordinal": 21,
         "name": "gear_group_ids!: Vec<GearGroup>",
         "type_info": "Int4Array"
       },
       {
-        "ordinal": 20,
+        "ordinal": 22,
         "name": "species_group_ids!: Vec<SpeciesGroup>",
         "type_info": "Int4Array"
       },
       {
-        "ordinal": 21,
+        "ordinal": 23,
         "name": "ais_mmsi?: Mmsi",
         "type_info": "Int4"
       },
       {
-        "ordinal": 22,
+        "ordinal": 24,
         "name": "ais_call_sign: CallSign",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 23,
+        "ordinal": 25,
         "name": "ais_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 24,
+        "ordinal": 26,
         "name": "current_trip_departure_timestamp",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 25,
+        "ordinal": 27,
         "name": "current_trip_target_species_fiskeridir_id",
         "type_info": "Int4"
       },
       {
-        "ordinal": 26,
+        "ordinal": 28,
         "name": "is_active!",
         "type_info": "Bool"
       }
@@ -165,6 +175,8 @@
       true,
       true,
       true,
+      true,
+      true,
       false,
       false,
       false,
@@ -175,5 +187,5 @@
       null
     ]
   },
-  "hash": "b3f4bf7db6d1c0653beee57573b9cb8cef38ec82f5558e2f76d55f901f7d3dc7"
+  "hash": "44aaf9e77cf95b353850ffa873920d5ebdc857e452dd9291d77f6b99f8fbafd9"
 }
