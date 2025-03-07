@@ -200,6 +200,17 @@ FROM
 
         sqlx::query!(
             r#"
+WITH
+    vessels AS (
+        SELECT
+            fiskeridir_vessel_id,
+            mmsi,
+            call_sign
+        FROM
+            active_vessels
+        WHERE
+            fiskeridir_vessel_id = ANY ($1::BIGINT[])
+    )
 INSERT INTO
     current_positions (
         fiskeridir_vessel_id,
@@ -215,7 +226,7 @@ INSERT INTO
         position_type_id
     )
 SELECT DISTINCT
-    ON (m.fiskeridir_vessel_id) m.fiskeridir_vessel_id,
+    ON (q.fiskeridir_vessel_id) q.fiskeridir_vessel_id,
     q.latitude,
     q.longitude,
     q.timestamp,
@@ -227,10 +238,10 @@ SELECT DISTINCT
     q.distance_to_shore,
     q.position_type_id
 FROM
-    active_vessels m
-    INNER JOIN (
+    (
         SELECT
-            mmsi,
+            v.fiskeridir_vessel_id,
+            p.mmsi,
             NULL AS call_sign,
             latitude,
             longitude,
@@ -241,13 +252,15 @@ FROM
             rate_of_turn,
             true_heading,
             distance_to_shore,
-            $1::INT AS position_type_id
+            $2::INT AS position_type_id
         FROM
-            current_ais_positions
+            current_ais_positions p
+            INNER JOIN vessels v ON p.mmsi = v.mmsi
         UNION ALL
         SELECT
+            v.fiskeridir_vessel_id,
             NULL AS mmsi,
-            call_sign,
+            p.call_sign,
             latitude,
             longitude,
             "timestamp",
@@ -257,15 +270,13 @@ FROM
             NULL AS rate_of_turn,
             NULL AS true_heading,
             distance_to_shore,
-            $2::INT AS position_type_id
+            $3::INT AS position_type_id
         FROM
-            current_vms_positions
-    ) q ON q.mmsi = m.mmsi
-    OR q.call_sign = m.call_sign
-WHERE
-    m.fiskeridir_vessel_id = ANY ($3::BIGINT[])
+            current_vms_positions p
+            INNER JOIN vessels v ON p.call_sign = v.call_sign
+    ) q
 ORDER BY
-    m.fiskeridir_vessel_id,
+    q.fiskeridir_vessel_id,
     q.timestamp DESC
 ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
 SET
@@ -280,9 +291,9 @@ SET
     distance_to_shore = EXCLUDED.distance_to_shore,
     position_type_id = EXCLUDED.position_type_id
             "#,
+            &vessel_ids as &[FiskeridirVesselId],
             PositionType::Ais as i32,
             PositionType::Vms as i32,
-            &vessel_ids as &[FiskeridirVesselId],
         )
         .execute(&mut **tx)
         .await?;
@@ -318,14 +329,17 @@ WITH
             UNNEST($3::TIMESTAMPTZ[]) AS delete_boundary_upper,
             UNNEST($4::TEXT[]) AS call_sign
     ),
-    _ AS (
+    delete_1 AS (
         DELETE FROM current_trip_positions p USING inputs i
         WHERE
             p.fiskeridir_vessel_id = i.vessel_id
-            AND (
-                p.timestamp < i.delete_boundary_lower
-                OR p.timestamp > i.delete_boundary_upper
-            )
+            AND p.timestamp < i.delete_boundary_lower
+    ),
+    delete_2 AS (
+        DELETE FROM current_trip_positions p USING inputs i
+        WHERE
+            p.fiskeridir_vessel_id = i.vessel_id
+            AND p.timestamp > i.delete_boundary_upper
     )
 DELETE FROM earliest_vms_insertion v USING inputs i
 WHERE
