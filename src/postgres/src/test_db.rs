@@ -293,7 +293,8 @@ SELECT
     start_port_id,
     end_port_id,
     target_species_fiskeridir_id,
-    target_species_fao_id
+    target_species_fao_id,
+    first_arrival
 FROM
     trips
 WHERE

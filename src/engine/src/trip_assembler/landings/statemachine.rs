@@ -51,6 +51,7 @@ impl LandingStatemachine {
                 period,
                 start_port_code: None,
                 end_port_code: None,
+                first_arrival: None,
             });
             self.current_landing = event;
         }

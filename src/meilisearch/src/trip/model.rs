@@ -40,6 +40,7 @@ pub struct Trip {
     pub delivery: Delivery,
     pub start_port_id: Option<String>,
     pub end_port_id: Option<String>,
+    pub first_arrival: Option<DateTime<Utc>>,
     pub assembler_id: TripAssemblerId,
     pub vessel_events: Vec<VesselEvent>,
     pub landing_ids: Vec<LandingId>,
@@ -150,6 +151,7 @@ impl Trip {
             fuel_consumption_liter,
             track_coverage,
             has_track,
+            first_arrival,
         } = self;
 
         let start = Utc.timestamp_nanos(start);
@@ -198,6 +200,7 @@ impl Trip {
             track_coverage,
             tra,
             has_track,
+            first_arrival,
         })
     }
 }
@@ -236,6 +239,7 @@ impl TryFrom<TripDetailed> for Trip {
             fuel_consumption_liter,
             track_coverage,
             has_track,
+            first_arrival,
         } = v;
 
         Ok(Self {
@@ -274,6 +278,7 @@ impl TryFrom<TripDetailed> for Trip {
             track_coverage,
             tra,
             has_track,
+            first_arrival,
         })
     }
 }
