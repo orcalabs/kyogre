@@ -164,7 +164,7 @@ impl Scraper {
         let weekly_sales_scraper =
             WeeklySalesScraper::new(config.rafisklaget_weekly_sales, http_client);
 
-        let weather_scraper = WeatherScraper::new();
+        let _weather_scraper = WeatherScraper::new();
         let _ocean_climate_scraper = OceanClimateScraper::new();
 
         Scraper {
@@ -182,7 +182,7 @@ impl Scraper {
                 ],
                 vec![Arc::new(vms_scraper)],
                 vec![Arc::new(mattilsynet_scraper)],
-                vec![Arc::new(weather_scraper)],
+                // vec![Arc::new(weather_scraper)],
                 // vec![Box::new(ocean_climate_scraper)],
             ],
             processor,
