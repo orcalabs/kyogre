@@ -1,3 +1,4 @@
+use crate::chunk::Chunks;
 use crate::{
     PostgresAdapter,
     error::Result,
@@ -523,8 +524,10 @@ WHERE
         vessel_ids: HashSet<FiskeridirVesselId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        sqlx::query!(
-            r#"
+        let mut iter = vessel_ids.chunks(100);
+        while let Some(chunk) = iter.next() {
+            sqlx::query!(
+                r#"
 UPDATE fiskeridir_vessels v
 SET
     gear_group_ids = q.gear_group_ids,
@@ -546,11 +549,11 @@ FROM
 WHERE
     v.fiskeridir_vessel_id = q.fiskeridir_vessel_id
             "#,
-            &(vessel_ids.into_iter().collect::<Vec<FiskeridirVesselId>>())
-                as &[FiskeridirVesselId],
-        )
-        .execute(&mut **tx)
-        .await?;
+                &chunk as &[FiskeridirVesselId],
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
 
         Ok(())
     }
