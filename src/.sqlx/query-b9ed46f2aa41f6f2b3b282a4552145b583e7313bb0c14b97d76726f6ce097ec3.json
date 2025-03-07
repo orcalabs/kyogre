@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    inputs AS (\n        SELECT\n            UNNEST($1::BIGINT[]) AS vessel_id,\n            UNNEST($2::TIMESTAMPTZ[]) AS delete_boundary_lower,\n            UNNEST($3::TIMESTAMPTZ[]) AS delete_boundary_upper,\n            UNNEST($4::TEXT[]) AS call_sign\n    ),\n    delete_1 AS (\n        DELETE FROM current_trip_positions p USING inputs i\n        WHERE\n            p.fiskeridir_vessel_id = i.vessel_id\n            AND p.timestamp < i.delete_boundary_lower\n    ),\n    delete_2 AS (\n        DELETE FROM current_trip_positions p USING inputs i\n        WHERE\n            p.fiskeridir_vessel_id = i.vessel_id\n            AND p.timestamp > i.delete_boundary_upper\n    )\nDELETE FROM earliest_vms_insertion v USING inputs i\nWHERE\n    v.call_sign = i.call_sign\n    AND v.used_by = $5\n    AND (\n        v.timestamp <= i.delete_boundary_lower\n        OR v.timestamp >= i.delete_boundary_upper\n    )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TimestamptzArray",
+        "TimestamptzArray",
+        "TextArray",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b9ed46f2aa41f6f2b3b282a4552145b583e7313bb0c14b97d76726f6ce097ec3"
+}
