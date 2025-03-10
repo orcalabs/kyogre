@@ -222,7 +222,7 @@ ORDER BY
 pub async fn get_trip_positions(
     pool: &PgPool,
     vessel: &Vessel,
-    range: &DateRange,
+    range: DateRange,
 ) -> Result<Vec<Position>> {
     sqlx::query_as!(
         Position,
@@ -280,7 +280,7 @@ ORDER BY
     p.timestamp
         "#,
         vessel.id.into_inner(),
-        PgRange::from(range),
+        PgRange::from(&range),
         &GearGroup::active_int(),
     )
     .fetch_all(pool)
