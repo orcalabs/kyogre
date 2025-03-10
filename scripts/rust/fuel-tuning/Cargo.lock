@@ -864,6 +864,7 @@ dependencies = [
  "clap",
  "fiskeridir-rs",
  "fuel-validation",
+ "futures",
  "geoutils",
  "kyogre-core",
  "rand 0.9.0",
