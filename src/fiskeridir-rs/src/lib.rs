@@ -35,7 +35,7 @@ macro_rules! sqlx_str_impl {
 
             impl Type<Postgres> for $ty {
                 fn type_info() -> PgTypeInfo {
-                    <&str>::type_info()
+                    <&str as Type<Postgres>>::type_info()
                 }
             }
 
@@ -50,13 +50,13 @@ macro_rules! sqlx_str_impl {
 
             impl Encode<'_, Postgres> for $ty {
                 fn encode_by_ref(&self, buf: &mut PgArgumentBuffer) -> Result<IsNull> {
-                    self.as_ref().encode(buf)
+                    <&str as Encode<'_, Postgres>>::encode(self.as_ref(), buf)
                 }
             }
 
             impl<'r> Decode<'r, Postgres> for $ty {
                 fn decode(value: PgValueRef<'r>) -> Result<Self> {
-                    let s = <&str>::decode(value)?;
+                    let s = <&str as Decode<'r, Postgres>>::decode(value)?;
                     Ok(s.parse()?)
                 }
             }
