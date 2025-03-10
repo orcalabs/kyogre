@@ -93,6 +93,7 @@ impl App {
             trip_distancer,
             ml_models,
             trip_position_layers,
+            settings.fuel_estimation_mode,
         );
 
         App {

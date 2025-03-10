@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use processors::estimate_fuel;
+use processors::{VesselFuelInfo, estimate_fuel};
 
 use super::*;
 
@@ -21,17 +21,21 @@ impl TripComputationStep for FuelConsumption {
             return Ok(unit);
         }
 
-        let adapter = shared.trips_precision_outbound_port.as_ref();
+        let max_cargo_weight: std::result::Result<Option<f64>, kyogre_core::Error> =
+            match shared.fuel_mode {
+                FuelMode::Normal => Ok(Some(
+                    shared
+                        .fuel_estimation
+                        .vessel_max_cargo_weight(vessel.fiskeridir.id)
+                        .await?,
+                )),
+                FuelMode::Holtrop => Ok(None),
+            };
 
-        let max_cargo_weight = adapter.vessel_max_cargo_weight(vessel.id()).await?;
+        let vessel = VesselFuelInfo::from_core(vessel, max_cargo_weight?, shared.fuel_mode);
+        let mut fuel_impl = vessel.chose_fuel_impl().unwrap();
 
-        estimate_fuel(
-            &mut unit.positions,
-            &engines,
-            vessel.fiskeridir.service_speed,
-            vessel.fiskeridir.degree_of_electrification,
-            Some(max_cargo_weight),
-        );
+        estimate_fuel(&mut fuel_impl, &mut unit.positions, &vessel);
 
         Ok(unit)
     }

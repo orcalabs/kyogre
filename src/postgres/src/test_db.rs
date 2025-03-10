@@ -223,7 +223,10 @@ ORDER BY
 SELECT
     mmsi AS "mmsi!: Mmsi",
     call_sign AS "call_sign: CallSign",
-    "name"
+    "name",
+    draught as "current_draught: Draught",
+    ship_length as length,
+    ship_width as breadth
 FROM
     ais_vessels
             "#
@@ -239,6 +242,9 @@ SELECT
     mmsi AS "mmsi!: Mmsi",
     call_sign AS "call_sign: CallSign",
     "name",
+    draught as "draught: Draught",
+    ship_length as length,
+    ship_width as width,
     eta
 FROM
     ais_vessels
@@ -252,6 +258,9 @@ FROM
                     mmsi: v.mmsi,
                     call_sign: v.call_sign,
                     name: v.name,
+                    length: v.length,
+                    breadth: v.width,
+                    current_draught: v.draught,
                 },
                 v.eta,
             )

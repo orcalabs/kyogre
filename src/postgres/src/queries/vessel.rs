@@ -8,6 +8,7 @@ use crate::{
 };
 use fiskeridir_rs::{CallSign, GearGroup, OrgId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
+use kyogre_core::Draught;
 use kyogre_core::{
     ActiveVesselConflict, EngineType, FiskeridirVesselId, HasTrack, Mmsi, TripAssemblerId, Vessel,
     VesselSource,
@@ -69,6 +70,9 @@ SELECT
     a.mmsi AS "ais_mmsi?: Mmsi",
     a.call_sign AS "ais_call_sign: CallSign",
     a.name AS ais_name,
+    a.draught AS "ais_draught: Draught",
+    a.ship_length AS ais_length,
+    a.ship_width AS ais_width,
     MAX(c.departure_timestamp) AS current_trip_departure_timestamp,
     MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id,
     BOOL_OR(v.is_active) AS "is_active!"
@@ -499,6 +503,9 @@ SELECT
     a.mmsi AS "ais_mmsi?: Mmsi",
     a.call_sign AS "ais_call_sign: CallSign",
     a.name AS ais_name,
+    a.draught AS "ais_draught: Draught",
+    a.ship_length AS ais_length,
+    a.ship_width AS ais_width,
     c.departure_timestamp AS "current_trip_departure_timestamp?",
     c.target_species_fiskeridir_id AS current_trip_target_species_fiskeridir_id,
     v.is_active

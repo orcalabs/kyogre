@@ -1,4 +1,4 @@
-use crate::{Result, estimate_fuel_for_positions};
+use crate::{FuelMode, Result, VesselFuelInfo, estimate_fuel_for_positions};
 use chrono::Utc;
 use kyogre_core::{
     AisPosition, Bound, DateRange, LiveFuelInbound, LiveFuelVessel, NewLiveFuel,
@@ -13,11 +13,12 @@ static FUEL_COMPUTE_BOUNDARY: chrono::Duration = chrono::Duration::days(30);
 #[derive(Clone)]
 pub struct LiveFuel {
     adapter: Arc<dyn LiveFuelInbound>,
+    mode: FuelMode,
 }
 
 impl LiveFuel {
-    pub fn new(adapter: Arc<dyn LiveFuelInbound>) -> Self {
-        Self { adapter }
+    pub fn new(adapter: Arc<dyn LiveFuelInbound>, mode: FuelMode) -> Self {
+        Self { adapter, mode }
     }
 
     #[instrument(skip_all)]
@@ -93,31 +94,29 @@ impl LiveFuel {
             }
         }
 
-        let engines = vessel.engines();
+        let vessel = VesselFuelInfo::from_live(vessel, None, self.mode);
+        if let Some(mut fuel_impl) = vessel.chose_fuel_impl() {
+            Ok(hour_split
+                .into_iter()
+                .filter_map(|(_, positions)| {
+                    if positions.len() <= 1 {
+                        None
+                    } else {
+                        // Safe unwrap as we check the len above
+                        let latest_position_timestamp =
+                            positions.iter().map(|p| p.msgtime).max().unwrap();
 
-        Ok(hour_split
-            .into_iter()
-            .filter_map(|(_, positions)| {
-                if positions.len() <= 1 {
-                    None
-                } else {
-                    // Safe unwrap as we check the len above
-                    let latest_position_timestamp =
-                        positions.iter().map(|p| p.msgtime).max().unwrap();
-                    let fuel = estimate_fuel_for_positions(
-                        &positions,
-                        &engines,
-                        vessel.service_speed,
-                        vessel.degree_of_electrification,
-                        None,
-                    );
+                        let fuel = estimate_fuel_for_positions(&mut fuel_impl, &positions, &vessel);
 
-                    Some(NewLiveFuel {
-                        latest_position_timestamp,
-                        fuel_liter: fuel.fuel_liter,
-                    })
-                }
-            })
-            .collect())
+                        Some(NewLiveFuel {
+                            latest_position_timestamp,
+                            fuel_liter: fuel.fuel_liter,
+                        })
+                    }
+                })
+                .collect())
+        } else {
+            Ok(vec![])
+        }
     }
 }
