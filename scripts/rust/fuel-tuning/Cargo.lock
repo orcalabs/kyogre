@@ -869,6 +869,7 @@ dependencies = [
  "rand 0.9.0",
  "serde",
  "sqlx",
+ "strum 0.27.1",
  "tokio",
 ]
 
