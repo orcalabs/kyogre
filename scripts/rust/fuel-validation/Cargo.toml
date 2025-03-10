@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+kyogre-core = { path = "../../../src/kyogre-core" }
+
 chrono = "0.4"
 anyhow = "1.0.96"
 calamine = { version = "0.26.1", features = ["chrono", "dates"] }

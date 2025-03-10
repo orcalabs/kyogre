@@ -175,7 +175,7 @@ impl FiskeridirVesselId {
     // This exists because `duckdb-rs` needs to be able to create this type from a
     // generated protobuf schema, and because `DeserializeOptFiskeridirVesselIdStr` needs to
     // construct it from a deserialized i64
-    pub fn new(value: i64) -> Self {
+    pub const fn new(value: i64) -> Self {
         Self(value)
     }
     pub fn into_inner(self) -> i64 {
