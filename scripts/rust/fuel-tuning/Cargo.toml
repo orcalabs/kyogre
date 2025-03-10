@@ -24,3 +24,4 @@ geoutils = "0.5.1"
 async-channel = "2.3.1"
 rand = "0.9.0"
 strum = { version = "0.27.1", features = ["derive"] }
+futures = "0.3.31"

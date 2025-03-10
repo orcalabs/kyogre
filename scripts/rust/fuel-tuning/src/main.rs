@@ -1,13 +1,13 @@
 use std::{
     cmp::Ordering,
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashSet},
     fmt::Display,
     iter,
     ops::{Add, AddAssign, Mul, Neg, SubAssign},
     sync::Arc,
 };
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use async_channel::unbounded;
 use chrono::{DateTime, Utc};
 use clap::{Parser, ValueEnum};
@@ -15,8 +15,9 @@ use fiskeridir_rs::{CallSign, Gear};
 use fuel_validation::{
     connect, decode_heroyfjord_eros, decode_nergard, decode_ramoen, decode_sille_marie,
 };
+use futures::future::try_join_all;
 use geoutils::Location;
-use kyogre_core::{FiskeridirVesselId, Mmsi, VesselEngine};
+use kyogre_core::{DateRange, FiskeridirVesselId, Mmsi, VesselEngine};
 use rand::random_range;
 use sqlx::PgPool;
 use strum::{EnumIter, IntoEnumIterator};
@@ -42,18 +43,18 @@ static VESSELS: &[(FiskeridirVesselId, &str)] = &[
 #[derive(Debug, Clone, PartialEq)]
 pub struct Params {
     /// Speed at which vessel has ~85% engine load
-    pub service_speeds: HashMap<FiskeridirVesselId, f64>,
+    pub service_speeds: BTreeMap<FiskeridirVesselId, f64>,
     /// How much `service_speed` is reduced by a full cargo load
     pub cargo_weight_factor: f64,
     /// Load factor for each Gear
-    pub haul_load_factors: HashMap<Gear, f64>,
+    pub haul_load_factors: BTreeMap<Gear, f64>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ParamsDelta {
-    pub service_speeds: HashMap<FiskeridirVesselId, f64>,
+    pub service_speeds: BTreeMap<FiskeridirVesselId, f64>,
     pub cargo_weight_factor: f64,
-    pub haul_load_factors: HashMap<Gear, f64>,
+    pub haul_load_factors: BTreeMap<Gear, f64>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -285,15 +286,51 @@ pub struct Trip {
     pub vessel: Arc<Vessel>,
     pub name: String,
     pub fuel: f64,
-    pub positions: Vec<Position>,
+    pub entries: Vec<TripEntry>,
+    pub fuel_items: Vec<FuelItem>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TripEntry {
+    pub fuel: f64,
+    pub range: DateRange,
 }
 
 impl Trip {
     pub fn diff_percent(&self, params: &Params) -> f64 {
-        let estimate = estimate_fuel(&self.positions, &self.vessel, params);
+        let estimate = estimate_fuel(&self.fuel_items, &self.vessel, params);
 
         let diff = estimate - self.fuel;
         (100. * diff) / self.fuel
+    }
+}
+
+impl TripEntry {
+    pub fn diff_percent(&self, params: &Params, trip: &Trip) -> f64 {
+        let start = trip
+            .fuel_items
+            .iter()
+            .position(|v| self.range.contains(v.timestamp))
+            .unwrap();
+        let end = trip
+            .fuel_items
+            .iter()
+            .position(|v| v.timestamp > self.range.end())
+            .unwrap_or(trip.fuel_items.len());
+
+        let estimate = estimate_fuel(&trip.fuel_items[start..end], &trip.vessel, params);
+
+        let diff = estimate - self.fuel;
+        (100. * diff) / self.fuel
+    }
+}
+
+impl From<fuel_validation::TripEntry> for TripEntry {
+    fn from(value: fuel_validation::TripEntry) -> Self {
+        Self {
+            fuel: value.fuel,
+            range: DateRange::from_dates(value.date, value.date).unwrap(),
+        }
     }
 }
 
@@ -305,21 +342,25 @@ pub struct MasterTask {
 
 fn service_speed_width(vessel_ids: impl ExactSizeIterator<Item = FiskeridirVesselId>) -> usize {
     let len = vessel_ids.len();
-    let max_name_len = vessel_ids
+    let service_speeds_len = vessel_ids
         .map(|v| {
             VESSELS
                 .iter()
-                .find_map(|(id, name)| (*id == v).then_some(name.len()))
+                .find_map(|(id, name)| {
+                    (*id == v).then(||
+                        // 2 Parentheses
+                        // 1 Colon
+                        // 1 Space
+                        // 5 Len of formatted f64
+                        name.len() + 2 + 1 + 1 + 5)
+                })
                 .unwrap()
         })
-        .max()
-        .unwrap();
+        .sum::<usize>();
 
-    // 2 Parentheses
-    // 1 Colon
+    // 1 Comma
     // 1 Space
-    // 5 Len of formatted f64
-    (2 + 1 + 1 + max_name_len + 5) * len
+    ((1 + 1) * (len - 1)) + service_speeds_len
 }
 
 impl Display for MasterTask {
@@ -409,7 +450,7 @@ async fn main() -> Result<()> {
     let gears = Arc::new(
         trips
             .iter()
-            .flat_map(|v| v.positions.iter().flat_map(|v| v.active_gear))
+            .flat_map(|v| v.fuel_items.iter().flat_map(|v| v.active_gear))
             .collect::<HashSet<_>>(),
     );
 
@@ -428,14 +469,12 @@ async fn main() -> Result<()> {
         let master_tx = master_tx.clone();
 
         set.spawn_blocking(move || {
-            let mut params = Params::rand(&vessel_ids, &gears);
-            let mut delta = ParamsDelta::new(&vessel_ids, &gears);
-            let mut score = Score::new(&trips, &params);
             let mut best_score = None;
 
             loop {
-                let mut new_params = params.clone();
-                let mut new_score = score;
+                let mut params = Params::rand(&vessel_ids, &gears);
+                let mut delta = ParamsDelta::new(&vessel_ids, &gears);
+                let mut score = Score::new(&trips, &params);
 
                 let mut done = false;
 
@@ -454,20 +493,20 @@ async fn main() -> Result<()> {
 
                         let temp_score = Score::new(&trips, &temp_params);
 
-                        if temp_score < new_score {
+                        if temp_score < score {
                             done = false;
-                            new_params = temp_params;
-                            new_score = temp_score;
+                            params = temp_params;
+                            score = temp_score;
                             continue;
                         }
 
                         temp_params -= delta_value * 2.;
                         let temp_score = Score::new(&trips, &temp_params);
 
-                        if temp_score < new_score {
+                        if temp_score < score {
                             done = false;
-                            new_params = temp_params;
-                            new_score = temp_score;
+                            params = temp_params;
+                            score = temp_score;
                             d.neg();
                             continue;
                         }
@@ -476,19 +515,10 @@ async fn main() -> Result<()> {
                     }
                 }
 
-                if best_score.is_none_or(|v| new_score < v) {
-                    best_score = Some(new_score);
-                    master_tx
-                        .try_send(MasterTask {
-                            params: new_params,
-                            score: new_score,
-                        })
-                        .unwrap();
+                if best_score.is_none_or(|v| score < v) {
+                    best_score = Some(score);
+                    master_tx.try_send(MasterTask { params, score }).unwrap();
                 }
-
-                params = Params::rand(&vessel_ids, &gears);
-                delta = ParamsDelta::new(&vessel_ids, &gears);
-                score = Score::new(&trips, &params);
             }
         });
     }
@@ -522,7 +552,7 @@ async fn main() -> Result<()> {
 async fn add_sille_marie(pool: &PgPool, trips: &mut Vec<Trip>) -> Result<()> {
     let vessel = Arc::new(get_vessel(pool, 2023124435).await?);
 
-    let excel_trips = decode_sille_marie()?;
+    let mut excel_trips = decode_sille_marie()?;
 
     let good_trips = [
         "Trip from 2024-02-02 to 2024-02-05",
@@ -555,25 +585,33 @@ async fn add_sille_marie(pool: &PgPool, trips: &mut Vec<Trip>) -> Result<()> {
         "Trip from 2023-11-08 to 2023-11-15",
     ];
 
-    let mut count = 0;
+    excel_trips.retain(|v| good_trips.contains(&v.name.as_str().trim()));
 
-    for trip in excel_trips {
-        if !good_trips.contains(&trip.name.as_str().trim()) {
-            continue;
-        }
+    assert_eq!(excel_trips.len(), good_trips.len());
 
-        count += 1;
+    let trip_positions = try_join_all(
+        excel_trips
+            .iter()
+            .map(|v| get_trip_positions(pool, &vessel, v.range())),
+    )
+    .await?;
 
-        let positions = get_trip_positions(pool, &vessel, &trip.range()).await?;
+    for (trip, positions) in excel_trips.into_iter().zip(trip_positions) {
+        let [start, end] = &trip.entries[..] else {
+            panic!("unexpected trip entries: {:?}", trip.entries);
+        };
+
         trips.push(Trip {
             vessel: vessel.clone(),
             fuel: trip.fuel_total(),
+            entries: vec![TripEntry {
+                fuel: end.fuel,
+                range: DateRange::from_dates(start.date, end.date).unwrap(),
+            }],
             name: trip.name,
-            positions,
+            fuel_items: FuelItem::from_positions(&positions),
         });
     }
-
-    assert_eq!(count, good_trips.len());
 
     Ok(())
 }
@@ -582,10 +620,14 @@ async fn add_breidtind(pool: &PgPool, trips: &mut Vec<Trip>) -> Result<()> {
     let vessel = Arc::new(get_vessel(pool, 2021119797).await?);
 
     let excel_trips = decode_nergard()?;
+    let trip_positions = try_join_all(
+        excel_trips
+            .iter()
+            .map(|v| get_trip_positions(pool, &vessel, v.range())),
+    )
+    .await?;
 
-    for mut trip in excel_trips {
-        let mut positions = get_trip_positions(pool, &vessel, &trip.range()).await?;
-
+    for (mut trip, mut positions) in excel_trips.into_iter().zip(trip_positions) {
         let start_day = positions[0].timestamp.date_naive().succ_opt().unwrap();
         let end_day = positions
             .last()
@@ -610,8 +652,9 @@ async fn add_breidtind(pool: &PgPool, trips: &mut Vec<Trip>) -> Result<()> {
         trips.push(Trip {
             vessel: vessel.clone(),
             fuel: trip.fuel_total(),
+            entries: trip.entries.into_iter().map(From::from).collect(),
             name: trip.name,
-            positions,
+            fuel_items: FuelItem::from_positions(&positions),
         });
     }
 
@@ -627,13 +670,27 @@ async fn add_heroyfjord(pool: &PgPool, trips: &mut Vec<Trip>) -> Result<()> {
     );
     let excel_trips = decode_heroyfjord_eros(bytes, name)?;
 
-    for trip in excel_trips {
-        let positions = get_trip_positions(pool, &vessel, &trip.range()).await?;
+    let trip_positions = try_join_all(
+        excel_trips
+            .iter()
+            .map(|v| get_trip_positions(pool, &vessel, v.range())),
+    )
+    .await?;
+
+    for (trip, positions) in excel_trips.into_iter().zip(trip_positions) {
+        let [start, end] = &trip.entries[..] else {
+            panic!("unexpected trip entries: {:?}", trip.entries);
+        };
+
         trips.push(Trip {
             vessel: vessel.clone(),
             fuel: trip.fuel_total(),
+            entries: vec![TripEntry {
+                fuel: end.fuel,
+                range: DateRange::from_dates(start.date, end.date).unwrap(),
+            }],
             name: trip.name,
-            positions,
+            fuel_items: FuelItem::from_positions(&positions),
         });
     }
 
@@ -649,13 +706,27 @@ async fn add_eros(pool: &PgPool, trips: &mut Vec<Trip>) -> Result<()> {
     );
     let excel_trips = decode_heroyfjord_eros(bytes, name)?;
 
-    for trip in excel_trips {
-        let positions = get_trip_positions(pool, &vessel, &trip.range()).await?;
+    let trip_positions = try_join_all(
+        excel_trips
+            .iter()
+            .map(|v| get_trip_positions(pool, &vessel, v.range())),
+    )
+    .await?;
+
+    for (trip, positions) in excel_trips.into_iter().zip(trip_positions) {
+        let [start, end] = &trip.entries[..] else {
+            panic!("unexpected trip entries: {:?}", trip.entries);
+        };
+
         trips.push(Trip {
             vessel: vessel.clone(),
             fuel: trip.fuel_total(),
+            entries: vec![TripEntry {
+                fuel: end.fuel,
+                range: DateRange::from_dates(start.date, end.date).unwrap(),
+            }],
             name: trip.name,
-            positions,
+            fuel_items: FuelItem::from_positions(&positions),
         });
     }
 
@@ -667,13 +738,27 @@ async fn add_ramoen(pool: &PgPool, trips: &mut Vec<Trip>) -> Result<()> {
 
     let excel_trips = decode_ramoen()?;
 
-    for trip in excel_trips {
-        let positions = get_trip_positions(pool, &vessel, &trip.range()).await?;
+    let trip_positions = try_join_all(
+        excel_trips
+            .iter()
+            .map(|v| get_trip_positions(pool, &vessel, v.range())),
+    )
+    .await?;
+
+    for (trip, positions) in excel_trips.into_iter().zip(trip_positions) {
+        let [start, end] = &trip.entries[..] else {
+            panic!("unexpected trip entries: {:?}", trip.entries);
+        };
+
         trips.push(Trip {
             vessel: vessel.clone(),
             fuel: trip.fuel_total(),
+            entries: vec![TripEntry {
+                fuel: end.fuel,
+                range: DateRange::from_dates(start.date, end.date).unwrap(),
+            }],
             name: trip.name,
-            positions,
+            fuel_items: FuelItem::from_positions(&positions),
         });
     }
 
@@ -699,37 +784,78 @@ pub struct Position {
     pub cumulative_cargo_weight: f64,
 }
 
-pub fn estimate_fuel(positions: &[Position], vessel: &Vessel, params: &Params) -> f64 {
-    if positions.is_empty() {
-        return 0.;
-    }
-
-    let mut iter = positions.iter();
-    let mut prev = iter.next().unwrap();
-
-    let mut fuel_liter = 0.;
-
-    for next in iter {
-        if let Some(v) = estimate_fuel_between_points(prev, next, vessel, params) {
-            fuel_liter += v;
-            prev = next;
-        }
-    }
-
-    fuel_liter
+#[derive(Debug, Clone)]
+pub struct FuelItem {
+    pub speed: f64,
+    pub time_secs: f64,
+    pub timestamp: DateTime<Utc>,
+    pub active_gear: Option<Gear>,
+    pub cumulative_cargo_weight: f64,
 }
 
-fn estimate_fuel_between_points(
-    first: &Position,
-    second: &Position,
-    vessel: &Vessel,
-    params: &Params,
-) -> Option<f64> {
-    let time_ms = (second.timestamp - first.timestamp).num_milliseconds();
+impl FuelItem {
+    pub fn from_positions(positions: &[Position]) -> Vec<Self> {
+        let mut vec = Vec::with_capacity(positions.len());
 
-    if time_ms <= 0 {
-        return None;
+        if positions.is_empty() {
+            return vec;
+        }
+
+        let mut iter = positions.iter();
+        let mut prev = iter.next().unwrap();
+        let mut prev_loc = Location::new(prev.latitude, prev.longitude);
+
+        for next in iter {
+            let time_ms = (next.timestamp - prev.timestamp).num_milliseconds();
+            if time_ms <= 0 {
+                continue;
+            }
+
+            let time_secs = time_ms as f64 / 1_000.;
+            let next_loc = Location::new(next.latitude, next.longitude);
+
+            let speed = match prev_loc.distance_to(&next_loc) {
+                Ok(v) => (v.meters() / time_secs) * METER_PER_SECONDS_TO_KNOTS,
+                Err(_) => match (prev.speed, next.speed) {
+                    (Some(a), Some(b)) => (a + b) / 2.,
+                    (Some(v), None) | (None, Some(v)) => v,
+                    (None, None) => continue,
+                },
+            };
+
+            vec.push(Self {
+                speed,
+                time_secs,
+                timestamp: prev.timestamp,
+                active_gear: prev.active_gear.or(next.active_gear),
+                cumulative_cargo_weight: (prev.cumulative_cargo_weight
+                    + next.cumulative_cargo_weight)
+                    / 2.,
+            });
+
+            prev = next;
+            prev_loc = next_loc;
+        }
+
+        vec
     }
+}
+
+pub fn estimate_fuel(items: &[FuelItem], vessel: &Vessel, params: &Params) -> f64 {
+    items
+        .iter()
+        .map(|v| estimate_fuel_for_item(v, vessel, params))
+        .sum()
+}
+
+fn estimate_fuel_for_item(item: &FuelItem, vessel: &Vessel, params: &Params) -> f64 {
+    let FuelItem {
+        speed,
+        time_secs,
+        timestamp: _,
+        active_gear,
+        cumulative_cargo_weight,
+    } = item;
 
     let Params {
         service_speeds,
@@ -737,57 +863,34 @@ fn estimate_fuel_between_points(
         haul_load_factors,
     } = params;
 
-    let time_secs = time_ms as f64 / 1_000.;
-
-    let first_loc = Location::new(first.latitude, first.longitude);
-    let second_loc = Location::new(second.latitude, second.longitude);
-
-    let empty_service_speed = service_speeds
-        .iter()
-        .find_map(|(id, v)| (*id == vessel.id).then_some(*v))
-        .with_context(|| format!("missing vessel_id: {}", vessel.id))
-        .unwrap();
-
+    let empty_service_speed = service_speeds[&vessel.id];
     let full_service_speed = empty_service_speed * *cargo_weight_factor;
 
     let service_speed = match vessel.max_cargo_weight {
         Some(max_weight) if max_weight > 0. => {
-            let cargo_weight =
-                (first.cumulative_cargo_weight + second.cumulative_cargo_weight) / 2.;
-
             full_service_speed
                 + ((empty_service_speed - full_service_speed)
-                    * (cargo_weight / max_weight).clamp(0., 1.))
+                    * (cumulative_cargo_weight / max_weight).clamp(0., 1.))
         }
         _ => empty_service_speed,
     };
 
-    let speed = match first_loc.distance_to(&second_loc) {
-        Ok(v) => (v.meters() / time_secs) * METER_PER_SECONDS_TO_KNOTS,
-        Err(_) => match (first.speed, second.speed) {
-            (Some(a), Some(b)) => (a + b) / 2.,
-            (Some(v), None) | (None, Some(v)) => v,
-            (None, None) => return None,
-        },
-    };
+    let temp = speed / service_speed;
+    // `powf/powi` is significantly slower than just multiplying `n` times
+    let load_factor = (temp * temp * temp).clamp(0., 0.98);
 
-    let load_factor = (speed / service_speed).powf(3.).clamp(0., 0.98);
+    let haul_factor = active_gear.map(|v| haul_load_factors[&v]).unwrap_or(1.);
 
-    let haul_factor = match (first.active_gear, second.active_gear) {
-        (Some(a), Some(b)) => (haul_load_factors[&a] + haul_load_factors[&b]) / 2.,
-        (Some(v), None) | (None, Some(v)) => haul_load_factors[&v],
-        (None, None) => 1.,
-    };
+    // `powf/powi` is significantly slower than just multiplying `n` times
+    let load_factor_squared = load_factor * load_factor;
 
-    let fuel = vessel
+    vessel
         .engines
         .iter()
         .map(|e| {
             let kwh = load_factor * e.power_kw * time_secs * haul_factor * 0.85 / 3_600.;
-            let sfc = e.sfc * (0.455 * load_factor.powf(2.) - 0.71 * load_factor + 1.28);
+            let sfc = e.sfc * (0.455 * load_factor_squared - 0.71 * load_factor + 1.28);
             sfc * kwh * DIESEL_GRAM_TO_LITER
         })
-        .sum();
-
-    Some(fuel)
+        .sum()
 }
