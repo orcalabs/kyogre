@@ -90,6 +90,7 @@ pub async fn upload_fuel_measurements<T: Database + 'static>(
         #[serde(deserialize_with = "deserialize_norwegian_timestamp")]
         pub timestamp: DateTime<Utc>,
         pub fuel_liter_before: f64,
+        #[serde(default)]
         pub fuel_after_liter: Option<f64>,
     }
 
