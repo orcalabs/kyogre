@@ -1,6 +1,7 @@
 log_level: Info
 num_trip_state_workers: 8
 tracing_mode: Regular
+fuel_estimation_mode: Maru
 fishing_predictors:
   training_rounds: 200
   training_mode:

@@ -4322,6 +4322,7 @@ dependencies = [
  "serde_json",
  "snafu",
  "stack-error",
+ "strum 0.27.1",
  "tokio",
  "tracing",
 ]

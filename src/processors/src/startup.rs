@@ -27,8 +27,9 @@ impl App {
                 settings.num_fuel_estimation_workers,
                 settings.fuel_estimation_vessels.clone(),
                 postgres.clone(),
+                settings.fuel_estimation_mode,
             ),
-            live_fuel: LiveFuel::new(postgres.clone()),
+            live_fuel: LiveFuel::new(postgres.clone(), settings.fuel_estimation_mode),
             current_position: CurrentPositionProcessor::new(
                 postgres,
                 settings.current_positions_batch_size,

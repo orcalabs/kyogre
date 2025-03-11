@@ -1,5 +1,8 @@
-use std::collections::HashMap;
-
+use crate::{
+    PostgresAdapter,
+    error::Result,
+    models::{self, NewAisCurrentPosition, NewAisVessel, NewAisVesselHistoric, NewAisVesselMmsi},
+};
 use chrono::{DateTime, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
@@ -7,12 +10,7 @@ use kyogre_core::{
     LEISURE_VESSEL_SHIP_TYPES, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic,
     PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
-
-use crate::{
-    PostgresAdapter,
-    error::Result,
-    models::{self, NewAisCurrentPosition, NewAisVessel, NewAisVesselHistoric, NewAisVesselMmsi},
-};
+use std::collections::HashMap;
 
 impl PostgresAdapter {
     pub(crate) fn ais_positions_impl(

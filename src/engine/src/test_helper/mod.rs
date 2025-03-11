@@ -19,7 +19,7 @@ use kyogre_core::{
 use machine::StateMachine;
 use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
-use processors::{AisVmsConflict, UnrealisticSpeed};
+use processors::{AisVmsConflict, FuelImplDiscriminants, UnrealisticSpeed};
 use std::{
     collections::{HashMap, HashSet},
     sync::{
@@ -276,6 +276,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         trip_distancer,
         vec![],
         trip_layers,
+        FuelImplDiscriminants::Maru,
     );
     let step = Step::initial(ScrapeState, shared_state, transition_log);
     FisheryEngine::Scrape(step)
@@ -339,6 +340,7 @@ impl TestStateBuilder {
                 current_positions_batch_size: 10,
                 environment: orca_core::Environment::Test,
                 postgres: psql_settings.clone(),
+                fuel_estimation_mode: FuelImplDiscriminants::Maru,
             })
             .await,
         }

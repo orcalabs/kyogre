@@ -1,3 +1,4 @@
+use super::{Draught, VesselCurrentTrip};
 use crate::mean::Mean;
 use crate::{AisVessel, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
@@ -13,8 +14,6 @@ use strum::{AsRefStr, Display, EnumIter, EnumString};
 mod benchmark;
 
 pub use benchmark::*;
-
-use super::VesselCurrentTrip;
 
 pub const HP_TO_KW: f64 = 0.745699872;
 pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
@@ -57,9 +56,20 @@ pub struct LiveFuelVessel {
     pub engine_rpm: Option<i32>,
     pub service_speed: Option<f64>,
     pub degree_of_electrification: Option<f64>,
+    pub length: Option<f64>,
+    pub breadth: Option<f64>,
+    pub current_draught: Option<Draught>,
 }
 
 impl LiveFuelVessel {
+    pub fn main_sfc(&self) -> f64 {
+        sfc(
+            self.engine_building_year as u32,
+            self.engine_type,
+            self.engine_rpm.map(|r| r as u32),
+        )
+    }
+
     pub fn engines(&self) -> Vec<VesselEngine> {
         engines(
             Some(self.engine_power as f64),
@@ -275,6 +285,51 @@ impl Vessel {
     }
     pub fn mmsi(&self) -> Option<Mmsi> {
         self.ais.as_ref().map(|v| v.mmsi)
+    }
+
+    pub fn length(&self) -> Option<f64> {
+        if let Some(l) = self.fiskeridir.length {
+            Some(l)
+        } else {
+            self.ais.as_ref().and_then(|a| a.length.map(|l| l as f64))
+        }
+    }
+
+    pub fn breadth(&self) -> Option<f64> {
+        self.ais.as_ref().and_then(|a| a.breadth.map(|w| w as f64))
+    }
+
+    pub fn current_draught(&self) -> Option<Draught> {
+        self.ais.as_ref().and_then(|a| a.current_draught)
+    }
+
+    pub fn main_sfc(&self) -> Option<f64> {
+        self.fiskeridir
+            .engine_building_year
+            .map(|y| sfc(y, self.fiskeridir.engine_type, self.fiskeridir.engine_rpm))
+    }
+
+    pub fn num_engines(&self) -> usize {
+        let mut num_engines = 0;
+
+        if self.fiskeridir.engine_power.is_some() && self.fiskeridir.engine_building_year.is_some()
+        {
+            num_engines += 1;
+        };
+
+        if self.fiskeridir.auxiliary_engine_power.is_some()
+            && self.fiskeridir.auxiliary_engine_building_year.is_some()
+        {
+            num_engines += 1;
+        };
+
+        if self.fiskeridir.boiler_engine_power.is_some()
+            && self.fiskeridir.boiler_engine_building_year.is_some()
+        {
+            num_engines += 1;
+        };
+
+        num_engines
     }
 
     pub fn engines(&self) -> Vec<VesselEngine> {
