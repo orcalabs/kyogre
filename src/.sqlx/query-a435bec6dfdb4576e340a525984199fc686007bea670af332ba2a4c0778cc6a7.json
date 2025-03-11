@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    mmsi AS \"mmsi!: Mmsi\",\n    call_sign AS \"call_sign: CallSign\",\n    \"name\",\n    draught as \"current_draught: Draught\",\n    ship_length as length,\n    ship_width as breadth\nFROM\n    ais_vessels\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mmsi!: Mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "call_sign: CallSign",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "current_draught: Draught",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "length",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "breadth",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "a435bec6dfdb4576e340a525984199fc686007bea670af332ba2a4c0778cc6a7"
+}

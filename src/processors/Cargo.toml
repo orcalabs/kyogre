@@ -23,3 +23,4 @@ async-channel = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 geoutils = { workspace = true }
+strum = { workspace = true }

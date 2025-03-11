@@ -41,6 +41,10 @@ impl Draught {
     pub fn into_inner(self) -> f64 {
         self.0
     }
+    #[cfg(feature = "test")]
+    pub fn test_new(val: f64) -> Self {
+        Self(val)
+    }
 }
 
 impl From<i32> for Draught {
@@ -142,6 +146,9 @@ pub struct AisVessel {
     pub mmsi: Mmsi,
     pub call_sign: Option<CallSign>,
     pub name: Option<String>,
+    pub length: Option<i32>,
+    pub breadth: Option<i32>,
+    pub current_draught: Option<Draught>,
 }
 
 #[derive(Clone, Debug)]

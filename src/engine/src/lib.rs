@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use kyogre_core::*;
 use machine::{Machine, Schedule};
+use processors::FuelImplDiscriminants;
 use serde::Deserialize;
 use strum::EnumDiscriminants;
 
@@ -86,6 +87,7 @@ pub enum Fishery {
 // TODO: change do Box<dyn Database> after (https://github.com/rust-lang/rust/issues/65991) resolves.
 pub struct SharedState {
     pub num_workers: u32,
+    pub fuel_mode: FuelImplDiscriminants,
     pub local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
     pub ml_models_inbound: Box<dyn MLModelsInbound>,
     pub ml_models_outbound: Box<dyn MLModelsOutbound>,
@@ -171,6 +173,7 @@ impl SharedState {
         trip_distancer: Box<dyn TripDistancer>,
         ml_models: Vec<Box<dyn MLModel>>,
         trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
+        fuel_mode: FuelImplDiscriminants,
     ) -> SharedState {
         SharedState {
             num_workers,
@@ -197,6 +200,7 @@ impl SharedState {
             trip_position_layers,
             catch_location_weather,
             fuel_estimation,
+            fuel_mode,
         }
     }
 }

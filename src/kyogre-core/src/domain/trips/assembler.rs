@@ -1,7 +1,7 @@
+use super::{Vessel, VesselEventDetailed};
 use crate::{
     CoreResult, NewTrip, PrecisionOutcome, TripAssemblerConflict, TripAssemblerId,
-    TripPrecisionOutboundPort, TripProcessingUnit, TripsConflictStrategy, Vessel,
-    VesselEventDetailed,
+    TripPrecisionOutboundPort, TripProcessingUnit, TripsConflictStrategy,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};

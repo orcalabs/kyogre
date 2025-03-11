@@ -2,8 +2,8 @@ use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    DateRange, EngineType, FiskeridirVesselId, FuelQuery, LiveFuelQuery, LiveFuelVessel, Mmsi,
-    NewFuelDayEstimate, NewLiveFuel, ProcessingStatus,
+    DateRange, Draught, EngineType, FiskeridirVesselId, FuelQuery, LiveFuelQuery, LiveFuelVessel,
+    Mmsi, NewFuelDayEstimate, NewLiveFuel, ProcessingStatus,
 };
 use sqlx::postgres::types::PgRange;
 use unnest_insert::UnnestInsert;
@@ -79,10 +79,14 @@ SELECT
     f.degree_of_electrification AS "degree_of_electrification?",
     t.departure_timestamp AS "current_trip_start?",
     -- Hacky fix because sqlx prepare/check flakes on nullability
-    COALESCE(q.latest_position_timestamp, NULL) AS latest_position_timestamp
+    COALESCE(q.latest_position_timestamp, NULL) AS latest_position_timestamp,
+    a.ship_width::DOUBLE PRECISION as breadth,
+    COALESCE(f.length, a.ship_length::DOUBLE PRECISION) as length,
+    a.draught as "current_draught: Draught"
 FROM
     active_vessels w
     INNER JOIN fiskeridir_vessels f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    INNER JOIN ais_vessels a ON a.mmsi = w.mmsi
     LEFT JOIN current_trips t ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     LEFT JOIN (
         SELECT DISTINCT
