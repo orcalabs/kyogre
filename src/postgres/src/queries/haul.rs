@@ -606,22 +606,25 @@ GROUP BY
         let mut stream = sqlx::query!(
             r#"
 SELECT
-    haul_id
+    haul_id,
+    message_id
 FROM
     hauls
             "#
         )
         .fetch(&self.pool)
-        .map_ok(|r| r.haul_id)
+        .map_ok(|r| (r.haul_id, r.message_id))
         .chunks(*HAULS_VERIFY_CHUNK_SIZE.get_or_init(|| 50_000));
 
         let mut incorrect_message_ids = Vec::new();
 
         while let Some(haul_id_chunk) = stream.next().await {
-            let ids: Vec<i64> = haul_id_chunk.into_iter().flatten().collect();
-            let mut message_ids = sqlx::query!(
+            let (haul_ids, message_ids): (Vec<i64>, Vec<i64>) =
+                haul_id_chunk.into_iter().flatten().unzip();
+            sqlx::query!(
                 r#"
 SELECT
+    h.haul_id,
     COALESCE(h.message_id, c.message_id) AS "message_id!"
 FROM
     (
@@ -633,7 +636,7 @@ FROM
         WHERE
             haul_id = ANY ($1)
     ) h
-    FULL JOIN (
+    LEFT JOIN (
         SELECT
             message_id,
             start_timestamp,
@@ -650,7 +653,8 @@ FROM
         FROM
             ers_dca_bodies
         WHERE
-            species_fao_id IS NOT NULL
+            message_id = ANY ($2)
+            AND species_fao_id IS NOT NULL
         GROUP BY
             message_id,
             start_timestamp,
@@ -678,18 +682,39 @@ WHERE
     h.message_id IS NULL
     OR c.message_id IS NULL
     OR (h.catch ->> 'living_weight')::INT != c.living_weight
-            "#,
-                &ids
+                "#,
+                &haul_ids,
+                &message_ids,
             )
             .fetch(&self.pool)
-            .map_ok(|r| r.message_id)
-            .try_collect()
+            .try_for_each(|v| {
+                incorrect_message_ids.push(v.message_id);
+                ready(Ok(()))
+            })
             .await?;
-
-            incorrect_message_ids.append(&mut message_ids);
         }
 
         Ok(incorrect_message_ids)
+    }
+
+    pub(crate) async fn ers_dca_catches_without_haul(&self) -> Result<Vec<i64>> {
+        sqlx::query!(
+            r#"
+SELECT
+    e.message_id
+FROM
+    ers_dca_bodies e
+    LEFT JOIN hauls h ON h.message_id = e.message_id
+WHERE
+    species_fao_id IS NOT NULL
+    AND h.message_id IS NULL
+                "#,
+        )
+        .fetch(&self.pool)
+        .map_ok(|v| v.message_id)
+        .try_collect()
+        .await
+        .map_err(|e| e.into())
     }
 
     pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(&self) -> Result<i64> {

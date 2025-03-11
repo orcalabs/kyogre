@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    haul_id,\n    message_id\nFROM\n    hauls\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "haul_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "message_id",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "394d539e7709ff2db0acf55d6763abe91b489a59e0067c65cc2fea1feec8d89c"
+}

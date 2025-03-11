@@ -140,6 +140,12 @@ pub enum VerifyDatabaseError {
         location: Location,
         message_ids: Vec<i64>,
     },
+    #[snafu(display("Found dca catches without haul: '{message_ids:?}'"))]
+    IncorrectErsDcaCatches {
+        #[snafu(implicit)]
+        location: Location,
+        message_ids: Vec<i64>,
+    },
     #[snafu(display("Hauls matrix and ers dca living weight differ by '{weight_diff}'"))]
     IncorrectHaulsMatrixLivingWeight {
         #[snafu(implicit)]

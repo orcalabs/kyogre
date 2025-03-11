@@ -7,7 +7,7 @@ use crate::{
     PostgresAdapter,
     error::{
         BuyerLocationsWithoutMappingSnafu, ConflictingVesselMappingsSnafu,
-        DanglingVesselEventsSnafu, IncorrectHaulCatchesSnafu,
+        DanglingVesselEventsSnafu, IncorrectErsDcaCatchesSnafu, IncorrectHaulCatchesSnafu,
         IncorrectHaulsMatrixLivingWeightSnafu, IncorrectLandingMatrixLivingWeightSnafu,
         LandingsWithoutTripSnafu, Result,
     },
@@ -23,6 +23,11 @@ impl PostgresAdapter {
         match self.hauls_with_incorrect_catches().await? {
             message_ids if message_ids.is_empty() => Ok(()),
             message_ids => IncorrectHaulCatchesSnafu { message_ids }.fail(),
+        }?;
+
+        match self.ers_dca_catches_without_haul().await? {
+            message_ids if message_ids.is_empty() => Ok(()),
+            message_ids => IncorrectErsDcaCatchesSnafu { message_ids }.fail(),
         }?;
 
         match self.hauls_matrix_vs_ers_dca_living_weight().await? {
