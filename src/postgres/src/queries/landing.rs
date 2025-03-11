@@ -650,9 +650,11 @@ WHERE
         let mut stream = sqlx::query!(
             r#"
 SELECT
-    landing_id
+    l.landing_id
 FROM
-    landings
+    landings l
+    INNER JOIN catch_locations c ON l.catch_main_area_id = c.catch_main_area_id
+    AND l.catch_area_id = c.catch_area_id
             "#
         )
         .fetch(&self.pool)
@@ -664,41 +666,26 @@ FROM
             let ids: Vec<String> = landing_id_chunk.into_iter().flatten().collect();
             sum += sqlx::query!(
                 r#"
-WITH
-    landings_to_check AS (
-        SELECT
-            landing_id,
-            living_weight
-        FROM
-            landing_entries
-        WHERE
-            landing_id = ANY ($1)
-    )
 SELECT
-    COALESCE(
+    (
         (
             SELECT
-                SUM(living_weight)
+                COALESCE(SUM(living_weight), 0)
             FROM
-                landings_to_check
-        ) - (
-            SELECT
-                SUM(e.living_weight)
-            FROM
-                landings_to_check e
-                LEFT JOIN landing_matrix l ON l.landing_id = e.landing_id
+                landing_entries
             WHERE
-                l.landing_id IS NULL
+                landing_id = ANY ($1)
         ) - (
             SELECT
-                SUM(living_weight)
+                COALESCE(SUM(living_weight), 0)
             FROM
                 landing_matrix
-        ),
-        0
+            WHERE
+                landing_id = ANY ($1)
+        )
     )::BIGINT AS "sum!"
-            "#,
-                &ids
+                "#,
+                &ids,
             )
             .fetch_one(&self.pool)
             .await?

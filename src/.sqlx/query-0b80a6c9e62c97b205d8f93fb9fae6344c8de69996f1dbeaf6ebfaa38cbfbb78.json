@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    (\n        (\n            SELECT\n                COALESCE(SUM(living_weight), 0)\n            FROM\n                landing_entries\n            WHERE\n                landing_id = ANY ($1)\n        ) - (\n            SELECT\n                COALESCE(SUM(living_weight), 0)\n            FROM\n                landing_matrix\n            WHERE\n                landing_id = ANY ($1)\n        )\n    )::BIGINT AS \"sum!\"\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "sum!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "0b80a6c9e62c97b205d8f93fb9fae6344c8de69996f1dbeaf6ebfaa38cbfbb78"
+}
