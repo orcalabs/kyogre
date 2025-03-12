@@ -2,6 +2,7 @@ use futures::StreamExt;
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
+    sync::OnceLock,
 };
 
 use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
@@ -24,6 +25,8 @@ use crate::{
 };
 
 static CHUNK_SIZE: usize = 100_000;
+
+pub static LANDINGS_VERIFY_CHUNK_SIZE: OnceLock<usize> = OnceLock::new();
 
 impl PostgresAdapter {
     pub(crate) fn landings_impl(
@@ -654,7 +657,7 @@ FROM
         )
         .fetch(&self.pool)
         .map_ok(|r| r.landing_id)
-        .chunks(100000);
+        .chunks(*LANDINGS_VERIFY_CHUNK_SIZE.get_or_init(|| 100_000));
 
         let mut sum = 0;
         while let Some(landing_id_chunk) = stream.next().await {
