@@ -15,5 +15,6 @@ mod queries;
 mod test_db;
 
 pub use adapter::PostgresAdapter;
+pub use queries::{haul::HAULS_VERIFY_CHUNK_SIZE, landing::LANDINGS_VERIFY_CHUNK_SIZE};
 #[cfg(feature = "test")]
 pub use test_db::TestDb;

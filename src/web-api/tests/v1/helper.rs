@@ -6,7 +6,7 @@ use futures::Future;
 use kyogre_core::*;
 use meilisearch::MeilisearchAdapter;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
-use postgres::{PostgresAdapter, TestDb};
+use postgres::{HAULS_VERIFY_CHUNK_SIZE, LANDINGS_VERIFY_CHUNK_SIZE, PostgresAdapter, TestDb};
 use std::f64;
 use std::ops::AddAssign;
 use std::path::PathBuf;
@@ -199,6 +199,9 @@ where
         test_helper = test_helper.add_meilisearch(None);
     }
 
+    HAULS_VERIFY_CHUNK_SIZE.get_or_init(|| 1);
+    LANDINGS_VERIFY_CHUNK_SIZE.get_or_init(|| 1);
+
     test_helper
         .build()
         .run(move |ops, db_name| async move {
@@ -210,7 +213,7 @@ where
                 db_name: db_name.clone(),
                 password: None,
                 username: "postgres".to_string(),
-                max_connections: 1,
+                max_connections: 5,
                 root_cert: None,
                 log_statements: PsqlLogStatements::Enable,
                 application_name: None,

@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear, GearGroup, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, StreamExt, TryStreamExt, future::ready};
@@ -8,6 +10,8 @@ use tracing::instrument;
 use crate::{PostgresAdapter, error::Result, models::Haul};
 
 static ADD_HAUL_MATRIX_CHUNK_SIZE: usize = 1000;
+
+pub static HAULS_VERIFY_CHUNK_SIZE: OnceLock<usize> = OnceLock::new();
 
 impl PostgresAdapter {
     pub(crate) async fn haul_weights_from_range_impl(
@@ -609,7 +613,7 @@ FROM
         )
         .fetch(&self.pool)
         .map_ok(|r| r.haul_id)
-        .chunks(50000);
+        .chunks(*HAULS_VERIFY_CHUNK_SIZE.get_or_init(|| 50_000));
 
         let mut incorrect_message_ids = Vec::new();
 
