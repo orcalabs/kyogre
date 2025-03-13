@@ -47,7 +47,7 @@ SELECT
     f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    MAX(v.call_sign) AS "fiskeridir_call_sign: CallSign",
+    v.call_sign AS "fiskeridir_call_sign: CallSign",
     f."name" AS fiskeridir_name,
     f.registration_id AS fiskeridir_registration_id,
     f."length" AS fiskeridir_length,
@@ -73,9 +73,9 @@ SELECT
     a.draught AS "ais_draught: Draught",
     a.ship_length AS ais_length,
     a.ship_width AS ais_width,
-    MAX(c.departure_timestamp) AS current_trip_departure_timestamp,
-    MAX(c.target_species_fiskeridir_id) AS current_trip_target_species_fiskeridir_id,
-    BOOL_OR(v.is_active) AS "is_active!"
+    c.departure_timestamp AS "current_trip_departure_timestamp?",
+    c.target_species_fiskeridir_id AS "current_trip_target_species_fiskeridir_id?",
+    v.is_active AS "is_active!"
 FROM
     all_vessels AS v
     INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
@@ -86,14 +86,18 @@ WHERE
         SELECT
             COUNT(*)
         FROM
-            trips_detailed t
-        WHERE
-            t.fiskeridir_vessel_id = v.fiskeridir_vessel_id
-            AND t.has_track > $1
+            (
+                SELECT
+                    1
+                FROM
+                    trips_detailed t
+                WHERE
+                    t.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+                    AND t.has_track > $1
+                LIMIT
+                    $2
+            )
     ) >= $2
-GROUP BY
-    f.fiskeridir_vessel_id,
-    a.mmsi
             "#,
             HasTrack::NoTrack as i32,
             num_trips as i32
@@ -549,7 +553,7 @@ FROM
             landings l
             LEFT JOIN landing_entries e ON l.landing_id = e.landing_id
         WHERE
-            fiskeridir_vessel_id = ANY($1)
+            fiskeridir_vessel_id = ANY ($1)
         GROUP BY
             fiskeridir_vessel_id
     ) q
