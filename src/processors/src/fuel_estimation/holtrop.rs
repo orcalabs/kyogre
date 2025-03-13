@@ -13,8 +13,6 @@ static PROPELLOR_EFFICENCY: f64 = 0.7;
 
 // Cb
 static BLOCK_COEFFICENT: f64 = 0.55;
-// Cwp
-static WATERPLANE_AREA_COEFFICENT: f64 = 0.55 + 0.45 * BLOCK_COEFFICENT;
 // Cm
 static MIDSHIP_SECTION_COEFFICIENT: f64 = 0.911;
 // Cp
@@ -29,9 +27,8 @@ static NREFF: f64 = 1.0;
 static KINVISCOSITY: f64 = 0.00000118831;
 static SHAFT_EFFICIENCY: f64 = 0.95;
 
-#[allow(dead_code)]
-#[derive(Default, Debug, PartialEq, Eq)]
-enum ScrewType {
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ScrewType {
     Twin,
     SingleOpenStern,
     SingleConventionalStern,
@@ -45,10 +42,35 @@ pub struct Holtrop {
     draught: f64,
     length: f64,
     breadth: f64,
+    screw_type: ScrewType,
     speed_meter_per_second: f64,
     // Carriers and Tankers < 0.65
     // Container ships < 0.74
-    propel_diameter: f64,
+    propellor_diameter: f64,
+    prismatic_coefficient: f64,
+    block_coefficient: f64,
+    propellor_efficency: f64,
+    shaft_efficency: f64,
+    midship_section_coefficient: f64,
+    waterplane_area_coefficent: f64,
+    stern_parameter: f64,
+}
+
+#[allow(dead_code)]
+#[derive(Debug)]
+pub struct HoltropBuilder {
+    main_engine_sfc: f64,
+    draught: f64,
+    length: f64,
+    breadth: f64,
+    screw_type: ScrewType,
+    propellor_diameter: Option<f64>,
+    prismatic_coefficient: Option<f64>,
+    block_coefficient: Option<f64>,
+    propellor_efficency: Option<f64>,
+    shaft_efficiency: Option<f64>,
+    midship_section_coefficient: Option<f64>,
+    stern_parameter: Option<f64>,
 }
 
 impl FuelComputation for Holtrop {
@@ -61,7 +83,7 @@ impl FuelComputation for Holtrop {
     ) -> Option<f64> {
         let speed_knots = self.speed_knots(first, second, time_ms)?;
 
-        self.fuel_liter_impl(speed_knots, time_ms)
+        self.fuel_liter_impl(speed_knots, time_ms, self.haul_factor(first, second))
     }
 
     fn mode(&self) -> FuelImplDiscriminants {
@@ -69,31 +91,106 @@ impl FuelComputation for Holtrop {
     }
 }
 
-impl Holtrop {
-    pub fn new(draught: Draught, length: f64, breadth: f64, main_engine_sfc: f64) -> Self {
+impl HoltropBuilder {
+    pub fn new(
+        draught: Draught,
+        length: f64,
+        breadth: f64,
+        main_engine_sfc: f64,
+        screw_type: ScrewType,
+    ) -> Self {
         Self {
             main_engine_sfc,
             draught: draught.into_inner(),
             length,
             breadth,
-            propel_diameter: 0.4,
-            speed_meter_per_second: 0.,
+            prismatic_coefficient: None,
+            block_coefficient: None,
+            propellor_efficency: None,
+            shaft_efficiency: None,
+            propellor_diameter: None,
+            midship_section_coefficient: None,
+            screw_type,
+            stern_parameter: None,
         }
     }
-    pub fn fuel_liter_impl(&mut self, speed_knots: f64, time_diff_ms: u64) -> Option<f64> {
-        //if let Some(draught) = draught_override {
-        //    self.draught = draught.into_inner();
-        //}
+    pub fn shaft_efficiency(self, shaft_efficiency: f64) -> HoltropBuilder {
+        HoltropBuilder {
+            shaft_efficiency: Some(shaft_efficiency),
+            ..self
+        }
+    }
+    pub fn block_coefficient(self, block_coefficient: f64) -> HoltropBuilder {
+        HoltropBuilder {
+            block_coefficient: Some(block_coefficient),
+            ..self
+        }
+    }
+    pub fn propellor_efficency(self, propellor_efficency: f64) -> HoltropBuilder {
+        HoltropBuilder {
+            propellor_efficency: Some(propellor_efficency),
+            ..self
+        }
+    }
 
-        //println!("{}", self.draught);
-        //self.draught = 7.5;
-        //self.length = 80.4;
-        //self.breadth = 16.;
-        //self.propel_diameter = 0.4;
+    pub fn propellor_diameter(self, propellor_diameter: f64) -> HoltropBuilder {
+        HoltropBuilder {
+            propellor_diameter: Some(propellor_diameter),
+            ..self
+        }
+    }
 
+    pub fn prismatic_coefficient(self, prismatic_coefficient: f64) -> HoltropBuilder {
+        HoltropBuilder {
+            prismatic_coefficient: Some(prismatic_coefficient),
+            ..self
+        }
+    }
+    pub fn midship_section_coefficient(self, midship_section_coefficient: f64) -> HoltropBuilder {
+        HoltropBuilder {
+            midship_section_coefficient: Some(midship_section_coefficient),
+            ..self
+        }
+    }
+    pub fn stern_parameter(self, stern_parameter: f64) -> HoltropBuilder {
+        HoltropBuilder {
+            stern_parameter: Some(stern_parameter),
+            ..self
+        }
+    }
+    pub fn build(self) -> Holtrop {
+        let block_coefficient = self.block_coefficient.unwrap_or(BLOCK_COEFFICENT);
+        Holtrop {
+            main_engine_sfc: self.main_engine_sfc,
+            draught: self.draught,
+            length: self.length,
+            breadth: self.breadth,
+            speed_meter_per_second: 0.,
+            propellor_diameter: self.propellor_diameter.unwrap_or(0.4),
+            prismatic_coefficient: self.prismatic_coefficient.unwrap_or(PRISMATIC_COEFFICIENT),
+            block_coefficient,
+            propellor_efficency: self.propellor_efficency.unwrap_or(PROPELLOR_EFFICENCY),
+            shaft_efficency: self.shaft_efficiency.unwrap_or(SHAFT_EFFICIENCY),
+            midship_section_coefficient: self
+                .midship_section_coefficient
+                .unwrap_or(MIDSHIP_SECTION_COEFFICIENT),
+            waterplane_area_coefficent: 0.55 + 0.45 * block_coefficient,
+            screw_type: self.screw_type,
+            stern_parameter: self.stern_parameter.unwrap_or(STERN_PARAMETER),
+        }
+    }
+}
+
+impl Holtrop {
+    pub fn fuel_liter_impl(
+        &mut self,
+        speed_knots: f64,
+        time_diff_ms: u64,
+        haul_factor: f64,
+    ) -> Option<f64> {
         self.speed_meter_per_second = speed_knots * 0.5144;
 
-        let break_power = self.break_power();
+        let break_power = self.break_power() * haul_factor;
 
         let hours_diff = time_diff_ms as f64 / 3_600_000.;
 
@@ -121,11 +218,11 @@ impl Holtrop {
     }
 
     fn transom_area(&self) -> f64 {
-        0.051 * MIDSHIP_SECTION_COEFFICIENT * self.breadth * self.draught
+        0.051 * self.midship_section_coefficient * self.breadth * self.draught
     }
 
     fn displacement(&self) -> f64 {
-        BLOCK_COEFFICENT
+        self.block_coefficient
             * self.length_between_perpendiculars()
             * self.breadth
             * self.draught
@@ -137,11 +234,11 @@ impl Holtrop {
     }
 
     fn transbulb_area(&self) -> f64 {
-        0.08 * MIDSHIP_SECTION_COEFFICIENT * self.breadth * self.draught
+        0.08 * self.midship_section_coefficient * self.breadth * self.draught
     }
 
     fn break_power(&self) -> f64 {
-        self.sea_margin() * SHAFT_EFFICIENCY
+        self.sea_margin() * self.shaft_efficency
     }
 
     fn sea_margin(&self) -> f64 {
@@ -155,18 +252,18 @@ impl Holtrop {
     }
 
     fn cnd(&self) -> f64 {
-        self.nh() * PROPELLOR_EFFICENCY * NREFF
+        self.nh() * self.propellor_efficency * NREFF
     }
 
     fn cp1(&self) -> f64 {
-        1.45 * PRISMATIC_COEFFICIENT - 0.315 - 0.0225 * self.longitudinal_centre_of_buoyancy()
+        1.45 * self.prismatic_coefficient - 0.315 - 0.0225 * self.longitudinal_centre_of_buoyancy()
     }
 
     fn ca(&self) -> f64 {
         0.006 * (self.length_at_waterline() + 100.0).powf(-0.16) - 0.00205
             + 0.003
                 * (self.length_at_waterline() / 7.5).sqrt()
-                * BLOCK_COEFFICENT.powf(4.0)
+                * self.block_coefficient.powf(4.0)
                 * self.holtrop_1()
                 * (0.04 - self.holtrop_4())
     }
@@ -178,55 +275,55 @@ impl Holtrop {
     fn t(&self) -> f64 {
         match ScrewType::default() {
             ScrewType::Twin => {
-                0.325 * BLOCK_COEFFICENT
-                    - 0.1885 * self.propel_diameter / (self.breadth * self.draught).sqrt()
+                0.325 * self.block_coefficient
+                    - 0.1885 * self.propellor_diameter / (self.breadth * self.draught).sqrt()
             }
             ScrewType::SingleOpenStern => 0.1,
             ScrewType::SingleConventionalStern => {
                 0.001979 * self.length_at_waterline() / (self.breadth - self.breadth * self.cp1())
                     + 1.0585 * self.holtrop_10()
                     - 0.00524
-                    - 0.1418 * self.propel_diameter.powf(2.0) / (self.breadth * self.draught)
-                    + 0.0015 * STERN_PARAMETER
+                    - 0.1418 * self.propellor_diameter.powf(2.0) / (self.breadth * self.draught)
+                    + 0.0015 * self.stern_parameter
             }
             ScrewType::Unknown => {
                 0.001979 * self.length_at_waterline() / (self.breadth - self.breadth * self.cp1())
                     + 1.0585 * self.holtrop_10()
                     - 0.00524
-                    - 0.1418 * self.propel_diameter.powf(2.0) / (self.breadth * self.draught)
-                    + 0.0015 * STERN_PARAMETER
+                    - 0.1418 * self.propellor_diameter.powf(2.0) / (self.breadth * self.draught)
+                    + 0.0015 * self.stern_parameter
             }
         }
     }
 
     fn w(&self) -> f64 {
-        match ScrewType::default() {
+        match self.screw_type {
             ScrewType::Twin => {
-                0.3095 * BLOCK_COEFFICENT + 10.0 * self.cv() * BLOCK_COEFFICENT
-                    - 0.23 * self.propel_diameter / (self.breadth * self.draught).sqrt()
+                0.3095 * self.block_coefficient + 10.0 * self.cv() * self.block_coefficient
+                    - 0.23 * self.propellor_diameter / (self.breadth * self.draught).sqrt()
             }
             ScrewType::SingleOpenStern => {
-                0.3 * BLOCK_COEFFICENT + 10.0 * self.cv() * BLOCK_COEFFICENT - 0.1
+                0.3 * self.block_coefficient + 10.0 * self.cv() * self.block_coefficient - 0.1
             }
             ScrewType::SingleConventionalStern => {
                 self.holtrop_9() * self.cv() * self.length_at_waterline() / self.draught
                     * (0.0661875 + 1.21756 * self.holtrop_11() * self.cv() / (1.0 - self.cp1()))
                     + 0.24558
                         * (self.breadth / (self.length_at_waterline() * (1.0 - self.cp1()))).sqrt()
-                    - 0.09726 / (0.95 - PRISMATIC_COEFFICIENT)
-                    + 0.11434 / (0.95 - BLOCK_COEFFICENT)
-                    + 0.75 * STERN_PARAMETER * self.cv()
-                    + 0.002 * STERN_PARAMETER
+                    - 0.09726 / (0.95 - self.prismatic_coefficient)
+                    + 0.11434 / (0.95 - self.block_coefficient)
+                    + 0.75 * self.stern_parameter * self.cv()
+                    + 0.002 * self.stern_parameter
             }
             ScrewType::Unknown => {
                 self.holtrop_9() * self.cv() * self.length_at_waterline() / self.draught
                     * (0.0661875 + 1.21756 * self.holtrop_11() * self.cv() / (1.0 - self.cp1()))
                     + 0.24558
                         * (self.breadth / (self.length_at_waterline() * (1.0 - self.cp1()))).sqrt()
-                    - 0.09726 / (0.95 - PRISMATIC_COEFFICIENT)
-                    + 0.11434 / (0.95 - BLOCK_COEFFICENT)
-                    + 0.75 * STERN_PARAMETER * self.cv()
-                    + 0.002 * STERN_PARAMETER
+                    - 0.09726 / (0.95 - self.prismatic_coefficient)
+                    + 0.11434 / (0.95 - self.block_coefficient)
+                    + 0.75 * self.stern_parameter * self.cv()
+                    + 0.002 * self.stern_parameter
             }
         }
     }
@@ -311,7 +408,7 @@ impl Holtrop {
 
     fn cm2(&self) -> f64 {
         self.holtrop_15()
-            * PRISMATIC_COEFFICIENT.powf(2.0)
+            * self.prismatic_coefficient.powf(2.0)
             * (-0.1 * self.ship_fn().powf(-2.0)).exp()
     }
 
@@ -332,8 +429,8 @@ impl Holtrop {
             * (0.93
                 + self.holtrop_12()
                     * ((self.breadth / self.lengh_of_run()).powf(0.92497))
-                    * (0.95 - PRISMATIC_COEFFICIENT).powf(-0.521448)
-                    * ((1.0 - PRISMATIC_COEFFICIENT
+                    * (0.95 - self.prismatic_coefficient).powf(-0.521448)
+                    * ((1.0 - self.prismatic_coefficient
                         + 0.0225 * self.longitudinal_centre_of_buoyancy())
                     .powf(0.6906)))
     }
@@ -341,17 +438,17 @@ impl Holtrop {
     fn fnt(&self) -> f64 {
         self.speed_meter_per_second
             / (2.0 * GRAVITY * self.transom_area()
-                / (self.breadth + self.breadth * WATERPLANE_AREA_COEFFICENT).sqrt())
+                / (self.breadth + self.breadth * self.waterplane_area_coefficent).sqrt())
     }
     fn cs(&self) -> f64 {
         self.length_at_waterline()
             * (2. * self.draught + self.breadth)
-            * MIDSHIP_SECTION_COEFFICIENT.sqrt()
-            * (0.453 + 0.4425 * BLOCK_COEFFICENT
-                - 0.2862 * MIDSHIP_SECTION_COEFFICIENT
+            * self.midship_section_coefficient.sqrt()
+            * (0.453 + 0.4425 * self.block_coefficient
+                - 0.2862 * self.midship_section_coefficient
                 - 0.003467 * (self.breadth / self.draught)
-                + 0.3696 * WATERPLANE_AREA_COEFFICENT)
-            + 2.38 * self.transbulb_area() / BLOCK_COEFFICENT
+                + 0.3696 * self.waterplane_area_coefficent)
+            + 2.38 * self.transbulb_area() / self.block_coefficient
     }
 
     fn ie(&self) -> f64 {
@@ -360,12 +457,13 @@ impl Holtrop {
         // TODO: fix?
         let lcb = -0.75 * (self.length_between_perpendiculars() / 2.0) / 100.0;
         let lr = self.length_at_waterline()
-            * (1.0 - PRISMATIC_COEFFICIENT
-                + ((0.06 * PRISMATIC_COEFFICIENT * lcb) / (4.0 * PRISMATIC_COEFFICIENT - 1.0)));
+            * (1.0 - self.prismatic_coefficient
+                + ((0.06 * self.prismatic_coefficient * lcb)
+                    / (4.0 * self.prismatic_coefficient - 1.0)));
         1.0 + 89.0
             * (-(self.length_at_waterline() / self.breadth).powf(0.80856)
-                * (1.0 - WATERPLANE_AREA_COEFFICENT).powf(0.30484)
-                * (1.0 - PRISMATIC_COEFFICIENT - 0.0225 * lcb).powf(0.6367)
+                * (1.0 - self.waterplane_area_coefficent).powf(0.30484)
+                * (1.0 - self.prismatic_coefficient - 0.0225 * lcb).powf(0.6367)
                 * (lr / self.breadth).powf(0.34574)
                 * (100.0 * self.displacement() / self.length_at_waterline().powf(3.0))
                     .powf(0.16302))
@@ -398,7 +496,7 @@ impl Holtrop {
 
     fn holtrop_5(&self) -> f64 {
         1.0 - 0.8 * self.transom_area()
-            / (self.breadth * self.draught * MIDSHIP_SECTION_COEFFICIENT)
+            / (self.breadth * self.draught * self.midship_section_coefficient)
     }
 
     fn holtrop_6(&self) -> f64 {
@@ -427,22 +525,22 @@ impl Holtrop {
 
         if val < 5.0 {
             self.breadth * self.s()
-                / (self.length_at_waterline() * self.propel_diameter * self.draught)
+                / (self.length_at_waterline() * self.propellor_diameter * self.draught)
         } else {
             self.s() * (7.0 * val - 25.0)
-                / (self.length_at_waterline() * self.propel_diameter * (val - 3.0))
+                / (self.length_at_waterline() * self.propellor_diameter * (val - 3.0))
         }
     }
 
     fn s(&self) -> f64 {
         self.length_at_waterline()
             * (2. * self.draught + self.breadth)
-            * MIDSHIP_SECTION_COEFFICIENT.sqrt()
-            * (0.453 + 0.4425 * BLOCK_COEFFICENT
-                - 0.2862 * MIDSHIP_SECTION_COEFFICIENT
+            * self.midship_section_coefficient.sqrt()
+            * (0.453 + 0.4425 * self.block_coefficient
+                - 0.2862 * self.midship_section_coefficient
                 - 0.003467 * (self.breadth / self.draught)
-                + 0.3696 * WATERPLANE_AREA_COEFFICENT)
-            + 2.38 * self.transbulb_area() / BLOCK_COEFFICENT
+                + 0.3696 * self.waterplane_area_coefficent)
+            + 2.38 * self.transbulb_area() / self.block_coefficient
     }
 
     fn holtrop_9(&self) -> f64 {
@@ -464,11 +562,11 @@ impl Holtrop {
     }
 
     fn holtrop_11(&self) -> f64 {
-        let val = self.draught / self.propel_diameter;
+        let val = self.draught / self.propellor_diameter;
         if val < 2.0 {
             val
         } else {
-            0.0833333 * (self.draught / self.propel_diameter).powf(3.0) + 1.33333
+            0.0833333 * (self.draught / self.propellor_diameter).powf(3.0) + 1.33333
         }
     }
 
@@ -484,7 +582,7 @@ impl Holtrop {
     }
 
     fn holtrop_13(&self) -> f64 {
-        1.0 + 0.003 * STERN_PARAMETER
+        1.0 + 0.003 * self.stern_parameter
     }
 
     fn holtrop_15(&self) -> f64 {
@@ -500,26 +598,26 @@ impl Holtrop {
     }
 
     fn holtrop_16(&self) -> f64 {
-        if PRISMATIC_COEFFICIENT < 0.8 {
-            8.07981 * PRISMATIC_COEFFICIENT - 13.8673 * PRISMATIC_COEFFICIENT.powf(2.0)
-                + 6.984388 * PRISMATIC_COEFFICIENT.powf(3.)
+        if self.prismatic_coefficient < 0.8 {
+            8.07981 * self.prismatic_coefficient - 13.8673 * self.prismatic_coefficient.powf(2.0)
+                + 6.984388 * self.prismatic_coefficient.powf(3.)
         } else {
-            1.73014 - 0.7067 * PRISMATIC_COEFFICIENT
+            1.73014 - 0.7067 * self.prismatic_coefficient
         }
     }
 
     fn lengh_of_run(&self) -> f64 {
         self.length_at_waterline()
-            * (1.0 - PRISMATIC_COEFFICIENT
-                + ((0.06 * PRISMATIC_COEFFICIENT * self.longitudinal_centre_of_buoyancy())
-                    / (4.0 * PRISMATIC_COEFFICIENT - 1.0)))
+            * (1.0 - self.prismatic_coefficient
+                + ((0.06 * self.prismatic_coefficient * self.longitudinal_centre_of_buoyancy())
+                    / (4.0 * self.prismatic_coefficient - 1.0)))
     }
 
     fn lambda(&self) -> f64 {
         if self.length_at_waterline() / self.breadth < 12.0 {
-            1.446 * PRISMATIC_COEFFICIENT - 0.03 * self.length_at_waterline() / self.breadth
+            1.446 * self.prismatic_coefficient - 0.03 * self.length_at_waterline() / self.breadth
         } else {
-            1.446 * PRISMATIC_COEFFICIENT - 0.36
+            1.446 * self.prismatic_coefficient - 0.36
         }
     }
 }

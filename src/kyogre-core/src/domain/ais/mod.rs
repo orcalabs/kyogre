@@ -47,6 +47,12 @@ impl Draught {
     }
 }
 
+impl Default for Draught {
+    fn default() -> Self {
+        Self(7.0)
+    }
+}
+
 impl From<i32> for Draught {
     fn from(value: i32) -> Draught {
         Draught(value as f64 / 10.0)

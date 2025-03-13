@@ -1,12 +1,3 @@
-use std::{
-    cmp::Ordering,
-    collections::{BTreeMap, HashSet},
-    fmt::Display,
-    iter,
-    ops::{Add, AddAssign, Mul, Neg, SubAssign},
-    sync::Arc,
-};
-
 use anyhow::Result;
 use async_channel::unbounded;
 use chrono::{DateTime, Utc};
@@ -17,12 +8,19 @@ use fuel_validation::{
 };
 use futures::future::try_join_all;
 use geoutils::Location;
-use kyogre_core::{DateRange, FiskeridirVesselId, Mmsi, VesselEngine};
-use rand::random_range;
+use kyogre_core::{DateRange, Draught, EngineVariant, FiskeridirVesselId, Mmsi, VesselEngine};
+use params::{ParamDeltaVariants, ParamVariants, Score, holtrop, maru};
+use processors::HoltropBuilder;
 use sqlx::PgPool;
+use std::{
+    collections::{BTreeMap, HashSet},
+    fmt::Display,
+    sync::Arc,
+};
 use strum::{EnumIter, IntoEnumIterator};
 use tokio::task::JoinSet;
 
+mod params;
 mod queries;
 
 use queries::*;
@@ -40,247 +38,6 @@ static VESSELS: &[(FiskeridirVesselId, &str)] = &[
     (FiskeridirVesselId::new(2016073913), "Ramoen"),
 ];
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Params {
-    /// Speed at which vessel has ~85% engine load
-    pub service_speeds: BTreeMap<FiskeridirVesselId, f64>,
-    /// How much `service_speed` is reduced by a full cargo load
-    pub cargo_weight_factor: f64,
-    /// Load factor for each Gear
-    pub haul_load_factors: BTreeMap<Gear, f64>,
-}
-
-#[derive(Debug, Clone)]
-pub struct ParamsDelta {
-    pub service_speeds: BTreeMap<FiskeridirVesselId, f64>,
-    pub cargo_weight_factor: f64,
-    pub haul_load_factors: BTreeMap<Gear, f64>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Delta {
-    ServiceSpeed((FiskeridirVesselId, f64)),
-    CargoWeightFactor(f64),
-    HaulLoadFactor((Gear, f64)),
-}
-
-#[derive(Debug)]
-pub enum DeltaMut<'a> {
-    ServiceSpeed((FiskeridirVesselId, &'a mut f64)),
-    CargoWeightFactor(&'a mut f64),
-    HaulLoadFactor((Gear, &'a mut f64)),
-}
-
-impl Params {
-    pub fn rand(vessel_ids: &HashSet<FiskeridirVesselId>, gears: &HashSet<Gear>) -> Self {
-        Self {
-            service_speeds: vessel_ids
-                .iter()
-                .map(|v| (*v, random_range(1.0..=20.0)))
-                .collect(),
-            cargo_weight_factor: random_range(0.1..=1.0),
-            haul_load_factors: gears
-                .iter()
-                .map(|v| (*v, random_range(1.0..=100.0)))
-                .collect(),
-        }
-    }
-}
-
-impl ParamsDelta {
-    pub fn new(vessel_ids: &HashSet<FiskeridirVesselId>, gears: &HashSet<Gear>) -> Self {
-        Self {
-            service_speeds: vessel_ids.iter().map(|v| (*v, 0.1)).collect(),
-            cargo_weight_factor: 0.1,
-            haul_load_factors: gears.iter().map(|v| (*v, 0.1)).collect(),
-        }
-    }
-
-    pub fn iter(&self) -> impl Iterator<Item = Delta> {
-        let Self {
-            service_speeds,
-            cargo_weight_factor,
-            haul_load_factors,
-        } = self;
-
-        service_speeds
-            .iter()
-            .map(|(id, v)| Delta::ServiceSpeed((*id, *v)))
-            .chain(iter::once(Delta::CargoWeightFactor(*cargo_weight_factor)))
-            .chain(
-                haul_load_factors
-                    .iter()
-                    .map(|(g, v)| Delta::HaulLoadFactor((*g, *v))),
-            )
-    }
-
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = DeltaMut<'_>> {
-        let Self {
-            service_speeds,
-            cargo_weight_factor,
-            haul_load_factors,
-        } = self;
-
-        service_speeds
-            .iter_mut()
-            .map(|(id, v)| DeltaMut::ServiceSpeed((*id, v)))
-            .chain(iter::once(DeltaMut::CargoWeightFactor(cargo_weight_factor)))
-            .chain(
-                haul_load_factors
-                    .iter_mut()
-                    .map(|(g, v)| DeltaMut::HaulLoadFactor((*g, v))),
-            )
-    }
-}
-
-impl DeltaMut<'_> {
-    pub fn is_zero(&self) -> bool {
-        match self {
-            DeltaMut::ServiceSpeed((_, v)) => **v == 0.,
-            DeltaMut::CargoWeightFactor(v) => **v == 0.,
-            DeltaMut::HaulLoadFactor((_, v)) => **v == 0.,
-        }
-    }
-
-    pub fn set_zero(&mut self) {
-        match self {
-            DeltaMut::ServiceSpeed((_, v)) => **v = 0.,
-            DeltaMut::CargoWeightFactor(v) => **v = 0.,
-            DeltaMut::HaulLoadFactor((_, v)) => **v = 0.,
-        }
-    }
-
-    pub fn value(&self) -> Delta {
-        match self {
-            DeltaMut::ServiceSpeed((id, v)) => Delta::ServiceSpeed((*id, **v)),
-            DeltaMut::CargoWeightFactor(v) => Delta::CargoWeightFactor(**v),
-            DeltaMut::HaulLoadFactor((g, v)) => Delta::HaulLoadFactor((*g, **v)),
-        }
-    }
-
-    pub fn neg(&mut self) {
-        match self {
-            DeltaMut::ServiceSpeed((_, v)) => **v = -**v,
-            DeltaMut::CargoWeightFactor(v) => **v = -**v,
-            DeltaMut::HaulLoadFactor((_, v)) => **v = -**v,
-        }
-    }
-}
-
-impl AddAssign<&ParamsDelta> for Params {
-    fn add_assign(&mut self, rhs: &ParamsDelta) {
-        for d in rhs.iter() {
-            *self += d;
-        }
-    }
-}
-
-impl Add<&ParamsDelta> for Params {
-    type Output = Self;
-
-    fn add(mut self, rhs: &ParamsDelta) -> Self::Output {
-        self += rhs;
-        self
-    }
-}
-
-impl AddAssign<Delta> for Params {
-    fn add_assign(&mut self, rhs: Delta) {
-        match rhs {
-            Delta::ServiceSpeed((id, delta)) => {
-                self.service_speeds
-                    .entry(id)
-                    .and_modify(|v| *v = (*v + delta).max(0.))
-                    .or_insert_with(|| panic!("missing vessel id: {id}"));
-            }
-            Delta::CargoWeightFactor(v) => {
-                self.cargo_weight_factor = (self.cargo_weight_factor + v).clamp(0., 1.)
-            }
-            Delta::HaulLoadFactor((gear, delta)) => {
-                self.haul_load_factors
-                    .entry(gear)
-                    .and_modify(|v| *v = (*v + delta).max(0.))
-                    .or_insert_with(|| panic!("missing gear: {gear}"));
-            }
-        }
-    }
-}
-
-impl Neg for Delta {
-    type Output = Self;
-
-    fn neg(self) -> Self::Output {
-        self * -1.
-    }
-}
-
-impl SubAssign<Delta> for Params {
-    fn sub_assign(&mut self, rhs: Delta) {
-        *self += -rhs;
-    }
-}
-
-impl Mul<f64> for Delta {
-    type Output = Self;
-
-    fn mul(mut self, rhs: f64) -> Self::Output {
-        match &mut self {
-            Delta::ServiceSpeed((_, v)) => *v *= rhs,
-            Delta::CargoWeightFactor(v) => *v *= rhs,
-            Delta::HaulLoadFactor((_, v)) => *v *= rhs,
-        };
-        self
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Score {
-    mean: f64,
-    sd: f64,
-}
-
-impl Eq for Score {}
-
-impl PartialOrd for Score {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Score {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.score().total_cmp(&other.score())
-    }
-}
-
-impl Score {
-    pub fn new(trips: &[Trip], params: &Params) -> Self {
-        let diffs = trips
-            .iter()
-            .map(|v| v.diff_percent(params).abs())
-            .collect::<Vec<_>>();
-
-        let n = diffs.len() as f64;
-        let mean = diffs.iter().sum::<f64>() / n;
-        let sd = (diffs
-            .iter()
-            .map(|v| ((v - mean).abs().powf(2.)))
-            .sum::<f64>()
-            / n)
-            .sqrt();
-
-        assert!(mean >= 0., "mean: {mean}");
-        assert!(sd >= 0., "sd: {sd}");
-
-        Self { mean, sd }
-    }
-
-    #[inline]
-    fn score(&self) -> f64 {
-        self.mean + self.sd
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Trip {
     pub vessel: Arc<Vessel>,
@@ -297,7 +54,7 @@ pub struct TripEntry {
 }
 
 impl Trip {
-    pub fn diff_percent(&self, params: &Params) -> f64 {
+    pub fn diff_percent(&self, params: &ParamVariants) -> f64 {
         let estimate = estimate_fuel(&self.fuel_items, &self.vessel, params);
 
         let diff = estimate - self.fuel;
@@ -306,7 +63,7 @@ impl Trip {
 }
 
 impl TripEntry {
-    pub fn diff_percent(&self, params: &Params, trip: &Trip) -> f64 {
+    pub fn diff_percent(&self, params: &ParamVariants, trip: &Trip) -> f64 {
         let start = trip
             .fuel_items
             .iter()
@@ -336,7 +93,7 @@ impl From<fuel_validation::TripEntry> for TripEntry {
 
 #[derive(Debug, Clone)]
 pub struct MasterTask {
-    params: Params,
+    params: ParamVariants,
     score: Score,
 }
 
@@ -365,43 +122,83 @@ fn service_speed_width(vessel_ids: impl ExactSizeIterator<Item = FiskeridirVesse
 
 impl Display for MasterTask {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut service_speeds = self
-            .params
-            .service_speeds
-            .iter()
-            .map(|(id, delta)| {
-                format!(
-                    "({}: {:.2})",
-                    VESSELS
-                        .iter()
-                        .find_map(|(v, name)| (v == id).then_some(name))
-                        .unwrap(),
-                    delta,
+        match &self.params {
+            ParamVariants::Holtrop(params) => {
+                let mut haul_load_factors = params
+                    .haul_load_factors
+                    .iter()
+                    .map(|(g, v)| format!("({g}: {v:.2})"))
+                    .collect::<Vec<_>>();
+
+                let mut propellor_diameter = params_to_terminal_display(&params.propellor_diameter);
+
+                let mut prismatic_coefficient =
+                    params_to_terminal_display(&params.prismatic_coefficient);
+
+                let mut block_coefficient = params_to_terminal_display(&params.block_coefficent);
+
+                let mut propellor_efficency =
+                    params_to_terminal_display(&params.propellor_efficency);
+
+                let mut shaft_efficiency = params_to_terminal_display(&params.shaft_efficiency);
+
+                let mut midship_section_coefficient =
+                    params_to_terminal_display(&params.midship_section_coefficient);
+
+                let mut stern_parameter = params_to_terminal_display(&params.stern_parameter);
+
+                haul_load_factors.sort();
+                propellor_diameter.sort();
+                prismatic_coefficient.sort();
+                block_coefficient.sort();
+                propellor_efficency.sort();
+                shaft_efficiency.sort();
+                midship_section_coefficient.sort();
+                stern_parameter.sort();
+
+                write!(
+                    f,
+                    "{:<16} | {:<10.2} | {:<10.2} | {:<19} | {:<19} | {:<19} | {:<19} | {:<19} | {:<19} | {:<20} | {}",
+                    Utc::now().format("%d/%m/%Y %H:%M"),
+                    self.score.mean,
+                    self.score.sd,
+                    propellor_diameter.join(", "),
+                    block_coefficient.join(", "),
+                    prismatic_coefficient.join(", "),
+                    propellor_efficency.join(", "),
+                    shaft_efficiency.join(", "),
+                    midship_section_coefficient.join(", "),
+                    stern_parameter.join(", "),
+                    haul_load_factors.join(", "),
                 )
-            })
-            .collect::<Vec<_>>();
-        let mut haul_load_factors = self
-            .params
-            .haul_load_factors
-            .iter()
-            .map(|(g, v)| format!("({g}: {v:.2})"))
-            .collect::<Vec<_>>();
+            }
+            ParamVariants::Maru(params) => {
+                let mut service_speeds = params_to_terminal_display(&params.service_speeds);
 
-        // Nicer if vessels and gears are listed in the same order every iteration
-        service_speeds.sort();
-        haul_load_factors.sort();
+                let mut haul_load_factors = params
+                    .haul_load_factors
+                    .iter()
+                    .map(|(g, v)| format!("({g}: {v:.2})"))
+                    .collect::<Vec<_>>();
 
-        write!(
-            f,
-            "{:<16} | {:<10.2} | {:<10.2} | {:<service_speed_width$} | {:<15.2} | {}",
-            Utc::now().format("%d/%m/%Y %H:%M"),
-            self.score.mean,
-            self.score.sd,
-            service_speeds.join(", "),
-            self.params.cargo_weight_factor,
-            haul_load_factors.join(", "),
-            service_speed_width = service_speed_width(self.params.service_speeds.keys().copied()),
-        )
+                // Nicer if vessels and gears are listed in the same order every iteration
+                service_speeds.sort();
+                haul_load_factors.sort();
+
+                write!(
+                    f,
+                    "{:<16} | {:<10.2} | {:<10.2} | {:<service_speed_width$} | {:<15.2} | {}",
+                    Utc::now().format("%d/%m/%Y %H:%M"),
+                    self.score.mean,
+                    self.score.sd,
+                    service_speeds.join(", "),
+                    params.cargo_weight_factor,
+                    haul_load_factors.join(", "),
+                    service_speed_width =
+                        service_speed_width(params.service_speeds.keys().copied()),
+                )
+            }
+        }
     }
 }
 
@@ -414,12 +211,45 @@ enum Vessels {
     Ramoen,
 }
 
+#[derive(Default, Debug, Clone, Copy, ValueEnum, EnumIter)]
+pub enum FuelMode {
+    #[default]
+    Maru,
+    Holtrop,
+}
+
+#[derive(Default, Debug, Clone, Copy, ValueEnum)]
+pub enum ScrewType {
+    Twin,
+    SingleOpenStern,
+    SingleConventionalStern,
+    #[default]
+    Unknown,
+}
+
+impl From<ScrewType> for processors::ScrewType {
+    fn from(value: ScrewType) -> Self {
+        match value {
+            ScrewType::Twin => processors::ScrewType::Twin,
+            ScrewType::SingleOpenStern => processors::ScrewType::SingleOpenStern,
+            ScrewType::SingleConventionalStern => processors::ScrewType::SingleConventionalStern,
+            ScrewType::Unknown => processors::ScrewType::Unknown,
+        }
+    }
+}
+
 /// Run fuel tuning on vessels
 #[derive(Parser, Debug)]
 struct Args {
     /// Names of the vessels to run tuning on (if not specified, all are used)
     #[arg(value_enum, short, long)]
     vessels: Vec<Vessels>,
+    #[arg(value_enum, short, long, default_value_t = FuelMode::default())]
+    mode: FuelMode,
+    #[arg(value_enum, short, long, default_value_t = ScrewType::default())]
+    screw_type: ScrewType,
+    #[arg(value_enum, short, long)]
+    print_per_iteration: bool,
 }
 
 #[tokio::main]
@@ -472,9 +302,24 @@ async fn main() -> Result<()> {
             let mut best_score = None;
 
             loop {
-                let mut params = Params::rand(&vessel_ids, &gears);
-                let mut delta = ParamsDelta::new(&vessel_ids, &gears);
-                let mut score = Score::new(&trips, &params);
+                let (mut params, mut delta, mut score) = match args.mode {
+                    FuelMode::Holtrop => {
+                        let params = ParamVariants::Holtrop(holtrop::Params::rand(
+                            &vessel_ids,
+                            &gears,
+                            args.screw_type.into(),
+                        ));
+                        let delta = holtrop::ParamsDelta::new(&vessel_ids, &gears);
+                        let score = Score::new(&trips, &params);
+                        (params, ParamDeltaVariants::Holtrop(delta), score)
+                    }
+                    FuelMode::Maru => {
+                        let params = ParamVariants::Maru(maru::Params::rand(&vessel_ids, &gears));
+                        let delta = maru::ParamsDelta::new(&vessel_ids, &gears);
+                        let score = Score::new(&trips, &params);
+                        (params, ParamDeltaVariants::Maru(delta), score)
+                    }
+                };
 
                 let mut done = false;
 
@@ -513,6 +358,15 @@ async fn main() -> Result<()> {
 
                         d.set_zero();
                     }
+
+                    if args.print_per_iteration {
+                        master_tx
+                            .try_send(MasterTask {
+                                params: params.clone(),
+                                score,
+                            })
+                            .unwrap();
+                    }
                 }
 
                 if best_score.is_none_or(|v| score < v) {
@@ -527,15 +381,34 @@ async fn main() -> Result<()> {
 
     let mut best = None::<MasterTask>;
 
-    println!(
-        "{:<16} | {:<10} | {:<10} | {:<service_speed_width$} | {:<15} | Gear",
-        "Time",
-        "Mean",
-        "SD",
-        "Service Speed",
-        "Cargo Weight",
-        service_speed_width = service_speed_width(vessel_ids.iter().copied()),
-    );
+    match args.mode {
+        FuelMode::Maru => {
+            println!(
+                "{:<16} | {:<10} | {:<10} | {:<service_speed_width$} | {:<15} | Gear",
+                "Time",
+                "Mean",
+                "SD",
+                "Service Speed",
+                "Cargo Weight",
+                service_speed_width = service_speed_width(vessel_ids.iter().copied()),
+            );
+        }
+        FuelMode::Holtrop => {
+            println!(
+                "{:<16} | {:<10} | {:<10} | {:<19} | {:<19} | {:<19} | {:<19} | {:<19} | {:<19} | {:<20} | Gear",
+                "Time",
+                "Mean",
+                "SD",
+                "Propellor diameter",
+                "Block",
+                "Prismatic",
+                "Propellor efficency",
+                "Shaft",
+                "Midship",
+                "Stern",
+            );
+        }
+    };
 
     while let Ok(task) = master_rx.recv_blocking() {
         if best.as_ref().is_none_or(|v| task.score < v.score) {
@@ -772,6 +645,9 @@ pub struct Vessel {
     pub call_sign: Option<CallSign>,
     pub max_cargo_weight: Option<f64>,
     pub engines: Vec<VesselEngine>,
+    pub draught: Option<Draught>,
+    pub breadth: Option<f64>,
+    pub length: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -791,6 +667,16 @@ pub struct FuelItem {
     pub timestamp: DateTime<Utc>,
     pub active_gear: Option<Gear>,
     pub cumulative_cargo_weight: f64,
+}
+
+impl Vessel {
+    pub fn main_engine_sfc(&self) -> f64 {
+        self.engines
+            .iter()
+            .find(|e| e.variant == EngineVariant::Main)
+            .unwrap()
+            .sfc
+    }
 }
 
 impl FuelItem {
@@ -841,14 +727,59 @@ impl FuelItem {
     }
 }
 
-pub fn estimate_fuel(items: &[FuelItem], vessel: &Vessel, params: &Params) -> f64 {
+pub fn estimate_fuel(items: &[FuelItem], vessel: &Vessel, params: &ParamVariants) -> f64 {
     items
         .iter()
         .map(|v| estimate_fuel_for_item(v, vessel, params))
         .sum()
 }
 
-fn estimate_fuel_for_item(item: &FuelItem, vessel: &Vessel, params: &Params) -> f64 {
+fn estimate_fuel_for_item(item: &FuelItem, vessel: &Vessel, params: &ParamVariants) -> f64 {
+    match params {
+        ParamVariants::Maru(p) => maru_estimate_fuel(item, vessel, p),
+        ParamVariants::Holtrop(p) => holtrop_estimate_fuel(item, vessel, p),
+    }
+}
+
+fn holtrop_estimate_fuel(item: &FuelItem, vessel: &Vessel, params: &holtrop::Params) -> f64 {
+    let holtrop::Params {
+        haul_load_factors,
+        propellor_diameter,
+        prismatic_coefficient,
+        block_coefficent,
+        propellor_efficency,
+        shaft_efficiency,
+        midship_section_coefficient,
+        screw_type,
+        stern_parameter,
+    } = params;
+    let mut holtrop = HoltropBuilder::new(
+        vessel.draught.unwrap_or_default(),
+        vessel.length.unwrap(),
+        vessel.breadth.unwrap(),
+        vessel.main_engine_sfc(),
+        *screw_type,
+    )
+    .shaft_efficiency(shaft_efficiency[&vessel.id])
+    .block_coefficient(block_coefficent[&vessel.id])
+    .propellor_efficency(propellor_efficency[&vessel.id])
+    .propellor_diameter(propellor_diameter[&vessel.id])
+    .prismatic_coefficient(prismatic_coefficient[&vessel.id])
+    .midship_section_coefficient(midship_section_coefficient[&vessel.id])
+    .stern_parameter(stern_parameter[&vessel.id])
+    .build();
+
+    let haul_factor = item
+        .active_gear
+        .map(|v| haul_load_factors[&v])
+        .unwrap_or(1.);
+
+    holtrop
+        .fuel_liter_impl(item.speed, (item.time_secs * 1000.0) as u64, haul_factor)
+        .unwrap_or(0.)
+}
+
+fn maru_estimate_fuel(item: &FuelItem, vessel: &Vessel, params: &maru::Params) -> f64 {
     let FuelItem {
         speed,
         time_secs,
@@ -857,7 +788,7 @@ fn estimate_fuel_for_item(item: &FuelItem, vessel: &Vessel, params: &Params) -> 
         cumulative_cargo_weight,
     } = item;
 
-    let Params {
+    let maru::Params {
         service_speeds,
         cargo_weight_factor,
         haul_load_factors,
@@ -893,4 +824,20 @@ fn estimate_fuel_for_item(item: &FuelItem, vessel: &Vessel, params: &Params) -> 
             sfc * kwh * DIESEL_GRAM_TO_LITER
         })
         .sum()
+}
+
+fn params_to_terminal_display(param: &BTreeMap<FiskeridirVesselId, f64>) -> Vec<String> {
+    param
+        .iter()
+        .map(|(id, delta)| {
+            format!(
+                "({}: {:.2})",
+                VESSELS
+                    .iter()
+                    .find_map(|(v, name)| (v == id).then_some(name))
+                    .unwrap(),
+                delta,
+            )
+        })
+        .collect::<Vec<_>>()
 }
