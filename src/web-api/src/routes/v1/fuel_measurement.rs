@@ -31,7 +31,7 @@ pub struct UploadFuelMeasurement {
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -48,7 +48,7 @@ pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn create_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -76,7 +76,7 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
-#[tracing::instrument(skip(db, body), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db, body), fields(user_id = profile.tracing_id()))]
 pub async fn upload_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -111,7 +111,7 @@ pub async fn upload_fuel_measurements<T: Database + 'static>(
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn update_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -140,7 +140,7 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn delete_fuel_measurements<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,

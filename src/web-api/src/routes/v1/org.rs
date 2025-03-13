@@ -26,7 +26,7 @@ pub struct OrgFuelPath {
 /// Returns organization benchmarks for the given organization id (Breg org id).
 /// This will include benchmarks for all vessels associated with the organization.
 #[oasgen(skip(db), tags("Org"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn benchmarks<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -50,7 +50,7 @@ pub async fn benchmarks<T: Database + 'static>(
 /// are returned.
 /// This is not based on trips and is the full fuel consumption estimate for the given date range.
 #[oasgen(skip(db), tags("Org"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn fuel<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,

@@ -104,14 +104,17 @@ pub struct BwJwtClaims {
 pub struct OptionBwProfile(Option<BwProfile>);
 
 impl BwProfile {
-    pub fn id(&self) -> BarentswatchUserId {
-        self.user.id
+    pub fn tracing_id(&self) -> String {
+        self.user.id.to_string()
     }
 }
 
 impl OptionBwProfile {
-    pub fn id(&self) -> Option<BarentswatchUserId> {
-        self.0.as_ref().map(|v| v.user.id)
+    pub fn tracing_id(&self) -> String {
+        self.0
+            .as_ref()
+            .map(|v| v.user.id.to_string())
+            .unwrap_or_default()
     }
 }
 

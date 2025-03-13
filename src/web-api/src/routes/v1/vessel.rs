@@ -39,7 +39,7 @@ pub struct LiveFuelParams {
 /// Note that all trip benchmarks that rely on some of the provided information will not be
 /// updated immediatley upon updating a vessel, trip benchmark updates can be expected within 24 hours.
 #[oasgen(skip(db), tags("Vessel"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn update_vessel<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -76,7 +76,7 @@ pub async fn vessels<T: Database + Send + Sync + 'static>(
 /// are returned.
 /// This is not based on trips and is the full fuel consumption estimate for the given date range
 #[oasgen(skip(db), tags("Vessel"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn fuel<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -89,7 +89,7 @@ pub async fn fuel<T: Database + Send + Sync + 'static>(
 }
 
 #[oasgen(skip(db), tags("Vessel"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn live_fuel<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
