@@ -103,6 +103,18 @@ pub struct BwJwtClaims {
 #[serde(rename_all = "camelCase")]
 pub struct OptionBwProfile(Option<BwProfile>);
 
+impl BwProfile {
+    pub fn id(&self) -> BarentswatchUserId {
+        self.user.id
+    }
+}
+
+impl OptionBwProfile {
+    pub fn id(&self) -> Option<BarentswatchUserId> {
+        self.0.as_ref().map(|v| v.user.id)
+    }
+}
+
 impl OptionBwProfile {
     pub fn read_fishing_facilities(&self) -> bool {
         self.0

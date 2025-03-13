@@ -72,7 +72,7 @@ pub struct CurrentTripPositionsPath {
 /// All vessels below 15m have significantly reduced trip data quality as they do not report
 /// ERS POR and DEP messages.
 #[oasgen(skip(db, meilisearch), tags("Trip"))]
-#[tracing::instrument(skip(db, meilisearch))]
+#[tracing::instrument(skip(db, meilisearch), fields(user_id = ?profile.id()))]
 pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
     db: web::Data<T>,
     meilisearch: web::Data<Option<M>>,
@@ -117,7 +117,7 @@ pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
 /// Returns the current trip of the given vessel, which is determined by the vessel's last reported DEP message.
 /// All vessels below 15m will not have a current trip as they do not report DEP messages.
 #[oasgen(skip(db), tags("Trip"))]
-#[tracing::instrument(skip(db))]
+#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
 pub async fn current_trip<T: Database + 'static>(
     db: web::Data<T>,
     profile: OptionBwProfile,
@@ -135,7 +135,7 @@ pub async fn current_trip<T: Database + 'static>(
 /// Returns the current trip of the given vessel, which is determined by the vessel's last reported DEP message.
 /// All vessels below 15m will not have a current trip as they do not report DEP messages.
 #[oasgen(skip(db), tags("Trip"))]
-#[tracing::instrument(skip(db))]
+#[tracing::instrument(skip(db), fields(user_id = ?user.id()))]
 pub async fn current_trip_positions<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     path: Path<CurrentTripPositionsPath>,

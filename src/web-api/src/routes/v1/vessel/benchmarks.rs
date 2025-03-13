@@ -5,13 +5,13 @@ use oasgen::oasgen;
 
 /// Returns benchmark data for the vessel associated with the authenticated user.
 #[oasgen(skip(db), tags("Vessel"))]
-#[tracing::instrument(skip(db))]
+#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
 pub async fn benchmarks<T: Database + 'static>(
     db: web::Data<T>,
-    bw_profile: BwProfile,
+    profile: BwProfile,
 ) -> Result<Response<VesselBenchmarks>> {
-    let call_sign = bw_profile.call_sign()?;
+    let call_sign = profile.call_sign()?;
     Ok(Response::new(
-        db.vessel_benchmarks(&bw_profile.user.id, call_sign).await?,
+        db.vessel_benchmarks(&profile.user.id, call_sign).await?,
     ))
 }

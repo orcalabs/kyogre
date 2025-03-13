@@ -5,7 +5,7 @@ use crate::states::BwState;
 use actix_web::http::header::AUTHORIZATION;
 use actix_web::{FromRequest, web::Data};
 use http_client::HttpClient;
-use kyogre_core::AisPermission;
+use kyogre_core::{AisPermission, BarentswatchUserId};
 use oasgen::{
     HeaderStyle, OaParameter, OaSchema, Parameter, ParameterData, ParameterKind,
     ParameterSchemaOrContent, RefOr,
@@ -22,6 +22,12 @@ pub enum UserAuth {
 }
 
 impl UserAuth {
+    pub fn id(&self) -> Option<BarentswatchUserId> {
+        match self {
+            UserAuth::Bw(v) => Some(v.user.id),
+            UserAuth::Orca(_) | UserAuth::NoUser => None,
+        }
+    }
     pub fn ais_permission(&self) -> AisPermission {
         match self {
             UserAuth::NoUser => AisPermission::Above15m,

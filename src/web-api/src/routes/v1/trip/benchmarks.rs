@@ -71,7 +71,7 @@ pub async fn average<T: Database + Send + Sync + 'static>(
 
 /// Returns trip benchmarks for the vessel associated with the authenticated user.
 #[oasgen(skip(db), tags("Trip"))]
-#[tracing::instrument(skip(db))]
+#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
 pub async fn benchmarks<T: Database>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -87,7 +87,7 @@ pub async fn benchmarks<T: Database>(
 /// Returns the EEOI of the logged in user for the given period.
 /// EEOI is given with the unit: `tonn / (tonn * nautical miles)`
 #[oasgen(skip(db), tags("Trip"))]
-#[tracing::instrument(skip(db))]
+#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
 pub async fn eeoi<T: Database>(
     db: web::Data<T>,
     profile: BwProfile,
