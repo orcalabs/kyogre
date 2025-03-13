@@ -2,18 +2,18 @@ use std::{
     collections::HashMap,
     fmt::Display,
     fs::File,
-    io::{Cursor, Write, stdout},
+    io::{stdout, Cursor, Write},
 };
 
 use anyhow::Result;
-use calamine::{Data, DataType, RangeDeserializerBuilder, Reader, Xlsx, open_workbook_from_rs};
+use calamine::{open_workbook_from_rs, Data, DataType, RangeDeserializerBuilder, Reader, Xlsx};
 use chrono::{Datelike, Duration, Months};
 use kyogre_core::DateRange;
 use serde::de::DeserializeOwned;
 use sqlx::{
-    PgPool,
     postgres::{PgConnectOptions, PgPoolOptions},
     types::chrono::NaiveDate,
+    PgPool,
 };
 
 #[derive(Debug, Clone)]

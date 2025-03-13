@@ -1,8 +1,8 @@
+use crate::{Result, SpeedItem, UnrealisticSpeed, estimated_speed_between_points};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 use fiskeridir_rs::Gear;
 use geoutils::Location;
-use holtrop::Holtrop;
 use kyogre_core::LiveFuelVessel;
 use kyogre_core::Mmsi;
 use kyogre_core::{
@@ -10,7 +10,6 @@ use kyogre_core::{
     Draught, FiskeridirVesselId, FuelEstimation, NewFuelDayEstimate, PositionType, Vessel,
     VesselEngine,
 };
-use normal::Maru;
 use serde::Deserialize;
 use std::sync::Arc;
 use strum::EnumDiscriminants;
@@ -20,14 +19,15 @@ use tokio::{
 };
 use tracing::{error, info, instrument, warn};
 
-use crate::{Result, SpeedItem, UnrealisticSpeed, estimated_speed_between_points};
-
 static RUN_INTERVAL: Duration = Duration::hours(5);
 static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
 static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
 
 mod holtrop;
 mod normal;
+
+pub use holtrop::*;
+pub use normal::*;
 
 #[cfg(not(feature = "test"))]
 static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
@@ -49,9 +49,10 @@ impl FuelImpl {
                 vessel.breadth,
                 vessel.main_sfc,
             ) {
-                (Some(draught), Some(length), Some(breadth), Some(main_sfc)) => {
-                    FuelImpl::Holtrop(Holtrop::new(draught, length, breadth, main_sfc))
-                }
+                (Some(draught), Some(length), Some(breadth), Some(main_sfc)) => FuelImpl::Holtrop(
+                    HoltropBuilder::new(draught, length, breadth, main_sfc, ScrewType::default())
+                        .build(),
+                ),
                 _ => {
                     warn!(
                         "lacking vessel information for fuel estimation, vessel_id: {}, draught: {:?}, length: {:?}, breadth: {:?}, main_sfc: {:?}",

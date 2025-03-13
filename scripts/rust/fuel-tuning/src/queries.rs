@@ -2,6 +2,7 @@
 
 use anyhow::{Context, Result};
 use fiskeridir_rs::{CallSign, FiskeridirVesselId, Gear, GearGroup};
+use kyogre_core::Draught;
 use kyogre_core::{DateRange, DepartureWeight, EngineType, HaulWeight, Mmsi, engines};
 use sqlx::{PgPool, postgres::types::PgRange};
 use tokio::join;
@@ -30,10 +31,14 @@ SELECT
     f.boiler_engine_power AS boil_engine_power,
     f.boiler_engine_building_year AS boil_engine_building_year,
     f.engine_type_manual AS "engine_type: EngineType",
-    f.engine_rpm_manual AS "engine_rpm"
+    f.engine_rpm_manual AS "engine_rpm",
+    av.ship_width as breadth,
+    av.draught AS "draught: Draught",
+    COALESCE(f.length, av.ship_length) AS length
 FROM
     all_vessels a
     INNER JOIN fiskeridir_vessels f ON a.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN ais_vessels av ON av.mmsi = a.mmsi
 WHERE
     a.fiskeridir_vessel_id = $1
         "#,
@@ -56,6 +61,9 @@ WHERE
             v.engine_type,
             v.engine_rpm.map(|v| v as _),
         ),
+        draught: v.draught,
+        breadth: v.breadth.map(|b| b as f64),
+        length: v.length,
     })
     .context("get_vessel")
 }
