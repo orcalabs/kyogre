@@ -46,7 +46,7 @@ pub struct FishingFacilitiesParams {
 /// Returns all fishing facilities matching the provided parameters.
 /// Access to fishing facilities are limited to authenticated users with sufficient permissions.
 #[oasgen(skip(db), tags("FishingFacility"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn fishing_facilities<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,

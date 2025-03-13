@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 
 #[oasgen(skip(db), tags("User"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn get_user<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
@@ -17,7 +17,7 @@ pub async fn get_user<T: Database + 'static>(
 }
 
 #[oasgen(skip(db), tags("User"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn update_user<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,

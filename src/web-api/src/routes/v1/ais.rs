@@ -30,7 +30,7 @@ pub struct AisTrackPath {
 /// If no time filter is provided the track of the last 24 hours are returned.
 /// AIS data for vessels under 15m are restricted to authenticated users with sufficient permissions.
 #[oasgen(skip(db), tags("Ais"))]
-#[tracing::instrument(skip(db), fields(user_id = ?user.id()))]
+#[tracing::instrument(skip(db), fields(user_id = user.tracing_id()))]
 pub async fn ais_track<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     params: Query<AisTrackParameters>,

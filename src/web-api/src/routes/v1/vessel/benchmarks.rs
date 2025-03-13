@@ -5,7 +5,7 @@ use oasgen::oasgen;
 
 /// Returns benchmark data for the vessel associated with the authenticated user.
 #[oasgen(skip(db), tags("Vessel"))]
-#[tracing::instrument(skip(db), fields(user_id = ?profile.id()))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
 pub async fn benchmarks<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
