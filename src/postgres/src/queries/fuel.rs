@@ -78,26 +78,22 @@ SELECT
     f.service_speed AS "service_speed?",
     f.degree_of_electrification AS "degree_of_electrification?",
     t.departure_timestamp AS "current_trip_start?",
-    -- Hacky fix because sqlx prepare/check flakes on nullability
-    COALESCE(q.latest_position_timestamp, NULL) AS latest_position_timestamp,
-    a.ship_width::DOUBLE PRECISION as breadth,
-    COALESCE(f.length, a.ship_length::DOUBLE PRECISION) as length,
-    a.draught as "current_draught: Draught"
+    a.ship_width::DOUBLE PRECISION AS breadth,
+    COALESCE(f.length, a.ship_length::DOUBLE PRECISION) AS length,
+    a.draught AS "current_draught: Draught",
+    (
+        SELECT
+            MAX(latest_position_timestamp)
+        FROM
+            live_fuel l
+        WHERE
+            l.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    ) AS "latest_position_timestamp?"
 FROM
     active_vessels w
     INNER JOIN fiskeridir_vessels f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     INNER JOIN ais_vessels a ON a.mmsi = w.mmsi
     LEFT JOIN current_trips t ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-    LEFT JOIN (
-        SELECT DISTINCT
-            ON (fiskeridir_vessel_id) fiskeridir_vessel_id,
-            latest_position_timestamp
-        FROM
-            live_fuel
-        ORDER BY
-            fiskeridir_vessel_id,
-            latest_position_timestamp DESC
-    ) q ON q.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     w.mmsi IS NOT NULL
     AND f.engine_building_year_final IS NOT NULL
