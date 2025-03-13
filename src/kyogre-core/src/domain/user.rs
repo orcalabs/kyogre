@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -6,7 +8,7 @@ use oasgen::OaSchema;
 
 use crate::FiskeridirVesselId;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[serde(transparent)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -21,6 +23,12 @@ pub struct User {
 impl AsRef<Uuid> for BarentswatchUserId {
     fn as_ref(&self) -> &Uuid {
         &self.0
+    }
+}
+
+impl Debug for BarentswatchUserId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 
