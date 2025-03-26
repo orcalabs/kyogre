@@ -97,9 +97,7 @@ async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 2.0;
-            })
+            .set_under_15m()
             .ais_positions(1)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;
@@ -126,9 +124,7 @@ async fn test_current_positions_return_positions_for_vessels_under_15m_with_full
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .ais_positions(1)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;
@@ -158,9 +154,7 @@ async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 2.0;
-            })
+            .set_under_15m()
             .ais_positions(1)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;
@@ -193,9 +187,7 @@ async fn test_current_positions_does_not_return_positions_for_vessels_under_15m_
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 2.0;
-            })
+            .set_under_15m()
             .ais_positions(1)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;

@@ -270,7 +270,7 @@ mod test {
                 imo_number: Some(10),
                 call_sign: Some(call_sign.parse().unwrap()),
                 name: Some("test_vessel".to_string()),
-                ship_length: Some(10),
+                ship_length: Some(15),
                 ship_width: Some(5),
                 eta: Some(Utc.timestamp_opt(1000, 0).unwrap()),
                 destination: Some("ramfjord camping".to_string()),

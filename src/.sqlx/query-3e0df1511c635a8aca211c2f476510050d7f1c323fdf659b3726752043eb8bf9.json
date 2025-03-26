@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE all_vessels v\nSET\n    length = q.length,\n    ship_type = q.ship_type\nFROM\n    (\n        SELECT\n            v.fiskeridir_vessel_id,\n            a.ship_type,\n            COALESCE(a.ship_length, f.length) AS length\n        FROM\n            all_vessels v\n            INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n            LEFT JOIN ais_vessels a ON v.mmsi = a.mmsi\n    ) q\nWHERE\n    v.fiskeridir_vessel_id = q.fiskeridir_vessel_id;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "3e0df1511c635a8aca211c2f476510050d7f1c323fdf659b3726752043eb8bf9"
+}
