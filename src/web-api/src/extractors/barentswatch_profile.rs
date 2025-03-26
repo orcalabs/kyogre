@@ -81,7 +81,7 @@ pub struct BwUser {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwVesselInfo {
-    pub ircs: CallSign,
+    pub ircs: Option<CallSign>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -270,7 +270,9 @@ impl BwProfile {
         if PROJECT_USERS.contains(profile.user.id.as_ref()) {
             let query: web::Query<HashMap<String, String>> = web::Query::from_query(&query_string)?;
             if let Some(cs) = query.get("call_sign_override") {
-                profile.fisk_info_profile = Some(BwVesselInfo { ircs: cs.parse()? });
+                profile.fisk_info_profile = Some(BwVesselInfo {
+                    ircs: Some(cs.parse()?),
+                });
             }
         }
 
@@ -280,13 +282,13 @@ impl BwProfile {
     pub fn call_sign(&self) -> Result<&CallSign> {
         self.fisk_info_profile
             .as_ref()
-            .map(|v| &v.ircs)
+            .and_then(|v| v.ircs.as_ref())
             .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
     }
 
     pub fn into_call_sign(self) -> Result<CallSign> {
         self.fisk_info_profile
-            .map(|v| v.ircs)
+            .and_then(|v| v.ircs)
             .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
     }
 }
