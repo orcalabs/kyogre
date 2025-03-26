@@ -78,7 +78,7 @@ impl BarentswatchHelper {
                             id: decoded.claims.id,
                         },
                         fisk_info_profile: Some(BwVesselInfo {
-                            ircs: TEST_SIGNED_IN_VESSEL_CALLSIGN.try_into().unwrap(),
+                            ircs: Some(TEST_SIGNED_IN_VESSEL_CALLSIGN.try_into().unwrap()),
                         }),
                         policies: decoded.claims.policies,
                         roles: decoded.claims.roles,
