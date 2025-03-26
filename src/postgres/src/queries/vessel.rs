@@ -329,7 +329,7 @@ FROM
         SELECT
             v.fiskeridir_vessel_id,
             a.ship_type,
-            COALESCE(f.length, a.ship_length) AS length
+            COALESCE(a.ship_length, f.length) AS length
         FROM
             all_vessels v
             INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id

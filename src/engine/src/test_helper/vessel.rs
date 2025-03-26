@@ -40,6 +40,14 @@ impl VesselBuilder {
         self
     }
 
+    pub fn set_under_15m(mut self) -> Self {
+        for v in &mut self.state.vessels[self.current_index..] {
+            v.ais.ship_length = Some(PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as i32 - 2);
+            v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 2.0;
+        }
+        self
+    }
+
     pub fn set_call_sign(mut self, call_sign: &CallSign) -> VesselBuilder {
         let base = &mut self.state;
         let num_vessels = base.vessels[self.current_index..].len();

@@ -428,9 +428,7 @@ async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_withou
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .ais_positions(1)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;
@@ -463,9 +461,7 @@ async fn test_ais_vms_return_positions_for_vessels_under_15m_with_full_ais_permi
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .ais_positions(1)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;
@@ -501,9 +497,7 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .ais_positions(1)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;
@@ -542,9 +536,7 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
         let pos_timestamp = Utc.timestamp_opt(1000, 0).unwrap();
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .ais_positions(1)
             .modify(|v| {
                 v.position.msgtime = pos_timestamp;
@@ -622,9 +614,7 @@ async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_wi
     test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .trips(1)
             .ais_positions(1)
             .build()
@@ -653,9 +643,7 @@ async fn test_ais_vms_by_trip_does_not_return_positions_for_vessels_under_15m_wi
     test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .trips(1)
             .ais_positions(1)
             .build()
@@ -685,9 +673,7 @@ async fn test_ais_vms_by_trip_return_positions_for_vessels_under_15m_with_full_a
     test(|mut helper, builder| async move {
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .trips(1)
             .ais_positions(1)
             .build()
@@ -715,9 +701,7 @@ async fn test_ais_vms_by_trip_does_not_return_ais_positions_for_vessels_under_15
     test(|helper, builder| async move {
         let state = builder
             .vessels(1)
-            .modify(|v| {
-                v.fiskeridir.length = PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY as f64 - 1.0;
-            })
+            .set_under_15m()
             .trips(1)
             .ais_positions(1)
             .build()
