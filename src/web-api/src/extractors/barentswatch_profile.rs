@@ -136,7 +136,7 @@ impl OaParameter for BwProfile {
             data: ParameterData {
                 name: AUTHORIZATION.to_string(),
                 description: None,
-                required: true,
+                required: false,
                 deprecated: None,
                 format: ParameterSchemaOrContent::Schema(String::schema_ref()),
                 example: None,
@@ -154,13 +154,6 @@ impl OaParameter for BwProfile {
 impl OaParameter for OptionBwProfile {
     fn parameters() -> Vec<RefOr<Parameter>> {
         BwProfile::parameters()
-            .into_iter()
-            .flat_map(|v| v.into_item())
-            .map(|mut v| {
-                v.required = false;
-                RefOr::Item(v)
-            })
-            .collect()
     }
 }
 
