@@ -290,33 +290,44 @@ where
                 .push(SecurityRequirement::from_iter([
                     ("".into(), vec![]),
                     ("auth0".into(), vec![]),
+                    ("barentswatch".into(), vec![]),
                 ]));
 
-            server.openapi.components.security_schemes.insert(
-                "auth0",
-                SecurityScheme::OAuth2 {
-                    flows: OAuth2Flows {
-                        implicit: Some(ImplicitOAuth2Flow {
-                            authorization_url: settings.authorization_url.clone(),
-                            refresh_url: None,
-                            scopes: IndexMap::from_iter([
-                                (
-                                    "read:ais:under_15m".into(),
-                                    "Read AIS data of vessels under 15m".into(),
-                                ),
-                                (
-                                    "read:fishing_facility".into(),
-                                    "Read fishing facilities".into(),
-                                ),
-                            ]),
-                        }),
-                        password: None,
-                        client_credentials: None,
-                        authorization_code: None,
-                    },
-                    description: None,
-                },
-            );
+            server.openapi.components.security_schemes.extend([
+                (
+                    "barentswatch".into(),
+                    RefOr::Item(SecurityScheme::HTTP {
+                        scheme: "Bearer".into(),
+                        bearer_format: Some("JWT".into()),
+                        description: None,
+                    }),
+                ),
+                (
+                    "auth0".into(),
+                    RefOr::Item(SecurityScheme::OAuth2 {
+                        flows: OAuth2Flows {
+                            implicit: Some(ImplicitOAuth2Flow {
+                                authorization_url: settings.authorization_url.clone(),
+                                refresh_url: None,
+                                scopes: IndexMap::from_iter([
+                                    (
+                                        "read:ais:under_15m".into(),
+                                        "Read AIS data of vessels under 15m".into(),
+                                    ),
+                                    (
+                                        "read:fishing_facility".into(),
+                                        "Read fishing facilities".into(),
+                                    ),
+                                ]),
+                            }),
+                            password: None,
+                            client_credentials: None,
+                            authorization_code: None,
+                        },
+                        description: None,
+                    }),
+                ),
+            ]);
         }
 
         for path in &mut server.openapi.paths.paths {

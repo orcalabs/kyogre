@@ -47,7 +47,7 @@ impl OaParameter for Auth0Profile {
             data: ParameterData {
                 name: AUTHORIZATION.to_string(),
                 description: None,
-                required: true,
+                required: false,
                 deprecated: None,
                 format: ParameterSchemaOrContent::Schema(String::schema_ref()),
                 example: None,
