@@ -8,18 +8,22 @@ edition = "2024"
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
+http-client = { path = "../http-client" }
 
-orca-core = { version = "0.31.0", registry = "orcalabs-orcastrator", features = [
+orca-core = { version = "0.36.0", registry = "orcalabs-orcastrator", features = [
     "telemetry",
 ] }
-stack-error = { version = "0.3.0", registry = "orcalabs-orcastrator" }
+stack-error = { version = "0.4.0", registry = "orcalabs-orcastrator" }
 
-snafu = "0.8.4"
+snafu = "0.8.5"
 chrono = { version = "0.4.31", features = ["serde"] }
 tracing = "0.1.40"
-config = "0.14.0"
+config = "0.15.0"
 serde = "1.0.195"
 tokio = { version = "1.35.1", features = ["macros", "rt-multi-thread"] }
 indicatif = "0.17.7"
+async-trait = "0.1.88"
+humantime-serde = "1.1"
+async-channel = "2.3.1"
 
 [workspace]

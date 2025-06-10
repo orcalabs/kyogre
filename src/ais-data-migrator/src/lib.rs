@@ -7,10 +7,13 @@ use indicatif::*;
 use kyogre_core::{AisMigratorDestination, AisMigratorSource, AisVesselMigrate, Mmsi};
 use snafu::location;
 use std::collections::{HashMap, HashSet};
+use tokio::task::JoinSet;
 use tracing::{error, info, instrument};
 
+pub mod barentswatch;
 pub mod error;
 pub mod settings;
+pub mod source;
 pub mod startup;
 
 #[derive(Clone)]
@@ -69,14 +72,10 @@ where
         }
 
         let vessels_to_migrate = map.into_values().collect::<Vec<_>>();
+        let num_vessels = mmsis.len();
 
-        info!(
-            "found {} mmsis at source, starting_migration...",
-            mmsis.len()
-        );
+        info!("found {num_vessels} mmsis at source, starting_migration...",);
 
-        let (sender, receiver) = std::sync::mpsc::channel();
-        let mut num_receiver = 0;
         let bar = ProgressBar::new(mmsis.len() as u64).with_style(
             ProgressStyle::with_template(
                 "[{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg} [{eta_precise}]",
@@ -85,66 +84,54 @@ where
             .progress_chars("#>-"),
         );
 
-        for chunk in vessels_to_migrate.chunks(1500) {
-            num_receiver += 1;
-            let sender = sender.clone();
-            let cloned = chunk.to_vec();
+        let (tx, rx) = async_channel::bounded(num_vessels);
+
+        let mut set = JoinSet::new();
+
+        for _ in 0..8 {
+            let rx = rx.clone();
             let self_clone = self.clone();
             let bar = bar.clone();
-            tokio::spawn(async move {
-                let len = cloned.len();
-                self_clone.migrate_vessels(cloned, bar).await;
-                if let Err(e) = sender.send(len) {
-                    error!("failed to send migrate ok messsage: {e:?}");
+            set.spawn(async move {
+                while let Ok(vessel) = rx.recv().await {
+                    self_clone.migrate_vessel(vessel).await;
+                    bar.inc(1);
                 }
             });
         }
-        let mut received = 0;
-        let mut migrated = 0;
 
-        while received < num_receiver {
-            match receiver.recv() {
-                Err(e) => {
-                    error!("failed to receive migrate ok messsages: {e:?}");
-                }
-                Ok(v) => {
-                    migrated += v;
-                    info!("migrated {migrated} vessels");
-                }
-            }
-            received += 1;
+        for vessel in vessels_to_migrate {
+            tx.try_send(vessel).unwrap();
         }
+
+        drop(tx);
+
+        set.join_all().await;
 
         bar.finish();
     }
 
-    #[instrument(skip(self, vessels), fields(app.migrated_vessels))]
-    async fn migrate_vessels(&self, vessels: Vec<AisVesselMigrate>, bar: ProgressBar) {
-        let num_vessels = vessels.len();
-        for v in vessels {
-            let start = v.progress.unwrap_or(self.start_threshold);
+    #[instrument(skip_all)]
+    async fn migrate_vessel(&self, vessel: AisVesselMigrate) {
+        let AisVesselMigrate { mmsi, progress } = vessel;
 
-            let mut tries = 0;
-            loop {
-                match self.migrate_vessel(v.mmsi, start).await {
-                    Ok(_) => break,
-                    Err(e) => {
-                        tries += 1;
-                        error!("{e:?}, try_number: {tries}");
-                    }
+        let start = progress.unwrap_or(self.start_threshold);
+
+        let mut tries = 0;
+        loop {
+            match self.migrate_vessel_impl(mmsi, start).await {
+                Ok(_) => break,
+                Err(e) => {
+                    tries += 1;
+                    error!("{e:?}, try_number: {tries}");
                 }
             }
-            bar.inc(1);
         }
-
-        tracing::Span::current().record("app.migrated_vessels", num_vessels);
     }
 
-    #[instrument(skip(self, mmsi, start), fields(app.migrated_vessels))]
-    async fn migrate_vessel(&self, mmsi: Mmsi, start: DateTime<Utc>) -> Result<()> {
+    #[instrument(skip(self, start))]
+    async fn migrate_vessel_impl(&self, mmsi: Mmsi, start: DateTime<Utc>) -> Result<()> {
         let mut current = start;
-
-        tracing::Span::current().record("app.mmsi", mmsi.into_inner());
 
         while current < self.end_threshold {
             let end = current + self.chunk_size;
@@ -171,6 +158,7 @@ where
                 current = self.end_threshold;
             }
         }
+
         Ok(())
     }
 }

@@ -70,7 +70,7 @@ pub enum WebApiError {
 }
 
 #[derive(Snafu, StackError)]
-#[snafu(module)]
+#[snafu(module(core_error), visibility(pub))]
 pub enum Error {
     #[snafu(display("Timeout error"))]
     Timeout {

@@ -27,7 +27,7 @@ pub struct PostgresAdapter {
     pub(crate) environment: Environment,
 }
 
-enum ConsumeLoopOutcome {
+pub enum ConsumeLoopOutcome {
     Exit,
     Continue,
 }
