@@ -3,9 +3,11 @@ use config::ConfigError;
 use orca_core::{Environment, PsqlSettings};
 use serde::Deserialize;
 
+use crate::source::SourceSettings;
+
 #[derive(Debug, Deserialize)]
 pub struct Settings {
-    pub source: PsqlSettings,
+    pub source: SourceSettings,
     pub destination: PsqlSettings,
     #[serde(with = "humantime_serde")]
     pub chunk_size: std::time::Duration,

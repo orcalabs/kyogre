@@ -16,6 +16,7 @@ pub struct OauthConfig {
     pub scope: String,
 }
 
+#[derive(Clone)]
 pub struct BearerToken(AccessToken);
 
 impl BearerToken {

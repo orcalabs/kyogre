@@ -235,6 +235,29 @@ ON CONFLICT (mmsi) DO NOTHING
         positions: Vec<kyogre_core::AisPosition>,
         progress: DateTime<Utc>,
     ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query!(
+            r#"
+INSERT INTO
+    ais_data_migration_progress (mmsi, progress)
+VALUES
+    ($1, $2)
+ON CONFLICT (mmsi) DO UPDATE
+SET
+    progress = excluded.progress
+            "#,
+            mmsi.into_inner(),
+            &progress
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        if positions.is_empty() {
+            tx.commit().await?;
+            return Ok(());
+        }
+
         let mut mmsis = Vec::with_capacity(positions.len());
         let mut latitude = Vec::with_capacity(positions.len());
         let mut longitude = Vec::with_capacity(positions.len());
@@ -258,24 +281,6 @@ ON CONFLICT (mmsi) DO NOTHING
             navigation_status_id.push(p.navigational_status.map(|v| v as i32));
             timestamp.push(p.msgtime);
         }
-
-        let mut tx = self.pool.begin().await?;
-
-        sqlx::query!(
-            r#"
-INSERT INTO
-    ais_data_migration_progress (mmsi, progress)
-VALUES
-    ($1, $2)
-ON CONFLICT (mmsi) DO UPDATE
-SET
-    progress = excluded.progress
-            "#,
-            mmsi.into_inner(),
-            &progress
-        )
-        .execute(&mut *tx)
-        .await?;
 
         sqlx::query!(
             r#"
