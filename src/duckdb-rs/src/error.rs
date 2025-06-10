@@ -56,7 +56,7 @@ pub enum Error {
         #[snafu(implicit)]
         location: Location,
         #[snafu(source)]
-        error: tonic::Status,
+        error: Box<tonic::Status>,
     },
     #[snafu(display("Uri error"))]
     Uri {
@@ -129,7 +129,7 @@ impl From<tonic::Status> for Error {
             | tonic::Code::DataLoss
             | tonic::Code::Unauthenticated => Error::Grpc {
                 location,
-                error: value,
+                error: Box::new(value),
             },
             tonic::Code::FailedPrecondition
             | tonic::Code::ResourceExhausted
