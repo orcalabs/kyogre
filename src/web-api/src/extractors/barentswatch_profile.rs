@@ -166,7 +166,7 @@ impl OaParameter for OptionBwProfile {
 
 impl From<&BwProfile> for AisPermission {
     fn from(value: &BwProfile) -> Self {
-        let ais_policy = value.policies.iter().any(|v| *v == BwPolicy::BwAisFiskinfo);
+        let ais_policy = value.policies.contains(&BwPolicy::BwAisFiskinfo);
         if ais_policy {
             value
                 .roles
