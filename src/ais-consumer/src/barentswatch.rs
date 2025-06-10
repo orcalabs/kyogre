@@ -74,9 +74,7 @@ impl BarentswatchAisClient {
         let stream = response.bytes_stream();
 
         let stream = stream
-            .map(|result| {
-                result.map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("{e:?}")))
-            })
+            .map(|result| result.map_err(|e| std::io::Error::other(format!("{e:?}"))))
             .into_async_read();
 
         let compat = tokio_util::compat::FuturesAsyncReadCompatExt::compat(stream);

@@ -203,7 +203,7 @@ impl DataFile {
             | ErsDep { year, .. }
             | ErsPor { year, .. }
             | ErsTra { year, .. } => year,
-            AquaCultureRegister { .. } => 0,
+            AquaCultureRegister => 0,
         }
     }
 }

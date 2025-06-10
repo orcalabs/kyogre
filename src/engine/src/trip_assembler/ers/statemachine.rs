@@ -27,24 +27,24 @@ use kyogre_core::{Bound, DateRange, NewTrip};
 ///     - Did not work out as their associated timestamp (both estimated and message timestamp) are not ordered correctly.
 /// - Latest DEP message instead of earliest
 ///     - The resulting trips did not accuratley represent fishing trips. There were cases where
-///         vessels sent a DEP message, then did some fishing, then sent another DEP and fished some more
-///         before sending a POR.
+///       vessels sent a DEP message, then did some fishing, then sent another DEP and fished some more
+///       before sending a POR.
 /// - Earliest POR message instead of latest
 ///     - The resulting trips did not accuratley represent full fishing trips. There were cases where
-///         vessels would send multiple successive POR messages at different ports, (deliverying
-///         fish at multiple locations) leading to placing landings on wrong trips.
+///       vessels would send multiple successive POR messages at different ports, (deliverying
+///       fish at multiple locations) leading to placing landings on wrong trips.
 ///
 /// Previously tested approaches for landing coverage:
 /// - `POR - 6 hours -> POR(N) - 6 hours` (Where POR and POR(N) were the *LAST* POR messages on their
-///         respective trips)
+///   respective trips)
 ///     - We observed that several incidents where landings were registered prior or close to
-///         earlier POR messages on the trip which then escaped the last POR - 6 hours threshold.
+///       earlier POR messages on the trip which then escaped the last POR - 6 hours threshold.
 /// - `POR -> POR(N)`
 ///     - We observed that several incidents where landings were registered a short duration prior
-///         to POR resulting in them being registered on the prior trip instead of the current trip.
+///       to POR resulting in them being registered on the prior trip instead of the current trip.
 /// - `DEP -> Middle of next trip`
 ///     - The arbitrary cutoff in the middle of trip resulted in incorrect landing connections, and
-///         did not scale well with longer trips.
+///       did not scale well with longer trips.
 
 #[derive(Debug)]
 pub struct ErsStatemachine {
