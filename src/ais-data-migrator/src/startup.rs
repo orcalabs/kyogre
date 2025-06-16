@@ -7,10 +7,10 @@ pub struct App {
 }
 
 impl App {
-    pub async fn build(settings: &Settings) -> App {
+    pub async fn build(settings: Settings) -> App {
         let destination = PostgresAdapter::new(&settings.destination).await.unwrap();
 
-        let source = Source::new(destination.clone(), &settings.source).await;
+        let source = Source::new(destination.clone(), settings.source).await;
 
         let migrator = Migrator::new(
             settings.start_threshold,

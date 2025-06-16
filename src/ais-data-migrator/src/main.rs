@@ -10,7 +10,7 @@ async fn main() {
 
     let settings = Settings::new(settings).unwrap();
 
-    let app = App::build(&settings).await;
+    let app = App::build(settings).await;
 
     app.run().await;
 }
