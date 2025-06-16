@@ -1,12 +1,14 @@
 log_level: Info
 chunk_size: 30d
-start_threshold: 2025-05-29T09:47:54Z
-end_threshold: 2025-06-10T10:04:30Z
+start_threshold: 2025-06-16T03:54:16.904+0200
+end_threshold: 2025-06-16T08:05:45.832+0200
 source:
   barentswatch:
-    auth_url: https://id.barentswatch.no/connect/authorization
-    token_url: https://id.barentswatch.no/connect/token
     ais_positions_url: https://historic.ais.barentswatch.no/open/v1/historic/tracks
+    oauth:
+      auth_url: https://id.barentswatch.no/connect/authorization
+      token_url: https://id.barentswatch.no/connect/token
+      scope: ais
   # postgres:
   #   ip: localhost
   #   port: 5532

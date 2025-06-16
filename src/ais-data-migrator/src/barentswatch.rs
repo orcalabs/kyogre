@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use http_client::{AUTHORIZATION, HttpClient};
+use http_client::{AUTHORIZATION, Error, HttpClient, StatusCode};
 use kyogre_core::{
     AisMigratorSource, BearerToken, CoreResult, Mmsi, NavigationStatus, OauthConfig,
     core_error::UnexpectedSnafu, distance_to_shore,
@@ -8,42 +10,85 @@ use kyogre_core::{
 use postgres::PostgresAdapter;
 use serde::Deserialize;
 use stack_error::OpaqueError;
+use tokio::sync::RwLock;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct BarentswatchSettings {
-    pub auth_url: String,
-    pub token_url: String,
     pub ais_positions_url: String,
-    pub client_id: String,
-    pub client_secret: String,
+    pub oauth: OauthConfig,
 }
 
 #[derive(Clone)]
 pub struct BarentswatchAdapter {
+    inner: Arc<Inner>,
+}
+
+pub struct Inner {
     destination: PostgresAdapter,
     client: HttpClient,
-    ais_positions_url: String,
-    token: BearerToken,
+    settings: BarentswatchSettings,
+    token: RwLock<BearerToken>,
 }
 
 // API Documentation: `https://historic.ais.barentswatch.no/index.html`
 impl BarentswatchAdapter {
-    pub async fn new(destination: PostgresAdapter, settings: &BarentswatchSettings) -> Self {
-        let token = BearerToken::acquire(&OauthConfig {
-            client_secret: settings.client_secret.clone(),
-            client_id: settings.client_id.clone(),
-            auth_url: settings.auth_url.clone(),
-            token_url: settings.token_url.clone(),
-            scope: "ais".into(),
-        })
-        .await
-        .unwrap();
+    pub async fn new(destination: PostgresAdapter, settings: BarentswatchSettings) -> Self {
+        let token = BearerToken::acquire(&settings.oauth).await.unwrap();
 
         Self {
-            destination,
-            client: Default::default(),
-            ais_positions_url: settings.ais_positions_url.clone(),
-            token,
+            inner: Arc::new(Inner {
+                destination,
+                client: Default::default(),
+                settings,
+                token: RwLock::new(token),
+            }),
+        }
+    }
+
+    async fn get_ais_positions(
+        &self,
+        mmsi: Mmsi,
+        start: DateTime<Utc>,
+        end: DateTime<Utc>,
+    ) -> Result<Vec<AisPosition>, http_client::Error> {
+        let f = |login| async move {
+            let token = {
+                if login {
+                    let token = BearerToken::acquire(&self.inner.settings.oauth)
+                        .await
+                        .unwrap();
+                    let mut guard = self.inner.token.write().await;
+                    *guard = token;
+                    format!("bearer {}", guard.as_ref())
+                } else {
+                    let token = self.inner.token.read().await;
+                    format!("bearer {}", token.as_ref())
+                }
+            };
+
+            self.inner
+                .client
+                .get(format!(
+                    "{}/{}/{}/{}",
+                    self.inner.settings.ais_positions_url,
+                    mmsi,
+                    start.to_rfc3339(),
+                    end.to_rfc3339(),
+                ))
+                .header(AUTHORIZATION, token)
+                .send()
+                .await?
+                .json()
+                .await
+        };
+
+        match f(false).await {
+            Ok(v) => Ok(v),
+            Err(Error::FailedRequest {
+                status: StatusCode::UNAUTHORIZED,
+                ..
+            }) => f(true).await,
+            Err(e) => Err(e),
         }
     }
 }
@@ -56,17 +101,8 @@ impl AisMigratorSource for BarentswatchAdapter {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
     ) -> CoreResult<Vec<kyogre_core::AisPosition>> {
-        let response = self
-            .client
-            .get(format!(
-                "{}/{}/{}/{}",
-                self.ais_positions_url,
-                mmsi,
-                start.to_rfc3339(),
-                end.to_rfc3339(),
-            ))
-            .header(AUTHORIZATION, format!("bearer {}", self.token.as_ref()))
-            .send()
+        let mut positions = self
+            .get_ais_positions(mmsi, start, end)
             .await
             .map_err(|e| {
                 UnexpectedSnafu {
@@ -74,13 +110,6 @@ impl AisMigratorSource for BarentswatchAdapter {
                 }
                 .build()
             })?;
-
-        let mut positions: Vec<AisPosition> = response.json().await.map_err(|e| {
-            UnexpectedSnafu {
-                opaque: OpaqueError::Std(Box::new(e)),
-            }
-            .build()
-        })?;
 
         // The API documentation does not specify any ordering, so we manually sort the positions
         // to make sure the downsampling is works correctly.
@@ -105,7 +134,7 @@ impl AisMigratorSource for BarentswatchAdapter {
         // so we have to get them from the destination database.
         // This assumes that the destination contains AIS data and this data migration
         // is just run to patch a hole.
-        self.destination.existing_mmsis().await
+        self.inner.destination.existing_mmsis().await
     }
 }
 

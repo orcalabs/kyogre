@@ -21,9 +21,9 @@ pub enum Source {
 }
 
 impl Source {
-    pub async fn new(destination: PostgresAdapter, settings: &SourceSettings) -> Self {
+    pub async fn new(destination: PostgresAdapter, settings: SourceSettings) -> Self {
         match settings {
-            SourceSettings::Postgres(v) => Self::Postgres(PostgresAdapter::new(v).await.unwrap()),
+            SourceSettings::Postgres(v) => Self::Postgres(PostgresAdapter::new(&v).await.unwrap()),
             SourceSettings::Barentswatch(v) => {
                 Self::Barentswatch(BarentswatchAdapter::new(destination, v).await)
             }
