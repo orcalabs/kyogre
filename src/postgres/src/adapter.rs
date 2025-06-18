@@ -1,4 +1,4 @@
-use std::{path::PathBuf, result::Result as StdResult};
+use std::{fmt::Debug, path::PathBuf, result::Result as StdResult};
 
 use async_channel::Receiver;
 use async_trait::async_trait;
@@ -39,6 +39,26 @@ enum AisProcessingAction {
         positions: Option<Vec<NewAisPosition>>,
         static_messages: Option<Vec<NewAisStatic>>,
     },
+}
+
+impl Debug for AisProcessingAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Exit => write!(f, "Exit"),
+            Self::Continue => write!(f, "Continue"),
+            Self::Retry {
+                positions,
+                static_messages,
+            } => f
+                .debug_struct("Retry")
+                .field("num_positions", &positions.as_ref().map(|v| v.len()))
+                .field(
+                    "num_static_messages",
+                    &static_messages.as_ref().map(|v| v.len()),
+                )
+                .finish(),
+        }
+    }
 }
 
 impl PostgresAdapter {
@@ -291,7 +311,7 @@ WHERE
         res.and(res2)
     }
 
-    #[instrument(skip_all, name = "postgres_insert_ais_data")]
+    #[instrument(skip_all, ret, name = "postgres_insert_ais_data")]
     async fn process_message(
         &self,
         incoming: StdResult<DataMessage, async_channel::RecvError>,
@@ -303,18 +323,28 @@ WHERE
                     self.add_ais_vessels(&message.static_messages).await,
                 ) {
                     (Ok(_), Ok(_)) => AisProcessingAction::Continue,
-                    (Ok(_), Err(_)) => AisProcessingAction::Retry {
-                        positions: None,
-                        static_messages: Some(message.static_messages),
-                    },
-                    (Err(_), Ok(_)) => AisProcessingAction::Retry {
-                        positions: Some(message.positions),
-                        static_messages: None,
-                    },
-                    (Err(_), Err(_)) => AisProcessingAction::Retry {
-                        positions: Some(message.positions),
-                        static_messages: Some(message.static_messages),
-                    },
+                    (Ok(_), Err(e)) => {
+                        warn!("failed to add ais vessels, err: {e:?}");
+                        AisProcessingAction::Retry {
+                            positions: None,
+                            static_messages: Some(message.static_messages),
+                        }
+                    }
+                    (Err(e), Ok(_)) => {
+                        warn!("failed to add ais positions, err: {e:?}");
+                        AisProcessingAction::Retry {
+                            positions: Some(message.positions),
+                            static_messages: None,
+                        }
+                    }
+                    (Err(e1), Err(e2)) => {
+                        warn!("failed to add ais positions, err: {e1:?}");
+                        warn!("failed to add ais vessels, err: {e2:?}");
+                        AisProcessingAction::Retry {
+                            positions: Some(message.positions),
+                            static_messages: Some(message.static_messages),
+                        }
+                    }
                 }
             }
             Err(e) => {
