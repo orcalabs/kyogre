@@ -12,6 +12,7 @@ use sqlx::{
     migrate::Migrator,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
+use tokio::time::timeout;
 use tracing::{error, info, instrument, warn};
 
 use crate::{
@@ -228,14 +229,21 @@ WHERE
         receiver: &mut Receiver<DataMessage>,
         process_confirmation: Option<&tokio::sync::mpsc::Sender<()>>,
     ) -> ConsumeLoopOutcome {
+        let time = std::time::Duration::from_secs(60 * 20);
         let message = receiver.recv().await;
-        let result = self.process_message(message).await;
+        let result = timeout(time, self.process_message(message)).await;
         // Only enabled in tests
         if let Some(s) = process_confirmation {
             // Only error here is if the reciver is closed which will happen in failing tests.
             // Not unwrapping here to avoid confusion on what actually went wrong in a failed test.
             let _ = s.send(()).await;
         }
+
+        let result = match result {
+            Ok(r) => r,
+            Err(e) => panic!("ais insertion took more than {}", e),
+        };
+
         match result {
             AisProcessingAction::Exit => ConsumeLoopOutcome::Exit,
             AisProcessingAction::Continue => ConsumeLoopOutcome::Continue,
@@ -245,9 +253,19 @@ WHERE
             } => {
                 let mut err = Ok(());
                 for _ in 0..2 {
-                    err = self
-                        .insertion_retry(&mut positions.as_deref(), &mut static_messages.as_deref())
-                        .await;
+                    let timeout_err = timeout(
+                        time,
+                        self.insertion_retry(
+                            &mut positions.as_deref(),
+                            &mut static_messages.as_deref(),
+                        ),
+                    )
+                    .await;
+
+                    err = match timeout_err {
+                        Ok(r) => r,
+                        Err(e) => panic!("ais retry insertion took more than {}", e),
+                    };
 
                     if err.is_ok() {
                         break;
