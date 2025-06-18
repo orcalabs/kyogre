@@ -1,3 +1,4 @@
+use core::panic;
 use std::{str::FromStr, time::Duration};
 
 use crate::{
@@ -8,7 +9,7 @@ use kyogre_core::DataMessage;
 use orca_core::Environment;
 use postgres::PostgresAdapter;
 use reqwest::Url;
-use tokio::io::AsyncRead;
+use tokio::{io::AsyncRead, task::JoinSet};
 use tracing::{error, instrument};
 
 pub struct App {
@@ -50,12 +51,23 @@ impl App {
     pub async fn run(self) {
         let receiver = self.receiver.clone();
         let postgres = self.postgres.clone();
-        tokio::spawn(async move { postgres.consume_loop(receiver, None).await });
-        loop {
-            self.run_impl().await;
-            // If the ais api is unresponsive we dont want to relentlessly spam it
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
+
+        let mut set = JoinSet::new();
+
+        set.spawn(async move { postgres.consume_loop(receiver, None).await });
+        set.spawn(async move {
+            loop {
+                self.run_impl().await;
+                // If the ais api is unresponsive we dont want to relentlessly spam it
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+        });
+
+        let out = set.join_next().await;
+        panic!(
+            "incoming ais consume loop or ais postgres loop exited unexpectedly: {:?}",
+            out
+        );
     }
 
     #[instrument(skip_all)]
