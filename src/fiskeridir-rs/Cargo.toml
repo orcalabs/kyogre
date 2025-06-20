@@ -37,7 +37,7 @@ enum_index = { workspace = true }
 enum_index_derive = { workspace = true }
 
 ahash = "0.8.11"
-zip = "2.2.2"
+zip = "4.1.0"
 
 [dev-dependencies]
 http-client = { path = "../http-client", default-features = false }

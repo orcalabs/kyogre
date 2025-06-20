@@ -2,9 +2,9 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use csv::Reader;
 use pyo3::{
-    Python,
+    BoundObject, Python,
     ffi::c_str,
-    types::{PyAnyMethods, PyDateTime, PyModule, timezone_utc},
+    types::{PyAnyMethods, PyDateTime, PyModule, PyTzInfo},
 };
 use tracing::{error, info};
 
@@ -81,8 +81,8 @@ fn download_ocean_climate_data(latest: DateTime<Utc>) -> Result<Vec<String>> {
     ));
 
     Ok(Python::with_gil(|py| {
-        let py_datetime =
-            PyDateTime::from_timestamp(py, latest.timestamp() as f64, Some(&timezone_utc(py)))?;
+        let tz = PyTzInfo::utc(py)?.into_bound();
+        let py_datetime = PyDateTime::from_timestamp(py, latest.timestamp() as f64, Some(&tz))?;
 
         let py_module = PyModule::from_code(py, py_code, c_str!(""), c_str!(""))?;
 

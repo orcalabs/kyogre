@@ -28,10 +28,10 @@ tokio = { workspace = true, features = [
 tokio-stream = { workspace = true, features = ["net"] }
 http = { workspace = true }
 
-duckdb = { version = "=1.1", features = ["r2d2", "bundled"] }
-libduckdb-sys = { version = "=1.1" }
+duckdb = { version = "1", features = ["r2d2", "bundled"] }
+libduckdb-sys = { version = "1" }
 r2d2 = { version = "0.8" }
-tonic = { version = "0.12.3", features = ["gzip"] }
+tonic = { version = "0.13.1", features = ["gzip"] }
 prost = "0.13"
 
 
@@ -42,4 +42,4 @@ futures = { workspace = true }
 orca-core = { workspace = true, features = ["test-helper"] }
 
 [build-dependencies]
-tonic-build = "0.12"
+tonic-build = "0.13"
