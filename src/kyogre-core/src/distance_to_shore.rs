@@ -36,7 +36,7 @@ pub fn distance_to_shore(latitude: f64, longitude: f64) -> f64 {
 fn haversine_distance(point1: &Coordinate, point2: &Coordinate) -> f64 {
     let p1 = point!(x: point1.longitude, y: point1.latitude);
     let p2 = point!(x: point2.longitude, y: point2.latitude);
-    Haversine::distance(p1, p2)
+    Haversine.distance(p1, p2)
 }
 
 fn decompress_shoreline() -> String {
