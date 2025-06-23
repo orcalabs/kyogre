@@ -8,7 +8,7 @@ use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
 use sqlx::{
-    ConnectOptions, PgPool,
+    ConnectOptions, PgConnection, PgPool,
     migrate::Migrator,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
@@ -118,6 +118,7 @@ impl PostgresAdapter {
                     .min_connections(1)
                     .max_connections(connections_per_pool)
                     .acquire_timeout(std::time::Duration::from_secs(60))
+                    .after_connect(|conn, _meta| Box::pin(check_if_read_only_connection(conn)))
                     .connect_with(opts)
                     .await?;
 
@@ -129,6 +130,7 @@ impl PostgresAdapter {
         let pool = PgPoolOptions::new()
             .max_connections(connections_per_pool)
             .acquire_timeout(std::time::Duration::from_secs(60))
+            .after_connect(|conn, _meta| Box::pin(check_if_read_only_connection(conn)))
             .connect_with(opts)
             .await?;
 
@@ -1676,4 +1678,27 @@ where
     E: std::convert::From<crate::error::Error>,
 {
     Ok(val.map(B::try_from).transpose()?)
+}
+
+// When our managed azure postgres db encounters a failover to its replica our
+// 'ais-consumer' and 'processeors' services becomes idle(?) and stops producing tracing spans.
+// We suspect this is because they are still connected to the replica when the main db node
+// comes back up and the replica becomes read-only rendering the connections to the replica as read-only.
+// According to the provided source this fix *MIGHT* resolve our issue.
+//
+// Fix source: https://github.com/launchbadge/sqlx/issues/2290#issuecomment-1663353872
+async fn check_if_read_only_connection(
+    conn: &mut PgConnection,
+) -> std::result::Result<(), sqlx::Error> {
+    let sql = "show transaction_read_only";
+    let transaction_read_only: String = sqlx::query_scalar(sql).fetch_one(conn).await?;
+    if transaction_read_only == "on" {
+        Err(sqlx::Error::Configuration(
+            "Attempted to connect to read-only database,
+                        most likely a replica which is probably caused by a database failover"
+                .into(),
+        ))
+    } else {
+        Ok(())
+    }
 }
