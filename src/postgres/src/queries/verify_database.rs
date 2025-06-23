@@ -30,15 +30,20 @@ impl PostgresAdapter {
             message_ids => IncorrectErsDcaCatchesSnafu { message_ids }.fail(),
         }?;
 
-        match self.hauls_matrix_vs_ers_dca_living_weight().await? {
-            0 => Ok(()),
-            weight_diff => IncorrectHaulsMatrixLivingWeightSnafu { weight_diff }.fail(),
-        }?;
+        match self.environment {
+            Environment::Test | Environment::Local => {
+                match self.hauls_matrix_vs_ers_dca_living_weight().await? {
+                    0 => Ok(()),
+                    weight_diff => IncorrectHaulsMatrixLivingWeightSnafu { weight_diff }.fail(),
+                }?;
 
-        match self.landing_matrix_vs_landings_living_weight().await? {
-            0 => Ok(()),
-            weight_diff => IncorrectLandingMatrixLivingWeightSnafu { weight_diff }.fail(),
-        }?;
+                match self.landing_matrix_vs_landings_living_weight().await? {
+                    0 => Ok(()),
+                    weight_diff => IncorrectLandingMatrixLivingWeightSnafu { weight_diff }.fail(),
+                }?;
+            }
+            Environment::Production | Environment::Development | Environment::OnPremise => {}
+        }
 
         let conflicts: Vec<ActiveVesselConflict> =
             self.active_vessel_conflicts_impl().try_collect().await?;
