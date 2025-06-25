@@ -50,7 +50,7 @@ impl DuckdbAdapter {
     pub fn new(
         settings: &DuckdbSettings,
         postgres_settings: PsqlSettings,
-    ) -> Result<DuckdbAdapter> {
+    ) -> Result<(DuckdbAdapter, DuckdbRefresher)> {
         let manager = match &settings.storage {
             CacheStorage::Memory => DuckdbConnectionManager::memory(),
             CacheStorage::Disk(path) => match DuckdbConnectionManager::file(path) {
@@ -85,9 +85,8 @@ impl DuckdbAdapter {
         };
 
         refresher.initial_create()?;
-        tokio::spawn(refresher.refresh_loop());
 
-        Ok(adapter)
+        Ok((adapter, refresher))
     }
 
     pub async fn refresh(&self) -> Result<()> {
