@@ -182,7 +182,7 @@ async fn download_and_read_landings() {
                 if ErrorDiscriminants::from(&e) == ErrorDiscriminants::IncompleteData {
                     incomplete_data += 1;
                 } else {
-                    panic!("{:?}", e);
+                    panic!("{e:?}");
                 }
             }
         }

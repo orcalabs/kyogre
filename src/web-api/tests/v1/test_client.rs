@@ -255,7 +255,7 @@ impl ApiClient {
         model_id: ModelId,
     ) -> Result<Vec<FishingSpotPrediction>, Error> {
         self.send(
-            format!("fishing_spot_predictions/{}", model_id),
+            format!("fishing_spot_predictions/{model_id}"),
             Method::GET,
             &(),
             None::<&()>,
@@ -267,7 +267,7 @@ impl ApiClient {
         model_id: ModelId,
     ) -> Result<Vec<FishingWeightPrediction>, Error> {
         self.send(
-            format!("fishing_weight_predictions/{}", model_id),
+            format!("fishing_weight_predictions/{model_id}"),
             Method::GET,
             &(),
             None::<&()>,
@@ -282,7 +282,7 @@ impl ApiClient {
         params: FishingSpotPredictionParams,
     ) -> Result<Option<FishingSpotPrediction>, Error> {
         self.send(
-            format!("fishing_spot_predictions/{}/{}", model_id, species),
+            format!("fishing_spot_predictions/{model_id}/{species}"),
             Method::GET,
             &(),
             Some(&params),
@@ -297,7 +297,7 @@ impl ApiClient {
         params: FishingWeightPredictionParams,
     ) -> Result<Vec<FishingWeightPrediction>, Error> {
         self.send(
-            format!("fishing_weight_predictions/{}/{}", model_id, species),
+            format!("fishing_weight_predictions/{model_id}/{species}"),
             Method::GET,
             &(),
             Some(&params),
@@ -317,7 +317,7 @@ impl ApiClient {
         active_filter: ActiveLandingFilter,
     ) -> Result<LandingMatrix, Error> {
         self.send(
-            &format!("landing_matrix/{}", active_filter),
+            &format!("landing_matrix/{active_filter}"),
             Method::GET,
             &(),
             Some(&params),
@@ -330,7 +330,7 @@ impl ApiClient {
         active_filter: ActiveHaulsFilter,
     ) -> Result<HaulsMatrix, Error> {
         self.send(
-            &format!("hauls_matrix/{}", active_filter),
+            &format!("hauls_matrix/{active_filter}"),
             Method::GET,
             &(),
             Some(&params),
