@@ -43,11 +43,10 @@ impl std::fmt::Display for HaulFilter<'_> {
             }
             HaulFilter::VesselIds(vals) => write_array_filter(f, "fiskeridir_vessel_id", vals),
             HaulFilter::MajoritySpeciesGroup(v) => {
-                f.write_fmt(format_args!("is_majority_species_group_of_haul = {} ", v))
+                f.write_fmt(format_args!("is_majority_species_group_of_haul = {v} "))
             }
             HaulFilter::BycatchPercentage(v) => f.write_fmt(format_args!(
-                "species_group_weight_percentage_of_haul >= {} ",
-                v
+                "species_group_weight_percentage_of_haul >= {v} "
             )),
         }
     }
@@ -98,7 +97,7 @@ impl FilterValue for u32 {
 
 impl FilterValue for CatchLocationId {
     fn filter_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("'{}'", self))
+        f.write_fmt(format_args!("'{self}'"))
     }
 }
 

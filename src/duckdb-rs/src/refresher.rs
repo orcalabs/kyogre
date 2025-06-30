@@ -323,11 +323,10 @@ LOAD postgres;
 SELECT
     version
 FROM
-    postgres_db.{}
+    postgres_db.{POSTGRES_DUCKDB_VERSION_TABLE}
 WHERE
     duckdb_data_version_id = ?
-            ",
-            POSTGRES_DUCKDB_VERSION_TABLE
+            "
         );
 
         let version: u64 = conn.query_row(
@@ -348,11 +347,10 @@ WHERE
 SELECT
     version
 FROM
-    postgres_db.{}
+    postgres_db.{POSTGRES_DUCKDB_VERSION_TABLE}
 WHERE
     duckdb_data_version_id = ?
-            ",
-            POSTGRES_DUCKDB_VERSION_TABLE
+            "
         );
 
         let version: u64 = tx.query_row(
@@ -473,8 +471,7 @@ FROM
         let queries = match mode {
             CreateMode::Initial => {
                 format!(
-                    "DROP TABLE IF EXISTS landing_matrix_cache;{};{};",
-                    LANDING_SCHEMA, postgres_scan_command
+                    "DROP TABLE IF EXISTS landing_matrix_cache;{LANDING_SCHEMA};{postgres_scan_command};"
                 )
             }
             CreateMode::Refresh => postgres_scan_command,
@@ -516,8 +513,7 @@ FROM
         let queries = match mode {
             CreateMode::Initial => {
                 format!(
-                    "DROP TABLE IF EXISTS hauls_matrix_cache;{};{};",
-                    HAULS_SCHEMA, postgres_scan_command
+                    "DROP TABLE IF EXISTS hauls_matrix_cache;{HAULS_SCHEMA};{postgres_scan_command};"
                 )
             }
             CreateMode::Refresh => postgres_scan_command,

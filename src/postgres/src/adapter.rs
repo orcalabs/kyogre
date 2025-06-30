@@ -243,7 +243,7 @@ WHERE
 
         let result = match result {
             Ok(r) => r,
-            Err(e) => panic!("ais insertion took more than {}", e),
+            Err(e) => panic!("ais insertion took more than {e}"),
         };
 
         match result {
@@ -266,7 +266,7 @@ WHERE
 
                     err = match timeout_err {
                         Ok(r) => r,
-                        Err(e) => panic!("ais retry insertion took more than {}", e),
+                        Err(e) => panic!("ais retry insertion took more than {e}"),
                     };
 
                     if err.is_ok() {
