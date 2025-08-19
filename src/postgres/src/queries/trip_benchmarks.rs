@@ -1,4 +1,4 @@
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, SpeciesGroup};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
@@ -238,6 +238,10 @@ WITH
                 $8::BIGINT[] IS NULL
                 OR t.fiskeridir_vessel_id = ANY ($8)
             )
+            AND (
+                $9::INT IS NULL
+                OR t.landing_largest_quantum_species_group_id = $9
+            )
         GROUP BY
             t.fiskeridir_vessel_id
     ),
@@ -275,6 +279,7 @@ WHERE
             query.length_group as Option<VesselLengthGroup>,
             query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
             query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
+            query.species_group_id as Option<SpeciesGroup>
         )
         .fetch_optional(&self.pool)
         .await?;

@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, FiskeridirVesselId, GearGroup, VesselLengthGroup};
+use fiskeridir_rs::{CallSign, FiskeridirVesselId, GearGroup, SpeciesGroup, VesselLengthGroup};
 
 use super::Ordering;
 
@@ -34,4 +34,5 @@ pub struct AverageEeoiQuery {
     pub gear_groups: Vec<GearGroup>,
     pub length_group: Option<VesselLengthGroup>,
     pub vessel_ids: Vec<FiskeridirVesselId>,
+    pub species_group_id: Option<SpeciesGroup>,
 }
