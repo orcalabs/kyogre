@@ -1,6 +1,7 @@
 use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web;
 use chrono::{DateTime, Utc};
+use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, EeoiQuery,
@@ -55,6 +56,8 @@ pub struct AverageEeoiParams {
     pub length_group: Option<VesselLengthGroup>,
     #[oasgen(rename = "vesselIds[]")]
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub species_group_id: Option<SpeciesGroup>,
 }
 
 /// Returns the average trip benchmarks for the given timespan and vessels matching the given
@@ -248,6 +251,7 @@ impl From<AverageEeoiParams> for AverageEeoiQuery {
             gear_groups,
             length_group,
             vessel_ids,
+            species_group_id,
         } = v;
 
         Self {
@@ -256,6 +260,7 @@ impl From<AverageEeoiParams> for AverageEeoiQuery {
             gear_groups: gear_groups.unwrap_or_default(),
             length_group,
             vessel_ids: vessel_ids.unwrap_or_default(),
+            species_group_id,
         }
     }
 }

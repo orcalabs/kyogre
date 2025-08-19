@@ -915,6 +915,41 @@ WHERE
 
         sqlx::query!(
             r#"
+WITH
+    target_trips AS (
+        SELECT
+            t.trip_id,
+            le.*
+        FROM
+            trips t
+            INNER JOIN vessel_events v ON t.trip_id = v.trip_id
+            INNER JOIN landings l ON l.vessel_event_id = v.vessel_event_id
+            INNER JOIN landing_entries le ON le.landing_id = l.landing_id
+        WHERE
+            t.trip_id = ANY ($1::BIGINT[])
+            AND le.product_quality_id IS NOT NULL
+            AND le.species_fiskeridir_id IS NOT NULL
+    ),
+    trips_with_largest_species_group_quantum AS (
+        SELECT DISTINCT
+            ON (trip_id) trip_id,
+            species_group_id AS landing_largest_quantum_species_group_id
+        FROM
+            (
+                SELECT
+                    trip_id,
+                    species_group_id,
+                    SUM(living_weight) AS living_weight
+                FROM
+                    target_trips
+                GROUP BY
+                    trip_id,
+                    species_group_id
+            ) q
+        ORDER BY
+            trip_id,
+            living_weight DESC
+    )
 UPDATE trips_detailed
 SET
     landings = COALESCE(q.landings, '[]'),
@@ -923,9 +958,11 @@ SET
     landing_total_gross_weight = COALESCE(q.gross_weight, 0),
     landing_total_product_weight = COALESCE(q.product_weight, 0),
     landing_total_price_for_fisher = COALESCE(q.final_price_for_fisher, 0),
-    price_for_fisher_is_estimated = COALESCE(q.price_for_fisher_is_estimated, FALSE)
+    price_for_fisher_is_estimated = COALESCE(q.price_for_fisher_is_estimated, FALSE),
+    landing_largest_quantum_species_group_id = tq.landing_largest_quantum_species_group_id
 FROM
-    (
+    trips_with_largest_species_group_quantum tq
+    INNER JOIN (
         SELECT
             qi.trip_id,
             COALESCE(
@@ -948,51 +985,44 @@ FROM
             (
                 SELECT
                     t.trip_id,
-                    ARRAY_AGG(DISTINCT le.species_group_id) FILTER (
+                    ARRAY_AGG(DISTINCT t.species_group_id) FILTER (
                         WHERE
-                            le.species_group_id IS NOT NULL
+                            t.species_group_id IS NOT NULL
                     ) AS species_group_ids,
                     JSONB_BUILD_OBJECT(
                         'living_weight',
-                        COALESCE(SUM(le.living_weight), 0),
+                        COALESCE(SUM(t.living_weight), 0),
                         'gross_weight',
-                        COALESCE(SUM(le.gross_weight), 0),
+                        COALESCE(SUM(t.gross_weight), 0),
                         'product_weight',
-                        COALESCE(SUM(le.product_weight), 0),
+                        COALESCE(SUM(t.product_weight), 0),
                         'price_for_fisher',
-                        COALESCE(SUM(le.final_price_for_fisher), 0),
+                        COALESCE(SUM(t.final_price_for_fisher), 0),
                         'species_fiskeridir_id',
-                        le.species_fiskeridir_id,
+                        t.species_fiskeridir_id,
                         'product_quality_id',
-                        le.product_quality_id
+                        t.product_quality_id
                     ) AS catches,
-                    SUM(le.living_weight) AS living_weight,
-                    SUM(le.gross_weight) AS gross_weight,
-                    SUM(le.product_weight) AS product_weight,
-                    SUM(le.final_price_for_fisher) AS final_price_for_fisher,
+                    SUM(t.living_weight) AS living_weight,
+                    SUM(t.gross_weight) AS gross_weight,
+                    SUM(t.product_weight) AS product_weight,
+                    SUM(t.final_price_for_fisher) AS final_price_for_fisher,
                     BOOL_OR(
-                        le.price_for_fisher IS NULL
-                        AND le.final_price_for_fisher IS NOT NULL
+                        t.price_for_fisher IS NULL
+                        AND t.final_price_for_fisher IS NOT NULL
                     ) AS price_for_fisher_is_estimated
                 FROM
-                    trips t
-                    INNER JOIN vessel_events v ON t.trip_id = v.trip_id
-                    INNER JOIN landings l ON l.vessel_event_id = v.vessel_event_id
-                    INNER JOIN landing_entries le ON le.landing_id = l.landing_id
-                WHERE
-                    t.trip_id = ANY ($1::BIGINT[])
-                    AND le.product_quality_id IS NOT NULL
-                    AND le.species_fiskeridir_id IS NOT NULL
+                    target_trips t
                 GROUP BY
                     t.trip_id,
-                    le.product_quality_id,
-                    le.species_fiskeridir_id
+                    t.product_quality_id,
+                    t.species_fiskeridir_id
             ) qi
         GROUP BY
             qi.trip_id
-    ) q
+    ) q ON tq.trip_id = q.trip_id
 WHERE
-    trips_detailed.trip_id = q.trip_id
+    trips_detailed.trip_id = tq.trip_id
             "#,
             trip_ids as &[TripId],
         )
