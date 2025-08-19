@@ -112,15 +112,15 @@ impl<'a> ErsPorSet<'a> {
     }
 
     fn add_county(&mut self, ers_por: &'a fiskeridir_rs::ErsPor) -> Result<()> {
-        if let Some(code) = ers_por.vessel_info.county_code {
-            if let Entry::Vacant(e) = self.counties.entry(code as i32) {
-                let county = ers_por
-                    .vessel_info
-                    .county
-                    .as_deref()
-                    .ok_or_else(|| MissingValueSnafu.build())?;
-                e.insert(NewCounty::new(code as i32, county));
-            }
+        if let Some(code) = ers_por.vessel_info.county_code
+            && let Entry::Vacant(e) = self.counties.entry(code as i32)
+        {
+            let county = ers_por
+                .vessel_info
+                .county
+                .as_deref()
+                .ok_or_else(|| MissingValueSnafu.build())?;
+            e.insert(NewCounty::new(code as i32, county));
         }
         Ok(())
     }
@@ -141,11 +141,11 @@ impl<'a> ErsPorSet<'a> {
     }
 
     fn add_port(&mut self, ers_por: &'a fiskeridir_rs::ErsPor) -> Result<()> {
-        if let Some(code) = ers_por.port.code.as_deref() {
-            if let Entry::Vacant(e) = self.ports.entry(code) {
-                let port = NewPort::new(code, ers_por.port.name.as_deref())?;
-                e.insert(port);
-            }
+        if let Some(code) = ers_por.port.code.as_deref()
+            && let Entry::Vacant(e) = self.ports.entry(code)
+        {
+            let port = NewPort::new(code, ers_por.port.name.as_deref())?;
+            e.insert(port);
         }
         Ok(())
     }

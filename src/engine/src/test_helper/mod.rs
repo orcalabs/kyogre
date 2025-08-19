@@ -620,10 +620,10 @@ impl TestStateBuilder {
         // TODO: dont clone in cycles
         // Use this (https://github.com/rust-lang/rust/issues/43244) if it ever merges
         for i in 1..=self.cycle.val() {
-            if let Some(reset_cycle) = self.trip_queue_reset {
-                if reset_cycle == i {
-                    self.storage.queue_trip_reset().await;
-                }
+            if let Some(reset_cycle) = self.trip_queue_reset
+                && reset_cycle == i
+            {
+                self.storage.queue_trip_reset().await;
             }
 
             self.ais_data_sender

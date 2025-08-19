@@ -231,15 +231,14 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                             Ok((report, trips)) => {
                                 trips_report = trips_report + report;
 
-                                if let Some(trips) = trips {
-                                    if let Err(e) =
+                                if let Some(trips) = trips &&
+                                    let Err(e) =
                                         shared_state.trip_pipeline_inbound.add_trip_set(trips).await
                                     {
                                         error!(
                                             "failed to store trips for vessel: {}, err: {e:?}",
                                             vessel.fiskeridir.id,
                                         );
-                                    }
                                 }
 
                                 // Regardless if we had no trips to add we need to set the current

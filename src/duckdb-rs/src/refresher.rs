@@ -206,10 +206,10 @@ SELECT
             error!("failed periodic refresh: {e:?}");
         }
 
-        if let Some(sender) = response_channel {
-            if let Err(e) = sender.send(RefreshResponse(res)).await {
-                error!("sender half error, exiting refresh_loop: {e:?}");
-            }
+        if let Some(sender) = response_channel
+            && let Err(e) = sender.send(RefreshResponse(res)).await
+        {
+            error!("sender half error, exiting refresh_loop: {e:?}");
         }
     }
 

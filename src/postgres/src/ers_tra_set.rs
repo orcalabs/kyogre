@@ -104,15 +104,15 @@ impl<'a> ErsTraSet<'a> {
     }
 
     fn add_county(&mut self, ers_tra: &'a fiskeridir_rs::ErsTra) -> Result<()> {
-        if let Some(code) = ers_tra.vessel_info.county_code {
-            if let Entry::Vacant(e) = self.counties.entry(code as i32) {
-                let county = ers_tra
-                    .vessel_info
-                    .county
-                    .as_deref()
-                    .ok_or_else(|| MissingValueSnafu.build())?;
-                e.insert(NewCounty::new(code as i32, county));
-            }
+        if let Some(code) = ers_tra.vessel_info.county_code
+            && let Entry::Vacant(e) = self.counties.entry(code as i32)
+        {
+            let county = ers_tra
+                .vessel_info
+                .county
+                .as_deref()
+                .ok_or_else(|| MissingValueSnafu.build())?;
+            e.insert(NewCounty::new(code as i32, county));
         }
         Ok(())
     }
