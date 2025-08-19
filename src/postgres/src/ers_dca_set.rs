@@ -178,15 +178,15 @@ impl<'a> ErsDcaSet<'a> {
     }
 
     fn add_county(&mut self, ers_dca: &'a fiskeridir_rs::ErsDca) -> Result<()> {
-        if let Some(code) = ers_dca.vessel_info.county_code {
-            if let Entry::Vacant(e) = self.counties.entry(code as i32) {
-                let county = ers_dca
-                    .vessel_info
-                    .county
-                    .as_deref()
-                    .ok_or_else(|| MissingValueSnafu.build())?;
-                e.insert(NewCounty::new(code as i32, county));
-            }
+        if let Some(code) = ers_dca.vessel_info.county_code
+            && let Entry::Vacant(e) = self.counties.entry(code as i32)
+        {
+            let county = ers_dca
+                .vessel_info
+                .county
+                .as_deref()
+                .ok_or_else(|| MissingValueSnafu.build())?;
+            e.insert(NewCounty::new(code as i32, county));
         }
         Ok(())
     }
@@ -199,14 +199,14 @@ impl<'a> ErsDcaSet<'a> {
     }
 
     fn add_herring_population(&mut self, ers_dca: &'a fiskeridir_rs::ErsDca) -> Result<()> {
-        if let Some(code) = ers_dca.herring_population_code.as_deref() {
-            if let Entry::Vacant(e) = self.herring_populations.entry(code) {
-                let herring_population = ers_dca
-                    .herring_population
-                    .as_deref()
-                    .ok_or_else(|| MissingValueSnafu.build())?;
-                e.insert(NewHerringPopulation::new(code, herring_population));
-            }
+        if let Some(code) = ers_dca.herring_population_code.as_deref()
+            && let Entry::Vacant(e) = self.herring_populations.entry(code)
+        {
+            let herring_population = ers_dca
+                .herring_population
+                .as_deref()
+                .ok_or_else(|| MissingValueSnafu.build())?;
+            e.insert(NewHerringPopulation::new(code, herring_population));
         }
         Ok(())
     }
@@ -236,11 +236,11 @@ impl<'a> ErsDcaSet<'a> {
     }
 
     fn add_port(&mut self, ers_dca: &'a fiskeridir_rs::ErsDca) -> Result<()> {
-        if let Some(code) = ers_dca.port.code.as_deref() {
-            if let Entry::Vacant(e) = self.ports.entry(code) {
-                let port = NewPort::new(code, ers_dca.port.name.as_deref())?;
-                e.insert(port);
-            }
+        if let Some(code) = ers_dca.port.code.as_deref()
+            && let Entry::Vacant(e) = self.ports.entry(code)
+        {
+            let port = NewPort::new(code, ers_dca.port.name.as_deref())?;
+            e.insert(port);
         }
         Ok(())
     }

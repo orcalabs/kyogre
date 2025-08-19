@@ -331,32 +331,31 @@ where
         }
 
         for path in &mut server.openapi.paths.paths {
-            if let RefOr::Item(item) = path.1 {
-                if let Some(op) = item
+            if let RefOr::Item(item) = path.1
+                && let Some(op) = item
                     .get
                     .as_mut()
                     .or(item.put.as_mut())
                     .or(item.post.as_mut())
                     .or(item.delete.as_mut())
-                {
-                    op.responses
-                        .responses
-                        .extend([400, 401, 403, 500].into_iter().map(|code| {
-                            (
-                                StatusCode::Code(code),
-                                RefOr::Item(Response {
-                                    content: IndexMap::from_iter([(
-                                        "application/json".into(),
-                                        MediaType {
-                                            schema: Some(ErrorResponse::schema_ref()),
-                                            ..Default::default()
-                                        },
-                                    )]),
-                                    ..Default::default()
-                                }),
-                            )
-                        }));
-                }
+            {
+                op.responses
+                    .responses
+                    .extend([400, 401, 403, 500].into_iter().map(|code| {
+                        (
+                            StatusCode::Code(code),
+                            RefOr::Item(Response {
+                                content: IndexMap::from_iter([(
+                                    "application/json".into(),
+                                    MediaType {
+                                        schema: Some(ErrorResponse::schema_ref()),
+                                        ..Default::default()
+                                    },
+                                )]),
+                                ..Default::default()
+                            }),
+                        )
+                    }));
             }
         }
 

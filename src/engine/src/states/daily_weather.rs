@@ -18,14 +18,13 @@ impl machine::State for DailyWeatherState {
 
         // On a fresh Local deployment it takes too long to perform the initial DailyWeather,
         // so prune the dirty table to only dates with weather.
-        if environment == Environment::Local {
-            if let Err(e) = shared_state
+        if environment == Environment::Local
+            && let Err(e) = shared_state
                 .catch_location_weather
                 .prune_dirty_dates()
                 .await
-            {
-                error!("failed to prune dirty weather dates: {e:?}");
-            }
+        {
+            error!("failed to prune dirty weather dates: {e:?}");
         }
 
         match shared_state
