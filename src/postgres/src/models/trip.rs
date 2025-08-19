@@ -13,7 +13,7 @@ use kyogre_core::{
 };
 use sqlx::postgres::types::PgRange;
 use std::str::FromStr;
-use unnest_insert::{UnnestInsert, UnnestUpdate};
+use unnest_insert::UnnestInsert;
 
 #[derive(Debug, Clone)]
 pub struct Trip {
@@ -134,30 +134,6 @@ pub struct TripPrunedAisVmsPosition {
     pub value: serde_json::Value,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub trip_position_layer_id: TripPositionLayerId,
-}
-
-#[derive(Debug, Clone, UnnestUpdate)]
-#[unnest_update(table_name = "trip_positions")]
-pub struct UpdateTripPositionCargoWeight {
-    #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i64")]
-    pub trip_id: TripId,
-    #[unnest_update(id)]
-    pub timestamp: DateTime<Utc>,
-    #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i32")]
-    pub position_type_id: PositionType,
-    pub trip_cumulative_cargo_weight: f64,
-}
-
-#[derive(Debug, Clone, UnnestUpdate)]
-#[unnest_update(table_name = "trip_positions")]
-pub struct UpdateTripPositionFuelConsumption {
-    #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i64")]
-    pub trip_id: TripId,
-    #[unnest_update(id)]
-    pub timestamp: DateTime<Utc>,
-    #[unnest_update(id, sql_type = "INT", type_conversion = "type_to_i32")]
-    pub position_type_id: PositionType,
-    pub trip_cumulative_fuel_consumption_liter: f64,
 }
 
 impl From<&TripProcessingUnit> for NewTrip {

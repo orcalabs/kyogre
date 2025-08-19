@@ -11,6 +11,8 @@ pub struct NewDeliveryPointId<'a> {
     pub delivery_point_id: &'a str,
 }
 
+// Only used in unnest insert from impl, cargo thinks its unused.
+#[allow(dead_code)]
 #[derive(Debug, Clone, UnnestInsert)]
 #[unnest_insert(
     table_name = "manual_delivery_points",
