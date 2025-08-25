@@ -181,6 +181,10 @@ where
                 get().to(routes::v1::trip::benchmarks::average::<T>),
             )
             .route(
+                "/trip/benchmarks/average_fui",
+                get().to(routes::v1::trip::benchmarks::average_fui::<T>),
+            )
+            .route(
                 "/trip/benchmarks/average_eeoi",
                 get().to(routes::v1::trip::benchmarks::average_eeoi::<T>),
             );
@@ -272,6 +276,12 @@ where
                     get()
                         .guard(guard.clone())
                         .to(routes::v1::trip::benchmarks::benchmarks::<T>),
+                )
+                .route(
+                    "/trip/benchmarks/fui",
+                    get()
+                        .guard(guard.clone())
+                        .to(routes::v1::trip::benchmarks::fui::<T>),
                 )
                 .route(
                     "/trip/benchmarks/eeoi",

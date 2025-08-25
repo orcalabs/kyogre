@@ -1,10 +1,10 @@
 use fiskeridir_rs::{CallSign, SpeciesGroup};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
-    AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
+    AverageEeoiQuery, AverageFuiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
     DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone, EngineType,
-    FiskeridirVesselId, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi, ProcessingStatus,
-    TripBenchmarksQuery, TripId, TripWithBenchmark,
+    FiskeridirVesselId, FuiQuery, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi,
+    ProcessingStatus, TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 
 use crate::{PostgresAdapter, error::Result, models::TripBenchmarkOutput};
@@ -161,6 +161,51 @@ ORDER BY
         Ok(trips)
     }
 
+    pub(crate) async fn fui_impl(&self, query: &FuiQuery) -> Result<Option<f64>> {
+        let result = sqlx::query!(
+            r#"
+WITH
+    vessel_id AS (
+        SELECT
+            fiskeridir_vessel_id
+        FROM
+            active_vessels
+        WHERE
+            call_sign = $1
+    )
+SELECT
+    CASE
+        WHEN SUM(t.landing_total_living_weight) > 0
+        AND SUM(t.distance) > $2 THEN (SUM(t.benchmark_fuel_consumption_liter) * $3)::DOUBLE PRECISION / (
+            SUM(t.landing_total_living_weight)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+        )
+        ELSE NULL
+    END AS fui
+FROM
+    vessel_id v
+    INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+WHERE
+    (
+        $4::TIMESTAMPTZ IS NULL
+        OR t.start_timestamp >= $4
+    )
+    AND (
+        $5::TIMESTAMPTZ IS NULL
+        OR t.stop_timestamp <= $5
+    )
+            "#,
+            query.call_sign.as_ref(),
+            MIN_EEOI_DISTANCE,
+            DIESEL_LITER_CARBON_FACTOR,
+            query.start_date,
+            query.end_date,
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.and_then(|v| v.fui))
+    }
+
     pub(crate) async fn eeoi_impl(&self, query: &EeoiQuery) -> Result<Option<f64>> {
         let result = sqlx::query!(
             r#"
@@ -205,6 +250,84 @@ WHERE
         .await?;
 
         Ok(result.and_then(|v| v.eeoi))
+    }
+    pub(crate) async fn average_fui_impl(&self, query: &AverageFuiQuery) -> Result<Option<f64>> {
+        let result = sqlx::query!(
+            r#"
+
+WITH
+    fuis AS (
+        SELECT
+            CASE
+                WHEN SUM(t.landing_total_living_weight) > 0
+                AND SUM(t.distance) > $1 THEN (SUM(t.benchmark_fuel_consumption_liter) * $2)::DOUBLE PRECISION / (
+                    SUM(t.landing_total_living_weight)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+                )
+                ELSE NULL
+            END AS fui
+        FROM
+            trips_detailed t
+        WHERE
+            t.start_timestamp >= $3
+            AND t.stop_timestamp <= $4
+            AND (
+                $5::INT IS NULL
+                OR t.fiskeridir_length_group_id = $5
+            )
+            AND (
+                $6::INT[] IS NULL
+                OR t.haul_gear_group_ids && $6
+            )
+            AND (
+                $7::BIGINT[] IS NULL
+                OR t.fiskeridir_vessel_id = ANY ($7)
+            )
+            AND (
+                $8::INT IS NULL
+                OR t.landing_largest_quantum_species_group_id = $8
+            )
+        GROUP BY
+            t.fiskeridir_vessel_id
+    ),
+    ranked_data AS (
+        SELECT
+            fui,
+            percent_rank() OVER (
+                ORDER BY
+                    fui
+            ) AS percent
+        FROM
+            fuis
+    )
+SELECT
+    AVG(fui) AS fui
+FROM
+    ranked_data
+WHERE
+    (
+        percent <= 0.95
+        OR percent >= 0.05
+    )
+    OR (
+        SELECT
+            COUNT(*)
+        FROM
+            ranked_data
+    ) <= 2
+            "#,
+            MIN_EEOI_DISTANCE,
+            DIESEL_LITER_CARBON_FACTOR,
+            query.start_date,
+            query.end_date,
+            query.length_group as Option<VesselLengthGroup>,
+            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
+            query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
+            query.species_group_id as Option<SpeciesGroup>
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.and_then(|v| v.fui))
     }
 
     pub(crate) async fn average_eeoi_impl(&self, query: &AverageEeoiQuery) -> Result<Option<f64>> {

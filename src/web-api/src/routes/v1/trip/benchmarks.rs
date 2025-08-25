@@ -4,8 +4,9 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{
-    AverageEeoiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery, EeoiQuery,
-    FiskeridirVesselId, Mean, Ordering, TripBenchmarksQuery, TripId, TripWithBenchmark,
+    AverageEeoiQuery, AverageFuiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
+    EeoiQuery, FiskeridirVesselId, FuiQuery, Mean, Ordering, TripBenchmarksQuery, TripId,
+    TripWithBenchmark,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -28,6 +29,13 @@ pub struct EeoiParams {
     pub end_date: Option<DateTime<Utc>>,
 }
 
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FuiParams {
+    pub start_date: Option<DateTime<Utc>>,
+    pub end_date: Option<DateTime<Utc>>,
+}
+
 #[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
@@ -41,6 +49,23 @@ pub struct AverageTripBenchmarksParams {
     pub length_group: Option<VesselLengthGroup>,
     #[oasgen(rename = "vesselIds[]")]
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+}
+
+#[serde_as]
+#[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AverageFuiParams {
+    pub start_date: DateTime<Utc>,
+    pub end_date: DateTime<Utc>,
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    #[oasgen(rename = "gearGroups[]")]
+    pub gear_groups: Option<Vec<GearGroup>>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub length_group: Option<VesselLengthGroup>,
+    #[oasgen(rename = "vesselIds[]")]
+    pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub species_group_id: Option<SpeciesGroup>,
 }
 
 #[serde_as]
@@ -85,6 +110,33 @@ pub async fn benchmarks<T: Database>(
 
     let benchmarks = db.trip_benchmarks(query).await?.into();
     Ok(Response::new(benchmarks))
+}
+
+/// Returns the FUI of the logged in user for the given period.
+#[oasgen(skip(db), tags("Trip"))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
+pub async fn fui<T: Database>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    params: Query<FuiParams>,
+) -> Result<Response<Option<f64>>> {
+    let call_sign = profile.call_sign()?;
+    let query = params.into_inner().into_query(call_sign.clone());
+
+    let fui = db.fui(query).await?;
+    Ok(Response::new(fui))
+}
+
+/// Returns the average FUI of all vessels matching the given parameters.
+#[oasgen(skip(db), tags("Trip"))]
+#[tracing::instrument(skip(db))]
+pub async fn average_fui<T: Database>(
+    db: web::Data<T>,
+    params: Query<AverageFuiParams>,
+) -> Result<Response<Option<f64>>> {
+    let query = params.into_inner().into();
+    let fui = db.average_fui(query).await?;
+    Ok(Response::new(fui))
 }
 
 /// Returns the EEOI of the logged in user for the given period.
@@ -208,6 +260,21 @@ impl TripBenchmarksParams {
     }
 }
 
+impl FuiParams {
+    fn into_query(self, call_sign: CallSign) -> FuiQuery {
+        let Self {
+            start_date,
+            end_date,
+        } = self;
+
+        FuiQuery {
+            call_sign,
+            start_date,
+            end_date,
+        }
+    }
+}
+
 impl EeoiParams {
     fn into_query(self, call_sign: CallSign) -> EeoiQuery {
         let Self {
@@ -246,6 +313,28 @@ impl From<AverageTripBenchmarksParams> for AverageTripBenchmarksQuery {
 impl From<AverageEeoiParams> for AverageEeoiQuery {
     fn from(v: AverageEeoiParams) -> Self {
         let AverageEeoiParams {
+            start_date,
+            end_date,
+            gear_groups,
+            length_group,
+            vessel_ids,
+            species_group_id,
+        } = v;
+
+        Self {
+            start_date,
+            end_date,
+            gear_groups: gear_groups.unwrap_or_default(),
+            length_group,
+            vessel_ids: vessel_ids.unwrap_or_default(),
+            species_group_id,
+        }
+    }
+}
+
+impl From<AverageFuiParams> for AverageFuiQuery {
+    fn from(v: AverageFuiParams) -> Self {
+        let AverageFuiParams {
             start_date,
             end_date,
             gear_groups,
