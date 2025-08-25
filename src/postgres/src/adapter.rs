@@ -701,6 +701,12 @@ impl LiveFuelInbound for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn fui(&self, query: FuiQuery) -> WebApiResult<Option<f64>> {
+        Ok(retry(|| self.fui_impl(&query)).await?)
+    }
+    async fn average_fui(&self, query: AverageFuiQuery) -> WebApiResult<Option<f64>> {
+        Ok(retry(|| self.average_fui_impl(&query)).await?)
+    }
     async fn live_fuel(&self, query: &LiveFuelQuery) -> WebApiResult<LiveFuel> {
         Ok(retry(|| async {
             let entries: WebApiResult<Vec<kyogre_core::LiveFuelEntry>> =
