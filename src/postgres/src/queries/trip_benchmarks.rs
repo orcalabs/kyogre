@@ -187,7 +187,7 @@ FROM
 WHERE
     (
         $4::TIMESTAMPTZ IS NULL
-        OR t.start_timestamp >= $4
+        OR t.stop_timestamp >= $4
     )
     AND (
         $5::TIMESTAMPTZ IS NULL
@@ -232,7 +232,7 @@ FROM
 WHERE
     (
         $5::TIMESTAMPTZ IS NULL
-        OR t.start_timestamp >= $5
+        OR t.stop_timestamp >= $5
     )
     AND (
         $6::TIMESTAMPTZ IS NULL
@@ -268,8 +268,7 @@ WITH
         FROM
             trips_detailed t
         WHERE
-            t.start_timestamp >= $3
-            AND t.stop_timestamp <= $4
+            t.stop_timestamp BETWEEN $3 AND $4
             AND (
                 $5::INT IS NULL
                 OR t.fiskeridir_length_group_id = $5
@@ -347,8 +346,7 @@ WITH
         FROM
             trips_detailed t
         WHERE
-            t.start_timestamp >= $4
-            AND t.stop_timestamp <= $5
+            t.stop_timestamp BETWEEN $4 AND $5
             AND (
                 $6::INT IS NULL
                 OR t.fiskeridir_length_group_id = $6
