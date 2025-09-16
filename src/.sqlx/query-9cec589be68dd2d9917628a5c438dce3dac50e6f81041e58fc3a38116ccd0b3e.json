@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessel_id AS (\n        SELECT\n            fiskeridir_vessel_id\n        FROM\n            active_vessels\n        WHERE\n            call_sign = $1\n    )\nSELECT\n    CASE\n        WHEN SUM(t.landing_total_living_weight) > 0\n        AND SUM(t.distance) > $2 THEN (SUM(t.benchmark_fuel_consumption_liter) * $3)::DOUBLE PRECISION / (\n            SUM(t.landing_total_living_weight * t.distance * $4)::DOUBLE PRECISION / 1000::DOUBLE PRECISION\n        )\n        ELSE NULL\n    END AS eeoi\nFROM\n    vessel_id v\n    INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\nWHERE\n    (\n        $5::TIMESTAMPTZ IS NULL\n        OR t.stop_timestamp >= $5\n    )\n    AND (\n        $6::TIMESTAMPTZ IS NULL\n        OR t.stop_timestamp <= $6\n    )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "eeoi",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "9cec589be68dd2d9917628a5c438dce3dac50e6f81041e58fc3a38116ccd0b3e"
+}
