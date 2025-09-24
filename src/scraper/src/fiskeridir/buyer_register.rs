@@ -26,7 +26,7 @@ impl DataSource for BuyerRegisterScraper {
         ScraperId::BuyerRegister
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
+    async fn scrape(&self, processor: &dyn Processor) -> Result<()> {
         if let Some(source) = &self.source {
             let latest = processor
                 .latest_buyer_location_update()

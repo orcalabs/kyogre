@@ -32,7 +32,7 @@ impl DataSource for VmsScraper {
     fn id(&self) -> ScraperId {
         ScraperId::Vms
     }
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
+    async fn scrape(&self, processor: &dyn Processor) -> Result<()> {
         prefetch_and_scrape(
             self.environment,
             self.fiskeridir_source.clone(),

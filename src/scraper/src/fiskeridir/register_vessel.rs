@@ -24,7 +24,7 @@ impl DataSource for RegisterVesselsScraper {
         ScraperId::RegisterVessels
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
+    async fn scrape(&self, processor: &dyn Processor) -> Result<()> {
         if let Some(source) = &self.source {
             let mut register_vessels = Vec::new();
             for i in 1.. {

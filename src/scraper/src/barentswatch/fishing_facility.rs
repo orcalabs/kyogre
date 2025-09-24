@@ -36,7 +36,7 @@ impl DataSource for FishingFacilityScraper {
         ScraperId::FishingFacility
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
+    async fn scrape(&self, processor: &dyn Processor) -> Result<()> {
         if let Some(config) = &self.config {
             let latest_timestamp = processor
                 .latest_fishing_facility_update(Some(FishingFacilityApiSource::Updates))

@@ -81,7 +81,7 @@ pub struct ApiClientConfig {
 #[async_trait]
 pub trait DataSource: Send + Sync {
     fn id(&self) -> ScraperId;
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()>;
+    async fn scrape(&self, processor: &dyn Processor) -> Result<()>;
 }
 
 impl Scraper {
@@ -191,7 +191,7 @@ impl Scraper {
 }
 
 #[instrument(skip_all, fields(app.scraper))]
-async fn run_scraper(s: &(dyn DataSource), processor: &(dyn Processor)) {
+async fn run_scraper(s: &dyn DataSource, processor: &dyn Processor) {
     tracing::Span::current().record("app.scraper", s.id().to_string());
     if let Err(e) = s.scrape(processor).await {
         error!("failed to run scraper: {e:?}");

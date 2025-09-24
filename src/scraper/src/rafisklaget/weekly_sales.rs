@@ -29,7 +29,7 @@ impl DataSource for WeeklySalesScraper {
         ScraperId::FishingFacility
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<(), Error> {
+    async fn scrape(&self, processor: &dyn Processor) -> Result<(), Error> {
         let Some(config) = &self.config else {
             return Ok(());
         };
@@ -46,7 +46,7 @@ impl DataSource for WeeklySalesScraper {
         let mut scrape_date = processor
             .latest_weekly_sale()
             .await?
-            .unwrap_or_else(|| (end_date - Duration::days(365)));
+            .unwrap_or_else(|| end_date - Duration::days(365));
 
         loop {
             let iso_week = scrape_date.iso_week();
