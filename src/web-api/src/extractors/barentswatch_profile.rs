@@ -36,6 +36,13 @@ static ERLEND_STAV: Uuid = parse_uuid("6c1d8388-82c2-43d6-bb06-6b55f5b65fd7");
 static TORE_SYVERSEN: Uuid = parse_uuid("0b3dce7f-233a-4450-a882-a69e06ea47e4");
 static DORTHEA_VATN: Uuid = parse_uuid("85e96543-ff2f-483a-a86b-89c5554e0216");
 
+static PROJECT_USERS_EMAIL: [&str; 4] = [
+    "kim@orcalabs.no",
+    "stale.walderhaug@fhf.no",
+    "eskild.johansen@fhf.no",
+    "rita.naustvik@fhf.no",
+];
+
 static PROJECT_USERS: [Uuid; 7] = [
     ORCA_ACCOUNT_ID,
     PER_GUNNAR_AURAN,
@@ -77,6 +84,7 @@ pub enum BwRole {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwUser {
     pub id: BarentswatchUserId,
+    pub email: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -260,7 +268,14 @@ impl BwProfile {
             profile
         };
 
-        if PROJECT_USERS.contains(profile.user.id.as_ref()) {
+        let is_whitelisted_email = profile
+            .user
+            .email
+            .as_ref()
+            .map(|e| PROJECT_USERS_EMAIL.contains(&e.as_str()))
+            .unwrap_or(false);
+
+        if PROJECT_USERS.contains(profile.user.id.as_ref()) || is_whitelisted_email {
             let query: web::Query<HashMap<String, String>> = web::Query::from_query(&query_string)?;
             if let Some(cs) = query.get("call_sign_override") {
                 profile.fisk_info_profile = Some(BwVesselInfo {

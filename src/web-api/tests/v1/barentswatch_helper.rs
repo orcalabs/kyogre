@@ -76,6 +76,7 @@ impl BarentswatchHelper {
                     let profile = BwProfile {
                         user: BwUser {
                             id: decoded.claims.id,
+                            email: Some("test_email@orcalabs.no".to_string()),
                         },
                         fisk_info_profile: Some(BwVesselInfo {
                             ircs: Some(TEST_SIGNED_IN_VESSEL_CALLSIGN.try_into().unwrap()),
