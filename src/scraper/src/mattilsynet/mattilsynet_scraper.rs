@@ -22,7 +22,7 @@ impl DataSource for MattilsynetScraper {
         ScraperId::Mattilsynet
     }
 
-    async fn scrape(&self, processor: &(dyn Processor)) -> Result<()> {
+    async fn scrape(&self, processor: &dyn Processor) -> Result<()> {
         match self.do_scrape(processor).await {
             Ok(()) => {
                 info!("successfully scraped mattilsynet delivery points");
@@ -50,7 +50,7 @@ impl MattilsynetScraper {
         }
     }
 
-    async fn do_scrape(&self, processor: &(dyn Processor)) -> Result<()> {
+    async fn do_scrape(&self, processor: &dyn Processor) -> Result<()> {
         let approved = self.approved_establishments().await?;
         let products = self.fishery_products().await?;
         let establishments = self.fishery_establishments().await?;

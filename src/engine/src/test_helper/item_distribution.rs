@@ -19,7 +19,7 @@ impl ItemDistribution {
             Ordering::Equal => ItemsPerElement::Equal(1),
             Ordering::Less => ItemsPerElement::Uneven,
             Ordering::Greater => {
-                if num_elements % num_items == 0 {
+                if num_elements.is_multiple_of(num_items) {
                     ItemsPerElement::Equal(num_elements / num_items)
                 } else {
                     let remainder = (num_elements % num_items) + (num_elements / num_items);
