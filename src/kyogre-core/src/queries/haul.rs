@@ -96,6 +96,8 @@ pub struct HaulsQuery {
     pub species_group_ids: Vec<SpeciesGroup>,
     pub vessel_length_groups: Vec<VesselLengthGroup>,
     pub vessel_ids: Vec<FiskeridirVesselId>,
+    pub start_timestamp: Option<DateTime<Utc>>,
+    pub end_timestamp: Option<DateTime<Utc>>,
     pub sorting: Option<HaulsSorting>,
     pub ordering: Option<Ordering>,
 }

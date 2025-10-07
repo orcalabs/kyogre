@@ -39,6 +39,8 @@ pub struct HaulsParams {
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub start_timestamp: Option<DateTime<Utc>>,
+    pub end_timestamp: Option<DateTime<Utc>>,
     pub sorting: Option<HaulsSorting>,
     pub ordering: Option<Ordering>,
 }
@@ -386,6 +388,8 @@ impl From<HaulsParams> for HaulsQuery {
             fiskeridir_vessel_ids,
             sorting,
             ordering,
+            start_timestamp,
+            end_timestamp,
         } = v;
 
         Self {
@@ -397,6 +401,8 @@ impl From<HaulsParams> for HaulsQuery {
             vessel_ids: fiskeridir_vessel_ids.unwrap_or_default(),
             sorting,
             ordering,
+            start_timestamp,
+            end_timestamp,
         }
     }
 }
