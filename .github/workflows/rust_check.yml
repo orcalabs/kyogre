@@ -24,5 +24,5 @@ jobs:
       image-pull-command: docker pull ghcr.io/orcalabs/kyogre/test-postgres:master
       check-sqlx: true
       sqlx-migrations-dir: postgres
-      postgres-version: postgis/postgis:16-3.4-alpine
+      postgres-version: postgis/postgis:17-3.5-alpine
       wait-for-check-name: build-test-db
