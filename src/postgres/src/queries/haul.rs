@@ -237,30 +237,38 @@ WHERE
         $6::BIGINT[] IS NULL
         OR h.fiskeridir_vessel_id = ANY ($6)
     )
+    AND (
+        $7::TIMESTAMPTZ IS NULL
+        OR h.start_timestamp >= $7
+    )
+    AND (
+        $8::TIMESTAMPTZ IS NULL
+        OR h.start_timestamp <= $8
+    )
 ORDER BY
     CASE
-        WHEN $7 = 1
-        AND $8 = 1 THEN h.start_timestamp
+        WHEN $9 = 1
+        AND $10 = 1 THEN h.start_timestamp
     END ASC,
     CASE
-        WHEN $7 = 1
-        AND $8 = 2 THEN h.stop_timestamp
+        WHEN $9 = 1
+        AND $10 = 2 THEN h.stop_timestamp
     END ASC,
     CASE
-        WHEN $7 = 1
-        AND $8 = 3 THEN h.total_living_weight
+        WHEN $9 = 1
+        AND $10 = 3 THEN h.total_living_weight
     END ASC,
     CASE
-        WHEN $7 = 2
-        AND $8 = 1 THEN h.start_timestamp
+        WHEN $9 = 2
+        AND $10 = 1 THEN h.start_timestamp
     END DESC,
     CASE
-        WHEN $7 = 2
-        AND $8 = 2 THEN h.stop_timestamp
+        WHEN $9 = 2
+        AND $10 = 2 THEN h.stop_timestamp
     END DESC,
     CASE
-        WHEN $7 = 2
-        AND $8 = 3 THEN h.total_living_weight
+        WHEN $9 = 2
+        AND $10 = 3 THEN h.total_living_weight
     END DESC
             "#,
             query.ranges.empty_to_none() as Option<Vec<Range<DateTime<Utc>>>>,
@@ -269,6 +277,8 @@ ORDER BY
             query.species_group_ids.empty_to_none() as Option<Vec<SpeciesGroup>>,
             query.vessel_length_groups.empty_to_none() as Option<Vec<VesselLengthGroup>>,
             query.vessel_ids.empty_to_none() as Option<Vec<FiskeridirVesselId>>,
+            query.start_timestamp,
+            query.end_timestamp,
             query.ordering.map(|o| o as i32),
             query.sorting.map(|s| s as i32),
         )

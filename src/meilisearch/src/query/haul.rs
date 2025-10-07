@@ -15,6 +15,9 @@ impl From<HaulsQuery> for Query<HaulFilter, Option<HaulSort>, ()> {
             species_group_ids,
             vessel_length_groups,
             vessel_ids,
+            // TODO: support these or remove meilisearch as its not used
+            start_timestamp: _,
+            end_timestamp: _,
         } = value;
 
         let mut filters = BTreeSet::new();
