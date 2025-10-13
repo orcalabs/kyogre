@@ -6,16 +6,17 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [features]
-test = ["kyogre-core/test", "postgres/test", "processors/test"]
+test = []
+# test = ["kyogre-core/test", "postgres/test", "processors/test"]
 
 [dependencies]
-kyogre-core = { path = "../kyogre-core" }
-postgres = { path = "../postgres" }
+kyogre-core = { path = "../kyogre-core", features = ["test"] }
+postgres = { path = "../postgres", features = ["test"] }
 scraper = { path = "../scraper" }
 trip-benchmark = { path = "../trip-benchmark" }
 meilisearch = { path = "../meilisearch" }
 http-client = { path = "../http-client" }
-processors = { path = "../processors" }
+processors = { path = "../processors", features = ["test"] }
 
 stack-error = { workspace = true }
 snafu = { workspace = true }
