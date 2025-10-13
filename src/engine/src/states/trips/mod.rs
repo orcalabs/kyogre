@@ -199,8 +199,19 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
         });
     }
 
+    let senja = FiskeridirVesselId::test_new(2020113273);
+
+    let mut found_senja = false;
+
     for v in vessels {
+        if v.fiskeridir.id == senja {
+            found_senja = true;
+        }
         worker_tx.try_send(WorkerTask::New(v)).unwrap();
+    }
+
+    if !found_senja {
+        error!("senja not being processed in trips");
     }
 
     let mut trips_report = TripsReport::default();
@@ -229,6 +240,10 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                                     }
                             }
                             Ok((report, trips)) => {
+                                if vessel.fiskeridir.id == senja {
+                                    // Error so its easy to find in honeycomb
+                                    error!("report: {:?}, trips: {:?}", &report, &trips);
+                                }
                                 trips_report = trips_report + report;
 
                                 if let Some(trips) = trips &&
@@ -243,7 +258,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
 
                                 // Regardless if we had no trips to add we need to set the current
                                 // trip to add any new hauls or fishing facilites that might have
-                                // bee added.
+                                // been added.
                                 match vessel.preferred_trip_assembler {
                                     TripAssemblerId::Landings => (),
                                     TripAssemblerId::Ers => {
@@ -406,7 +421,7 @@ async fn run_trip_assembler(
     let conflict = timer.as_ref().and_then(|v| v.conflict.clone());
     let prior_trip_calculation_time = timer.as_ref().map(|t| t.timestamp);
 
-    let state = if let Some(timer) = timer {
+    let state = if let Some(timer) = timer.clone() {
         match (timer.conflict, timer.queued_reset) {
             (_, true) => AssemblerState::QueuedReset,
             (Some(c), false) => AssemblerState::Conflict(c),
@@ -448,12 +463,12 @@ async fn run_trip_assembler(
         }
     };
 
-    let new_trip_events = vessel_events
+    let new_trip_events: Vec<MinimalVesselEvent> = vessel_events
         .new_vessel_events
         .iter()
         .map(MinimalVesselEvent::from)
         .collect();
-    let prior_trip_events = vessel_events
+    let prior_trip_events: Vec<MinimalVesselEvent> = vessel_events
         .prior_trip_start_end_events
         .iter()
         .map(MinimalVesselEvent::from)
@@ -465,6 +480,28 @@ async fn run_trip_assembler(
             vessel_events.new_vessel_events,
         )
         .await?;
+
+    if vessel.fiskeridir.id == FiskeridirVesselId::test_new(2020113273) {
+        // Error so its easy to find in honeycomb
+        error!(
+            "
+            conflict: {:?}
+            prior_trip_calculation_time: {:?}
+            timer: {:?}
+            state: {:?}
+            new_trip_events_len: {:?}
+            prior_trip_events: {:?}
+            trips_is_some: {:?}
+      ",
+            conflict,
+            prior_trip_calculation_time,
+            timer,
+            state,
+            new_trip_events.len(),
+            prior_trip_events.len(),
+            trips.is_some()
+        );
+    }
 
     if let Some(trips) = trips {
         let conflict_strategy = match (&state, trips.conflict_strategy) {
