@@ -8,7 +8,7 @@ edition = "2024"
 [features]
 oasgen = ["dep:oasgen"]
 sqlx = ["dep:sqlx", "dep:geozero"]
-test = ["dep:rand"]
+test = ["dep:rand", "fiskeridir-rs/test"]
 
 [dependencies]
 fiskeridir-rs = { workspace = true }
