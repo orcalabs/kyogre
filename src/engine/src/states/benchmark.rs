@@ -59,7 +59,6 @@ async fn state_impl(shared_state: &SharedState) -> Result<(), Error> {
     Ok(())
 }
 
-#[instrument(skip_all)]
 async fn benchmark_trip(
     shared_state: &SharedState,
     trip: &BenchmarkTrip,
