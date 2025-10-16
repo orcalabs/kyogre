@@ -13,7 +13,7 @@ pub struct VesselEvent {
     pub vessel_event_type_id: VesselEventType,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct VesselEventDetailed {
     pub vessel_event_id: i64,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
@@ -80,7 +80,7 @@ impl TryFrom<VesselEventDetailed> for kyogre_core::VesselEventDetailed {
         Ok(kyogre_core::VesselEventDetailed {
             event_id: vessel_event_id as u64,
             vessel_id: fiskeridir_vessel_id,
-            timestamp: report_timestamp,
+            reported_timestamp: report_timestamp,
             event_type: vessel_event_type_id,
             event_data,
         })

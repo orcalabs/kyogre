@@ -1,3 +1,4 @@
+use crate::trip_assembler::landings::statemachine::LandingVesselEventId;
 use crate::trip_assembler::precision::TripPrecisionCalculator;
 use crate::{
     DeliveryPointPrecision, DistanceToShorePrecision, FirstMovedPoint, PrecisionConfig,
@@ -7,7 +8,8 @@ use async_trait::async_trait;
 use chrono::Duration;
 use kyogre_core::{
     CoreResult, PrecisionDirection, PrecisionOutcome, TripAssembler, TripAssemblerId,
-    TripAssemblerState, TripPrecisionOutboundPort, TripProcessingUnit, Vessel, VesselEventDetailed,
+    TripAssemblerState, TripPrecisionOutboundPort, TripProcessingUnit, TripsConflictStrategy,
+    Vessel, VesselEventDetailed,
 };
 
 use self::statemachine::{LandingEvent, LandingStatemachine};
@@ -101,16 +103,31 @@ async fn assemble_impl(
         return Ok(None);
     }
 
+    let mut conflict_strategy = None;
+
     let start_landing = if prior_trip_events.is_empty() {
+        let event = vessel_events.first().unwrap();
+        // This arm occurs in three cases:
+        // - First ever run of trip assembler (replacing all does nothing).
+        // - There exists a conflict prior to all other landings.
+        // - There exists a conflict within the first ever trip of the vessel.
+        // For the two latter cases we need to remove the artifical trip we created as the first
+        // trip and therefore need to replace all existing trips.
+        // If we have conflict that far back in the history we have to re-generate all trips
+        // anyway.
+        conflict_strategy = Some(TripsConflictStrategy::ReplaceAll);
         // As we do not have any reasonable estimate of the first trip of a vessel
         // we set it to start a day prior to the first landing.
         LandingEvent {
-            timestamp: vessel_events.first().unwrap().timestamp() - Duration::days(1),
+            timestamp: event.timestamp() - Duration::days(1),
+            vessel_event_id: LandingVesselEventId::ArtificalLandingPreceedingFirstLanding,
         }
     } else {
+        let event = prior_trip_events.last().unwrap();
         // Need to connect the prior trip to the new one
         LandingEvent {
-            timestamp: prior_trip_events.last().unwrap().timestamp(),
+            timestamp: event.timestamp(),
+            vessel_event_id: event.vessel_event_id,
         }
     };
 
@@ -127,7 +144,7 @@ async fn assemble_impl(
     } else {
         Ok(Some(TripAssemblerState {
             new_trips,
-            conflict_strategy: None,
+            conflict_strategy,
         }))
     }
 }

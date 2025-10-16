@@ -52,6 +52,9 @@ impl LandingStatemachine {
                 start_port_code: None,
                 end_port_code: None,
                 first_arrival: None,
+                start_vessel_event_id: self.current_landing.vessel_event_id.vessel_event_id(),
+                // SAFETY: Should always be set.
+                end_vessel_event_id: Some(event.vessel_event_id.vessel_event_id().unwrap()),
             });
             self.current_landing = event;
         }
@@ -66,13 +69,34 @@ impl LandingStatemachine {
 #[derive(Debug, Clone, Copy)]
 pub struct LandingEvent {
     pub timestamp: DateTime<Utc>,
+    pub vessel_event_id: LandingVesselEventId,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum LandingVesselEventId {
+    // For the first ever landing event we create an artifical one that occurs a single day prior
+    // which does not have a `vessel_event_id` to link to.
+    ArtificalLandingPreceedingFirstLanding,
+    RegularLanding { vessel_event_id: i64 },
+}
+
+impl LandingVesselEventId {
+    fn vessel_event_id(&self) -> Option<i64> {
+        match self {
+            LandingVesselEventId::ArtificalLandingPreceedingFirstLanding => None,
+            LandingVesselEventId::RegularLanding { vessel_event_id } => Some(*vessel_event_id),
+        }
+    }
 }
 
 impl LandingEvent {
     pub fn from_vessel_event_detailed(v: VesselEventDetailed) -> Option<LandingEvent> {
         match v.event_type {
             VesselEventType::Landing => Some(LandingEvent {
-                timestamp: v.timestamp,
+                timestamp: v.reported_timestamp,
+                vessel_event_id: LandingVesselEventId::RegularLanding {
+                    vessel_event_id: v.event_id as i64,
+                },
             }),
             VesselEventType::ErsDca => None,
             VesselEventType::ErsPor => None,

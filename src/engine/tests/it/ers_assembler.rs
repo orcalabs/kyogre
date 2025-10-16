@@ -187,6 +187,43 @@ async fn test_produces_no_trips_with_no_new_departures_or_arrivals() {
 }
 
 #[tokio::test]
+async fn test_handles_single_dep_conflict_prior_to_all_other_events() {
+    test(|_helper, builder| async move {
+        let departure = Utc.timestamp_opt(10, 0).unwrap();
+        let arrival = Utc.timestamp_opt(20, 0).unwrap();
+        let departure2 = Utc.timestamp_opt(8, 0).unwrap();
+
+        let state = builder
+            .vessels(1)
+            .dep(1)
+            .modify(|v| {
+                v.dep.set_departure_timestamp(departure);
+                v.dep.message_info.set_message_timestamp(departure);
+            })
+            .por(1)
+            .modify(|v| {
+                v.por.set_arrival_timestamp(arrival);
+                v.por.message_info.set_message_timestamp(arrival);
+            })
+            .new_cycle()
+            .dep(1)
+            .modify(|v| {
+                v.dep.set_departure_timestamp(departure2);
+                v.dep.message_info.set_message_timestamp(departure2);
+            })
+            .build()
+            .await;
+
+        let trip = &state.trips[0];
+        assert_eq!(state.trips.len(), 1);
+        assert_eq!(trip.trip_id.into_inner(), 2);
+        assert_eq!(trip.period.start(), departure2);
+        assert_eq!(trip.period.end(), arrival);
+    })
+    .await;
+}
+
+#[tokio::test]
 async fn test_does_not_recompute_prior_trip_with_new_departure_event() {
     test(|_helper, builder| async move {
         let state = builder

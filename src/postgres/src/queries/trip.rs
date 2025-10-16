@@ -3,16 +3,18 @@ use crate::{
     error::{Result, TripPositionMatchSnafu},
     models::{
         CurrentTrip, NewTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning,
-        Trip, TripAisVmsPosition, TripCalculationTimer, TripDetailed, TripPrunedAisVmsPosition,
+        Trip, TripAisVmsPosition, TripAndSucceedingEventsErs, TripAndSucceedingEventsLandings,
+        TripCalculationTimer, TripDetailed, TripPrunedAisVmsPosition,
     },
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisVmsPosition, Bound, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack, Ordering,
-    PrecisionOutcome, ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput, TripSet,
-    TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
+    AisVmsPosition, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack, Ordering,
+    PrecisionOutcome, ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput,
+    TripSearchTimestamp, TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery,
+    VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use std::collections::{HashMap, HashSet};
@@ -1760,50 +1762,276 @@ WHERE
         Ok(())
     }
 
-    pub(crate) async fn trip_prior_to_timestamp_impl(
+    pub(crate) async fn trip_prior_to_timestamp_landings(
         &self,
         vessel_id: FiskeridirVesselId,
-        time: &DateTime<Utc>,
-        bound: Bound,
-    ) -> Result<Option<Trip>> {
+        search_timestamp: TripSearchTimestamp,
+    ) -> Result<Option<TripAndSucceedingEventsLandings>> {
         let trip = sqlx::query_as!(
-            Trip,
+            TripAndSucceedingEventsLandings,
             r#"
-SELECT
-    trip_id AS "trip_id!: TripId",
-    period AS "period!: DateRange",
-    period_extended AS "period_extended: DateRange",
-    period_precision AS "period_precision: DateRange",
-    landing_coverage AS "landing_coverage!: DateRange",
-    distance,
-    trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    start_port_id,
-    end_port_id,
-    target_species_fiskeridir_id,
-    target_species_fao_id,
-    first_arrival
-FROM
-    trips
-WHERE
-    fiskeridir_vessel_id = $1
-    AND (
-        (
-            $2 = 1
-            AND UPPER(period) <= $3
-        )
-        OR (
-            $2 = 2
-            AND UPPER(period) < $3
-        )
+WITH
+    trip AS (
+        SELECT
+            trip_id,
+            start_vessel_event_id,
+            end_vessel_event_id,
+            fiskeridir_vessel_id,
+            UPPER(period) AS trip_end
+        FROM
+            trips
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND (
+                (
+                    $2 = 1
+                    AND UPPER(period) <= $3
+                )
+                OR (
+                    $2 = 2
+                    AND UPPER(period) < $3
+                )
+            )
+        ORDER BY
+            period DESC
+        LIMIT
+            1
+    ),
+    landings_after_trip AS (
+        SELECT
+            v.vessel_event_id,
+            v.fiskeridir_vessel_id,
+            v.report_timestamp,
+            v.occurence_timestamp AS estimated_timestamp,
+            v.vessel_event_type_id
+        FROM
+            trip t
+            INNER JOIN vessel_events v ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND v.report_timestamp > t.trip_end
+        WHERE
+            v.fiskeridir_vessel_id = $1
+            AND v.vessel_event_type_id = $4
     )
-ORDER BY
-    period DESC
-LIMIT
-    1
+SELECT
+    MAX(t.fiskeridir_vessel_id) AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    MAX(start_landing.vessel_event_id) AS "start_vessel_event_id!",
+    MAX(start_landing.report_timestamp) AS "start_report_timestamp!",
+    MAX(end_landing.vessel_event_id) AS "end_vessel_event_id!",
+    MAX(end_landing.report_timestamp) AS "end_report_timestamp!",
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'vessel_event_id',
+                l.vessel_event_id,
+                'fiskeridir_vessel_id',
+                l.fiskeridir_vessel_id,
+                'report_timestamp',
+                l.report_timestamp,
+                'estimated_timestamp',
+                l.estimated_timestamp,
+                'vessel_event_type_id',
+                l.vessel_event_type_id,
+                'departure_port_id',
+                NULL,
+                'arrival_port_id',
+                NULL,
+                'port_id',
+                NULL
+            )
+        ) FILTER (
+            WHERE
+                l.vessel_event_id IS NOT NULL
+        ),
+        '[]'
+    )::TEXT AS "landings_after_trip!"
+FROM
+    trip t
+    -- We can assume that start/end vessel event id is set here as the only case in which they are null is when a landing has been deleted from the csv files at fiskeridir.
+    -- This will result in a conflict in the trip assembler which in turn will re-construct the affected trips.
+    -- During re-construction we will always be retrieving the trip *PRIOR* to where the conflict occured,
+    -- hence, the trip that had its landings (start/end event) deleted will not be consulted in this query during re-construction.
+    INNER JOIN vessel_events start_landing ON start_landing.vessel_event_id = t.start_vessel_event_id
+    INNER JOIN vessel_events end_landing ON end_landing.vessel_event_id = t.end_vessel_event_id
+    LEFT JOIN landings_after_trip l ON TRUE
+GROUP BY
+    t.trip_id
+           "#,
+            vessel_id.into_inner(),
+            search_timestamp.bound() as i32,
+            search_timestamp.timestamp(),
+            VesselEventType::Landing as i32
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(trip)
+    }
+    pub(crate) async fn trip_prior_to_timestamp_ers(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        search_timestamp: TripSearchTimestamp,
+    ) -> Result<Option<TripAndSucceedingEventsErs>> {
+        let trip = sqlx::query_as!(
+            TripAndSucceedingEventsErs,
+            r#"
+WITH
+    trip AS (
+        SELECT
+            trip_id,
+            start_vessel_event_id,
+            end_vessel_event_id,
+            fiskeridir_vessel_id
+        FROM
+            trips
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND (
+                (
+                    $2 = 1
+                    AND UPPER(period) <= $3
+                )
+                OR (
+                    $2 = 2
+                    AND UPPER(period) < $3
+                )
+            )
+        ORDER BY
+            period DESC
+        LIMIT
+            1
+    ),
+    trip_arrival AS (
+        SELECT
+            a.arrival_timestamp AS occurence_timestamp,
+            a.relevant_year,
+            a.message_number,
+            a.message_timestamp AS report_timestamp,
+            a.port_id,
+            t.trip_id,
+            t.fiskeridir_vessel_id
+        FROM
+            trip t
+            INNER JOIN ers_arrivals a ON a.vessel_event_id = t.end_vessel_event_id
+    ),
+    all_events_after_latest_arrival AS (
+        SELECT
+            vessel_event_id,
+            fiskeridir_vessel_id,
+            report_timestamp,
+            vessel_event_type_id,
+            port_id,
+            estimated_timestamp
+        FROM
+            (
+                SELECT
+                    v.vessel_event_id,
+                    v.fiskeridir_vessel_id,
+                    v.report_timestamp,
+                    v.vessel_event_type_id,
+                    d.port_id,
+                    d.relevant_year,
+                    d.message_number,
+                    d.departure_timestamp AS estimated_timestamp
+                FROM
+                    vessel_events v
+                    INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
+                    INNER JOIN trip_arrival t ON t.fiskeridir_vessel_id = d.fiskeridir_vessel_id
+                    AND (
+                        d.departure_timestamp > t.occurence_timestamp
+                        OR (
+                            d.relevant_year > t.relevant_year
+                            OR (
+                                d.relevant_year = t.relevant_year
+                                AND d.message_number > t.message_number
+                            )
+                        )
+                    )
+                WHERE
+                    v.fiskeridir_vessel_id = $1::BIGINT
+                    AND v.occurence_timestamp >= $3::TIMESTAMPTZ
+                UNION
+                SELECT
+                    v.vessel_event_id,
+                    v.fiskeridir_vessel_id,
+                    v.report_timestamp,
+                    v.vessel_event_type_id,
+                    a.port_id,
+                    a.relevant_year,
+                    a.message_number,
+                    a.arrival_timestamp AS estimated_timestamp
+                FROM
+                    vessel_events v
+                    INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
+                    INNER JOIN trip_arrival t ON t.fiskeridir_vessel_id = a.fiskeridir_vessel_id
+                    AND (
+                        a.arrival_timestamp > t.occurence_timestamp
+                        OR (
+                            a.relevant_year > t.relevant_year
+                            OR (
+                                a.relevant_year = t.relevant_year
+                                AND a.message_number > t.message_number
+                            )
+                        )
+                    )
+                WHERE
+                    v.fiskeridir_vessel_id = $1::BIGINT
+                    AND v.occurence_timestamp >= $3::TIMESTAMPTZ
+            ) q
+        ORDER BY
+            estimated_timestamp,
+            relevant_year,
+            message_number
+    )
+SELECT
+    MAX(t.fiskeridir_vessel_id) AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    MAX(t.end_vessel_event_id) AS "arrival_vessel_event_id!",
+    MAX(a.port_id) AS "arrival_port_id",
+    MAX(a.occurence_timestamp) AS "arrival_estimated_timestamp!",
+    MAX(a.report_timestamp) AS "arrival_report_timestamp!",
+    MAX(t.start_vessel_event_id) AS "departure_vessel_event_id!",
+    MAX(d.port_id) AS "departure_port_id",
+    MAX(d.departure_timestamp) AS "departure_estimated_timestamp!",
+    MAX(d.message_timestamp) AS "departure_report_timestamp!",
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'vessel_event_id',
+                e.vessel_event_id,
+                'fiskeridir_vessel_id',
+                e.fiskeridir_vessel_id,
+                'report_timestamp',
+                e.report_timestamp,
+                'estimated_timestamp',
+                e.estimated_timestamp,
+                'vessel_event_type_id',
+                e.vessel_event_type_id,
+                'departure_port_id',
+                NULL,
+                'arrival_port_id',
+                NULL,
+                'port_id',
+                e.port_id
+            )
+        ) FILTER (
+            WHERE
+                e.vessel_event_id IS NOT NULL
+        ),
+        '[]'
+    )::TEXT AS "por_and_dep_events_after_trip!"
+FROM
+    trip t
+    INNER JOIN ers_departures d ON d.vessel_event_id = t.start_vessel_event_id
+    INNER JOIN trip_arrival a ON a.trip_id = t.trip_id
+    -- The result set produced by joining `trip`, `trip_arrival`, and `ers_departures`
+    -- will always contain a single row or be empty.
+    -- start/end vessel_event_id is unique on trips table.
+    LEFT JOIN all_events_after_latest_arrival e ON TRUE
+GROUP BY
+    t.trip_id
             "#,
             vessel_id.into_inner(),
-            bound as i32,
-            time,
+            search_timestamp.bound() as i32,
+            search_timestamp.timestamp(),
         )
         .fetch_optional(&self.pool)
         .await?;

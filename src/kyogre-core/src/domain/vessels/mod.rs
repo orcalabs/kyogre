@@ -146,7 +146,7 @@ pub enum VesselEventData {
 pub struct VesselEventDetailed {
     pub event_id: u64,
     pub vessel_id: FiskeridirVesselId,
-    pub timestamp: DateTime<Utc>,
+    pub reported_timestamp: DateTime<Utc>,
     pub event_type: VesselEventType,
     pub event_data: VesselEventData,
 }
@@ -157,6 +157,8 @@ pub struct DepartureWeight {
     pub weight: f64,
 }
 
+// A change to this enum requires a thorough check through our triggers and sql queries.
+// TODO: fail compilation in our sql queries and triggers if we change this somehow?
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 #[repr(i32)]
