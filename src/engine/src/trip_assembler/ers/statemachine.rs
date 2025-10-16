@@ -132,6 +132,8 @@ impl ErsStatemachine {
             landing_coverage: new_trip_landing_coverage,
             start_port_code: self.current_departure.port_id.clone(),
             end_port_code: arrival.port_id,
+            start_vessel_event_id: Some(self.current_departure.vessel_event_id),
+            end_vessel_event_id: Some(arrival.vessel_event_id),
         });
 
         Ok(())
@@ -144,6 +146,7 @@ impl ErsStatemachine {
                     estimated_timestamp: event.estimated_timestamp,
                     port_id: event.port_id,
                     message_timestamp: event.message_timestamp,
+                    vessel_event_id: event.vessel_event_id,
                 });
 
                 if self.first_arrival.is_none() {
@@ -179,6 +182,7 @@ pub struct Departure {
     estimated_timestamp: DateTime<Utc>,
     message_timestamp: DateTime<Utc>,
     port_id: Option<String>,
+    vessel_event_id: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -187,6 +191,7 @@ struct Arrival {
     estimated_timestamp: DateTime<Utc>,
     message_timestamp: DateTime<Utc>,
     port_id: Option<String>,
+    vessel_event_id: i64,
 }
 
 impl From<ErsEvent> for Arrival {
@@ -195,6 +200,7 @@ impl From<ErsEvent> for Arrival {
             estimated_timestamp: value.estimated_timestamp,
             port_id: value.port_id,
             message_timestamp: value.message_timestamp,
+            vessel_event_id: value.vessel_event_id,
         }
     }
 }
@@ -205,6 +211,7 @@ impl From<ErsEvent> for Departure {
             estimated_timestamp: value.estimated_timestamp,
             port_id: value.port_id,
             message_timestamp: value.message_timestamp,
+            vessel_event_id: value.vessel_event_id,
         }
     }
 }
@@ -217,6 +224,7 @@ impl Departure {
                 estimated_timestamp: v.estimated_timestamp,
                 port_id: v.port_id,
                 message_timestamp: v.message_timestamp,
+                vessel_event_id: v.vessel_event_id,
             }),
         }
     }

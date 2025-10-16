@@ -11,7 +11,7 @@ use strum::EnumDiscriminants;
 pub enum AssemblerState {
     Conflict(TripAssemblerConflict),
     NoPriorState,
-    Normal(DateTime<Utc>),
+    TripCalculationTimer(DateTime<Utc>),
     QueuedReset,
 }
 

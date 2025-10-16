@@ -84,6 +84,7 @@ pub struct ErsEvent {
     estimated_timestamp: DateTime<Utc>,
     event_type: ErsEventType,
     port_id: Option<String>,
+    vessel_event_id: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,10 +112,11 @@ impl ErsEvent {
         .map(|(event_type, port_id, estimated_timestamp)| ErsEvent {
             event_id: v.event_id,
             vessel_id: v.vessel_id,
-            message_timestamp: v.timestamp,
+            message_timestamp: v.reported_timestamp,
             event_type,
             port_id,
             estimated_timestamp,
+            vessel_event_id: v.event_id as i64,
         })
     }
 }

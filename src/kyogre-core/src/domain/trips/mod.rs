@@ -71,7 +71,7 @@ impl TripAssemblerLogEntry {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MinimalVesselEvent {
     pub vessel_event_id: u64,
-    pub timestamp: DateTime<Utc>,
+    pub reported_timestamp: DateTime<Utc>,
     pub event_type: VesselEventType,
 }
 
@@ -153,6 +153,12 @@ pub struct NewTrip {
     pub landing_coverage: DateRange,
     pub start_port_code: Option<String>,
     pub end_port_code: Option<String>,
+
+    // Only set during trip creation by trip assemblers.
+    // Currently not defining a new separate type for trip updates to avoid alot
+    // of duplication.
+    pub start_vessel_event_id: Option<i64>,
+    pub end_vessel_event_id: Option<i64>,
 }
 
 #[derive(Debug, Clone)]
@@ -169,6 +175,34 @@ pub struct TripUpdate {
     pub distance: Option<TripDistanceOutput>,
     pub positions: Vec<AisVmsPosition>,
     pub position_layers_output: Option<TripPositionLayerOutput>,
+}
+
+#[derive(Debug)]
+pub struct TripAndSucceedingEvents {
+    pub start_and_end_event: [VesselEventDetailed; 2],
+    pub succeeding_events: Vec<VesselEventDetailed>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TripSearchTimestamp {
+    Conflict(DateTime<Utc>),
+    TripCalculationTimer(DateTime<Utc>),
+}
+
+impl TripSearchTimestamp {
+    pub fn timestamp(&self) -> DateTime<Utc> {
+        match self {
+            TripSearchTimestamp::Conflict(ts) | TripSearchTimestamp::TripCalculationTimer(ts) => {
+                *ts
+            }
+        }
+    }
+    pub fn bound(&self) -> Bound {
+        match self {
+            TripSearchTimestamp::Conflict(_) => Bound::Exclusive,
+            TripSearchTimestamp::TripCalculationTimer(_) => Bound::Inclusive,
+        }
+    }
 }
 
 impl Trip {
@@ -319,7 +353,7 @@ impl From<&VesselEventDetailed> for MinimalVesselEvent {
     fn from(value: &VesselEventDetailed) -> Self {
         MinimalVesselEvent {
             vessel_event_id: value.event_id,
-            timestamp: value.timestamp,
+            reported_timestamp: value.reported_timestamp,
             event_type: value.event_type,
         }
     }

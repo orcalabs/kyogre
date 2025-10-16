@@ -140,30 +140,17 @@ pub trait TripAssemblerOutboundPort: Send + Sync {
         vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
     ) -> CoreResult<Option<TripCalculationTimer>>;
-    async fn trip_prior_to_timestamp(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        timestamp: &DateTime<Utc>,
-        bound: Bound,
-    ) -> CoreResult<Option<Trip>>;
     async fn all_vessel_events(
         &self,
         vessel_id: FiskeridirVesselId,
         trip_assembler: TripAssemblerId,
     ) -> CoreResult<Vec<VesselEventDetailed>>;
-    async fn all_events_after_timestamp(
+    async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,
-        timestamp: DateTime<Utc>,
+        search_timestamp: TripSearchTimestamp,
         trip_assembler: TripAssemblerId,
-    ) -> CoreResult<Vec<VesselEventDetailed>>;
-    async fn trip_start_and_end_events(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
-        trip_assembler: TripAssemblerId,
-    ) -> CoreResult<Vec<VesselEventDetailed>>;
+    ) -> CoreResult<Option<TripAndSucceedingEvents>>;
     async fn ports(&self) -> CoreResult<Vec<Port>>;
     async fn dock_points(&self) -> CoreResult<Vec<PortDockPoint>>;
 }

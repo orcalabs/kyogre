@@ -1,6 +1,7 @@
 use super::{TripTra, VesselEvent};
 use crate::{
     error::{Error, Result},
+    models::VesselEventDetailed,
     queries::{opt_type_to_i32, type_to_i32, type_to_i64},
 };
 use chrono::{DateTime, Utc};
@@ -66,6 +67,8 @@ pub struct NewTripAssemblerLogEntry<'a> {
     returning = "trip_id:TripId, period, landing_coverage, fiskeridir_vessel_id"
 )]
 pub struct NewTrip {
+    pub start_vessel_event_id: Option<i64>,
+    pub end_vessel_event_id: i64,
     pub first_arrival: Option<DateTime<Utc>>,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub trip_assembler_id: TripAssemblerId,
@@ -136,6 +139,128 @@ pub struct TripPrunedAisVmsPosition {
     pub trip_position_layer_id: TripPositionLayerId,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TripAndSucceedingEventsLandings {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+
+    pub start_vessel_event_id: i64,
+    pub start_report_timestamp: DateTime<Utc>,
+
+    pub end_vessel_event_id: i64,
+    pub end_report_timestamp: DateTime<Utc>,
+
+    pub landings_after_trip: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TripAndSucceedingEventsErs {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+
+    pub arrival_vessel_event_id: i64,
+    pub arrival_port_id: Option<String>,
+    pub arrival_report_timestamp: DateTime<Utc>,
+    pub arrival_estimated_timestamp: DateTime<Utc>,
+
+    pub departure_vessel_event_id: i64,
+    pub departure_port_id: Option<String>,
+    pub departure_report_timestamp: DateTime<Utc>,
+    pub departure_estimated_timestamp: DateTime<Utc>,
+
+    pub por_and_dep_events_after_trip: String,
+}
+
+impl TryFrom<TripAndSucceedingEventsLandings> for kyogre_core::TripAndSucceedingEvents {
+    type Error = Error;
+
+    fn try_from(value: TripAndSucceedingEventsLandings) -> std::result::Result<Self, Self::Error> {
+        let TripAndSucceedingEventsLandings {
+            fiskeridir_vessel_id,
+            start_vessel_event_id,
+            start_report_timestamp,
+            end_vessel_event_id,
+            end_report_timestamp,
+            landings_after_trip,
+        } = value;
+
+        let start_event = kyogre_core::VesselEventDetailed {
+            event_id: start_vessel_event_id as u64,
+            vessel_id: fiskeridir_vessel_id,
+            reported_timestamp: start_report_timestamp,
+            event_type: VesselEventType::Landing,
+            event_data: kyogre_core::VesselEventData::Landing,
+        };
+
+        let end_event = kyogre_core::VesselEventDetailed {
+            event_id: end_vessel_event_id as u64,
+            vessel_id: fiskeridir_vessel_id,
+            reported_timestamp: end_report_timestamp,
+            event_type: VesselEventType::Landing,
+            event_data: kyogre_core::VesselEventData::Landing,
+        };
+
+        Ok(Self {
+            start_and_end_event: [start_event, end_event],
+            succeeding_events: serde_json::from_str::<Vec<VesselEventDetailed>>(
+                &landings_after_trip,
+            )?
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<kyogre_core::VesselEventDetailed>>>()?,
+        })
+    }
+}
+
+impl TryFrom<TripAndSucceedingEventsErs> for kyogre_core::TripAndSucceedingEvents {
+    type Error = Error;
+
+    fn try_from(value: TripAndSucceedingEventsErs) -> std::result::Result<Self, Self::Error> {
+        let TripAndSucceedingEventsErs {
+            fiskeridir_vessel_id,
+            arrival_vessel_event_id,
+            arrival_port_id,
+            arrival_report_timestamp,
+            arrival_estimated_timestamp,
+            departure_vessel_event_id,
+            departure_port_id,
+            departure_report_timestamp,
+            departure_estimated_timestamp,
+            por_and_dep_events_after_trip,
+        } = value;
+
+        let start_event = kyogre_core::VesselEventDetailed {
+            event_id: departure_vessel_event_id as u64,
+            vessel_id: fiskeridir_vessel_id,
+            reported_timestamp: departure_report_timestamp,
+            event_type: VesselEventType::ErsDep,
+            event_data: kyogre_core::VesselEventData::ErsDep {
+                port_id: departure_port_id,
+                estimated_timestamp: departure_estimated_timestamp,
+            },
+        };
+
+        let end_event = kyogre_core::VesselEventDetailed {
+            event_id: arrival_vessel_event_id as u64,
+            vessel_id: fiskeridir_vessel_id,
+            reported_timestamp: arrival_report_timestamp,
+            event_type: VesselEventType::ErsPor,
+            event_data: kyogre_core::VesselEventData::ErsPor {
+                port_id: arrival_port_id,
+                estimated_timestamp: arrival_estimated_timestamp,
+            },
+        };
+
+        Ok(Self {
+            start_and_end_event: [start_event, end_event],
+            succeeding_events: serde_json::from_str::<Vec<VesselEventDetailed>>(
+                &por_and_dep_events_after_trip,
+            )?
+            .into_iter()
+            .map(TryInto::try_into)
+            .collect::<Result<Vec<kyogre_core::VesselEventDetailed>>>()?,
+        })
+    }
+}
+
 impl From<&TripProcessingUnit> for NewTrip {
     fn from(value: &TripProcessingUnit) -> Self {
         let TripProcessingUnit {
@@ -148,6 +273,8 @@ impl From<&TripProcessingUnit> for NewTrip {
                     first_arrival,
                     start_port_code: _,
                     end_port_code: _,
+                    start_vessel_event_id,
+                    end_vessel_event_id,
                 },
             trip_id: _,
             trip_assembler_id,
@@ -195,6 +322,11 @@ impl From<&TripProcessingUnit> for NewTrip {
         };
 
         NewTrip {
+            // `start_vessel_event_id` is `None` only for the first ever landing event which
+            // contains an artifical landing event, for all other cases it should be `Some`.
+            // `end_vessel_event_id` should always be `Some`.
+            start_vessel_event_id: *start_vessel_event_id,
+            end_vessel_event_id: end_vessel_event_id.unwrap(),
             period: PgRange::from(period),
             period_extended: PgRange::from(period_extended),
             period_precision,

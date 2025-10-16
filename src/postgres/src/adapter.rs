@@ -1,5 +1,7 @@
-use std::{fmt::Debug, path::PathBuf, result::Result as StdResult};
-
+use crate::{
+    error::{Error, Result},
+    queries::ais::AisPositionsArg,
+};
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
@@ -12,13 +14,9 @@ use sqlx::{
     migrate::Migrator,
     postgres::{PgConnectOptions, PgPoolOptions, PgSslMode},
 };
+use std::{fmt::Debug, path::PathBuf, result::Result as StdResult};
 use tokio::time::timeout;
 use tracing::{error, info, instrument, warn};
-
-use crate::{
-    error::{Error, Result},
-    queries::ais::AisPositionsArg,
-};
 
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
@@ -1125,13 +1123,22 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
     async fn trip_prior_to_timestamp(
         &self,
         vessel_id: FiskeridirVesselId,
-        timestamp: &DateTime<Utc>,
-        bound: Bound,
-    ) -> CoreResult<Option<Trip>> {
-        Ok(self
-            .trip_prior_to_timestamp_impl(vessel_id, timestamp, bound)
-            .await?
-            .map(From::from))
+        search_timestamp: TripSearchTimestamp,
+        trip_assembler: TripAssemblerId,
+    ) -> CoreResult<Option<TripAndSucceedingEvents>> {
+        let trip = match trip_assembler {
+            TripAssemblerId::Landings => self
+                .trip_prior_to_timestamp_landings(vessel_id, search_timestamp)
+                .await?
+                .map(TryFrom::try_from)
+                .transpose()?,
+            TripAssemblerId::Ers => self
+                .trip_prior_to_timestamp_ers(vessel_id, search_timestamp)
+                .await?
+                .map(TryFrom::try_from)
+                .transpose()?,
+        };
+        Ok(trip)
     }
     async fn all_vessel_events(
         &self,
@@ -1146,45 +1153,6 @@ impl TripAssemblerOutboundPort for PostgresAdapter {
             }
             TripAssemblerId::Ers => {
                 self.all_ers_por_and_dep_events(vessel_id)
-                    .try_convert_collect()
-                    .await
-            }
-        }
-    }
-    async fn all_events_after_timestamp(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        timestamp: DateTime<Utc>,
-        trip_assembler: TripAssemblerId,
-    ) -> CoreResult<Vec<VesselEventDetailed>> {
-        match trip_assembler {
-            TripAssemblerId::Landings => {
-                self.all_landing_events_after_trip(vessel_id, timestamp)
-                    .try_convert_collect()
-                    .await
-            }
-            TripAssemblerId::Ers => {
-                self.all_ers_por_and_dep_events_after_timestamp(vessel_id, timestamp)
-                    .try_convert_collect()
-                    .await
-            }
-        }
-    }
-    async fn trip_start_and_end_events(
-        &self,
-        vessel_id: FiskeridirVesselId,
-        start: DateTime<Utc>,
-        end: DateTime<Utc>,
-        trip_assembler: TripAssemblerId,
-    ) -> CoreResult<Vec<VesselEventDetailed>> {
-        match trip_assembler {
-            TripAssemblerId::Landings => {
-                self.landing_trip_start_and_end_events_impl(vessel_id, start, end)
-                    .try_convert_collect()
-                    .await
-            }
-            TripAssemblerId::Ers => {
-                self.ers_trip_start_and_end_events_impl(vessel_id, start, end)
                     .try_convert_collect()
                     .await
             }
