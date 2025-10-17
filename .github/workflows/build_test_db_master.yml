@@ -44,13 +44,13 @@ jobs:
         with:
           tool: sqlx-cli
 
-      - name: install postgres 16
+      - name: install postgres 17
         if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         run: |
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
           sudo apt update
-          sudo apt install postgresql-client-16
+          sudo apt install postgresql-client-17
 
       - name: Setup rust
         if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
