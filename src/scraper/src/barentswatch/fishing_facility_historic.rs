@@ -1,16 +1,15 @@
-use std::sync::Arc;
-
+use super::{BarentswatchSource, FishingFacilityToolType};
+use crate::{ApiClientConfig, DataSource, Processor, Result, ScraperId};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
+use fiskeridir_rs::deserialize_optional_call_sign;
 use kyogre_core::{BearerToken, FishingFacilityApiSource, GeometryWkt, Mmsi};
 use serde::Deserialize;
-use serde_with::{DisplayFromStr, NoneAsEmptyString, serde_as};
+use serde_with::{DisplayFromStr, serde_as};
+use std::sync::Arc;
 use tracing::info;
 use uuid::Uuid;
-
-use super::{BarentswatchSource, FishingFacilityToolType};
-use crate::{ApiClientConfig, DataSource, Processor, Result, ScraperId};
 
 pub struct FishingFacilityHistoricScraper {
     config: Option<ApiClientConfig>,
@@ -75,7 +74,7 @@ struct FishingFacilityHistoric {
     tool_id: Uuid,
     vessel_name: Option<String>,
     // International radio call sign
-    #[serde_as(as = "NoneAsEmptyString")]
+    #[serde(deserialize_with = "deserialize_optional_call_sign")]
     ircs: Option<CallSign>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     mmsi: Option<Mmsi>,
