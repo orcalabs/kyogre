@@ -1,4 +1,7 @@
-use crate::error::{ParseStringError, parse_string_error::EmptySnafu};
+use crate::{
+    CallSign,
+    error::{ParseStringError, parse_string_error::EmptySnafu},
+};
 use jurisdiction::Jurisdiction;
 use serde::{
     Deserialize, Serialize,
@@ -16,6 +19,15 @@ pub struct NonEmptyString(String);
 impl NonEmptyString {
     pub fn new_unchecked(value: String) -> Self {
         Self(value)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct OptPrunedString(Option<PrunedString>);
+
+impl From<OptPrunedString> for Option<CallSign> {
+    fn from(value: OptPrunedString) -> Self {
+        value.0.map(CallSign::from)
     }
 }
 
@@ -136,6 +148,52 @@ impl<'de> Deserialize<'de> for PrunedString {
         D: serde::Deserializer<'de>,
     {
         deserializer.deserialize_str(PrunedStringVisitor)
+    }
+}
+
+impl<'de> Deserialize<'de> for OptPrunedString {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_option(OptPrunedStringVisitor)
+    }
+}
+
+pub(crate) struct OptPrunedStringVisitor;
+impl<'a> Visitor<'a> for OptPrunedStringVisitor {
+    type Value = OptPrunedString;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("a non-empty string containing no '-', '_', or ' '")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(OptPrunedString(PrunedString::from_str(value).ok()))
+    }
+
+    fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+    where
+        D: de::Deserializer<'a>,
+    {
+        deserializer.deserialize_str(OptPrunedStringVisitor)
+    }
+
+    fn visit_unit<E>(self) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(OptPrunedString(None))
+    }
+
+    fn visit_none<E>(self) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(OptPrunedString(None))
     }
 }
 

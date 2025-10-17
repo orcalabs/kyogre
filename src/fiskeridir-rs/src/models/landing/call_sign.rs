@@ -1,11 +1,12 @@
 use std::{fmt::Display, ops::Deref, str::FromStr};
 
 use crate::{
+    OptPrunedString,
     error::ParseStringError,
     sqlx_str_impl,
     string_new_types::{PrunedString, PrunedStringVisitor},
 };
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
@@ -24,6 +25,12 @@ impl CallSign {
     }
     pub fn into_inner(self) -> String {
         self.0.into_inner()
+    }
+}
+
+impl From<PrunedString> for CallSign {
+    fn from(value: PrunedString) -> Self {
+        Self(value)
     }
 }
 
@@ -86,6 +93,15 @@ impl<'de> Deserialize<'de> for CallSign {
             .deserialize_str(PrunedStringVisitor)
             .map(CallSign)
     }
+}
+
+// Instead of returning an error if the pruned `CallSign` is empty we return `None`.
+// This occurs when the input string contains only one of the to-be-pruned characters ('-', '_', or
+// ' ').
+pub fn deserialize_optional_call_sign<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<CallSign>, D::Error> {
+    Ok(OptPrunedString::deserialize(deserializer)?.into())
 }
 
 sqlx_str_impl!(CallSign);
