@@ -161,7 +161,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
     let num_vessels = vessels.len();
     let num_workers = min(num_vessels, shared_state.num_workers as usize);
 
-    let (master_tx, mut master_rx) = channel(10);
+    let (master_tx, mut master_rx) = channel(5);
     let (worker_tx, worker_rx) = bounded(num_vessels);
 
     let mut workers = JoinSet::new();
