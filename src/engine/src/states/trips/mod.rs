@@ -225,28 +225,26 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                             Ok((report, trips)) => {
                                 trips_report = trips_report + report;
 
-                                if let Some(trips) = trips &&
-                                    let Err(e) =
-                                        shared_state.trip_pipeline_inbound.add_trip_set(trips).await
-                                    {
+                                if let Some(trips) = trips {
+                                    if let Err(e) = shared_state.trip_pipeline_inbound.add_trip_set(trips).await {
                                         error!(
                                             "failed to store trips for vessel: {}, err: {e:?}",
                                             vessel.fiskeridir.id,
                                         );
-                                }
-
-                                // Regardless if we had no trips to add we need to set the current
-                                // trip to add any new hauls or fishing facilites that might have
-                                // been added.
-                                match vessel.preferred_trip_assembler {
-                                    TripAssemblerId::Landings => (),
-                                    TripAssemblerId::Ers => {
-                                        if let Err(e) = shared_state.trip_pipeline_inbound.set_current_trip(vessel.fiskeridir.id).await {
-                                            error!(
-                                                "failed to set current trip for vessel: {}, err: {e:?}",
-                                                vessel.fiskeridir.id,
-                                            );
-
+                                    }
+                                } else {
+                                    // Regardless if we had no trips to add we need to set the current
+                                    // trip to add any new hauls or fishing facilites that might have
+                                    // been added.
+                                    match vessel.preferred_trip_assembler {
+                                        TripAssemblerId::Landings => (),
+                                        TripAssemblerId::Ers => {
+                                            if let Err(e) = shared_state.trip_pipeline_inbound.set_current_trip(vessel.fiskeridir.id).await {
+                                                error!(
+                                                    "failed to set current trip for vessel: {}, err: {e:?}",
+                                                    vessel.fiskeridir.id,
+                                                );
+                                            }
                                         }
                                     }
                                 }

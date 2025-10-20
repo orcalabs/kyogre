@@ -1365,7 +1365,7 @@ impl TripPipelineInbound for PostgresAdapter {
     }
 
     async fn set_current_trip(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()> {
-        self.set_current_trip_impl(vessel_id).await?;
+        self.set_current_trip_impl(vessel_id, &self.pool).await?;
         Ok(())
     }
     async fn nuke_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()> {
