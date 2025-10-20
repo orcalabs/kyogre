@@ -32,7 +32,11 @@ pub struct TripPositionsOutput {
 }
 
 impl PostgresAdapter {
-    pub(crate) async fn set_current_trip_impl(&self, vessel_id: FiskeridirVesselId) -> Result<()> {
+    pub(crate) async fn set_current_trip_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        executor: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
+    ) -> Result<()> {
         sqlx::query!(
             r#"
 INSERT INTO
@@ -196,7 +200,7 @@ SET
             vessel_id.into_inner(),
             TripAssemblerId::Ers as i32,
         )
-        .execute(&self.pool)
+        .execute(executor)
         .await?;
 
         Ok(())
@@ -1605,6 +1609,13 @@ WHERE
 
         self.reset_trips_refresh_boundary(vessel_id, &mut tx)
             .await?;
+
+        match trip_assembler_id {
+            TripAssemblerId::Landings => (),
+            TripAssemblerId::Ers => {
+                self.set_current_trip_impl(vessel_id, &mut *tx).await?;
+            }
+        };
 
         tx.commit().await?;
 
