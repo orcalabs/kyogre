@@ -32,6 +32,9 @@ impl LandingStatemachine {
 
                     self.new_trips[idx].period = period.clone();
                     self.new_trips[idx].landing_coverage = period;
+                    // SAFETY: Should always be set.
+                    self.new_trips[idx].end_vessel_event_id =
+                        Some(event.vessel_event_id.vessel_event_id().unwrap());
                 }
 
                 self.current_landing = event;
