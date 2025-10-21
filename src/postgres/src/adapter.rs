@@ -1365,7 +1365,10 @@ impl TripPipelineInbound for PostgresAdapter {
     }
 
     async fn set_current_trip(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()> {
-        self.set_current_trip_impl(vessel_id, &self.pool).await?;
+        let mut tx = self.pool.begin().await.map_err(Error::from)?;
+        self.set_current_trip_impl(vessel_id, &mut tx).await?;
+        tx.commit().await.map_err(Error::from)?;
+
         Ok(())
     }
     async fn nuke_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()> {
