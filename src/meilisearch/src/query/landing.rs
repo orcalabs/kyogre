@@ -18,6 +18,9 @@ impl From<LandingsQuery> for Query<LandingFilter, Option<LandingSort>, Paginatio
             vessel_length_groups,
             vessel_ids,
             pagination,
+            // TODO: support this
+            start_timestamp: _,
+            end_timestamp: _,
         } = value;
 
         let mut filters = BTreeSet::new();
