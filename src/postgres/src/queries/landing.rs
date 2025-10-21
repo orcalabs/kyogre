@@ -109,34 +109,42 @@ WHERE
         $6::BIGINT[] IS NULL
         OR l.fiskeridir_vessel_id = ANY ($6)
     )
+    AND (
+        $7::TIMESTAMPTZ IS NULL
+        OR l.landing_timestamp >= $7
+    )
+    AND (
+        $8::TIMESTAMPTZ IS NULL
+        OR l.landing_timestamp <= $8
+    )
 GROUP BY
     l.landing_id
 HAVING
     (
-        $7::INT[] IS NULL
-        OR ARRAY_AGG(le.species_group_id) && $7
+        $9::INT[] IS NULL
+        OR ARRAY_AGG(le.species_group_id) && $9
     )
 ORDER BY
     CASE
-        WHEN $8 = 1
-        AND $9 = 1 THEN l.landing_timestamp
+        WHEN $10 = 1
+        AND $11 = 1 THEN l.landing_timestamp
     END ASC,
     CASE
-        WHEN $8 = 1
-        AND $9 = 2 THEN SUM(le.living_weight)
+        WHEN $10 = 1
+        AND $11 = 2 THEN SUM(le.living_weight)
     END ASC,
     CASE
-        WHEN $8 = 2
-        AND $9 = 1 THEN l.landing_timestamp
+        WHEN $10 = 2
+        AND $11 = 1 THEN l.landing_timestamp
     END DESC,
     CASE
-        WHEN $8 = 2
-        AND $9 = 2 THEN SUM(le.living_weight)
+        WHEN $10 = 2
+        AND $11 = 2 THEN SUM(le.living_weight)
     END DESC
 OFFSET
-    $10
+    $12
 LIMIT
-    $11
+    $13
             "#,
             query.ranges.empty_to_none() as Option<Vec<Range<DateTime<Utc>>>>,
             catch_area_ids.as_deref(),
@@ -144,6 +152,8 @@ LIMIT
             query.gear_group_ids.empty_to_none() as Option<Vec<GearGroup>>,
             query.vessel_length_groups.empty_to_none() as Option<Vec<VesselLengthGroup>>,
             query.vessel_ids.empty_to_none() as Option<Vec<FiskeridirVesselId>>,
+            query.start_timestamp,
+            query.end_timestamp,
             query.species_group_ids.empty_to_none() as Option<Vec<SpeciesGroup>>,
             query.ordering.map(|o| o as i32),
             query.sorting.map(|s| s as i32),

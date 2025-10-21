@@ -41,6 +41,8 @@ pub struct LandingsParams {
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+    pub start_timestamp: Option<DateTime<Utc>>,
+    pub end_timestamp: Option<DateTime<Utc>>,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,
     pub limit: Option<u64>,
@@ -282,6 +284,8 @@ impl From<LandingsParams> for LandingsQuery {
             ordering,
             limit,
             offset,
+            start_timestamp,
+            end_timestamp,
         } = v;
 
         Self {
@@ -294,6 +298,8 @@ impl From<LandingsParams> for LandingsQuery {
             vessel_ids: fiskeridir_vessel_ids.unwrap_or_default(),
             sorting: Some(sorting.unwrap_or_default()),
             ordering: Some(ordering.unwrap_or_default()),
+            start_timestamp,
+            end_timestamp,
         }
     }
 }
