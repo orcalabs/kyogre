@@ -35,9 +35,9 @@ impl PostgresAdapter {
     pub(crate) async fn set_current_trip_impl(
         &self,
         vessel_id: FiskeridirVesselId,
-        executor: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
-        sqlx::query!(
+        let affected = sqlx::query!(
             r#"
 INSERT INTO
     current_trips (
@@ -200,8 +200,24 @@ SET
             vessel_id.into_inner(),
             TripAssemblerId::Ers as i32,
         )
-        .execute(executor)
+        .execute(&mut **tx)
         .await?;
+
+        // If there are no departures after the end of the most recent trip there is no current
+        // trip. The `current_trips` table will still hold the old current trip which must be
+        // removed.
+        if affected.rows_affected() == 0 {
+            sqlx::query!(
+                r#"
+DELETE FROM current_trips
+WHERE
+    fiskeridir_vessel_id = $1
+                "#,
+                vessel_id.into_inner()
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
 
         Ok(())
     }
@@ -1613,7 +1629,7 @@ WHERE
         match trip_assembler_id {
             TripAssemblerId::Landings => (),
             TripAssemblerId::Ers => {
-                self.set_current_trip_impl(vessel_id, &mut *tx).await?;
+                self.set_current_trip_impl(vessel_id, &mut tx).await?;
             }
         };
 
