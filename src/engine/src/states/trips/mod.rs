@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use machine::Schedule;
 use tokio::{select, sync::mpsc::channel, task::JoinSet};
-use tracing::{error, info, instrument};
+use tracing::{error, info};
 
 use crate::{error::Result, *};
 
@@ -386,7 +386,6 @@ async fn process_vessel(
     }
 }
 
-#[instrument(skip_all)]
 async fn run_trip_assembler(
     vessel: &Vessel,
     adapter: &dyn TripAssemblerOutboundPort,
