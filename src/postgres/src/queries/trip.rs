@@ -1,6 +1,6 @@
 use crate::{
     PostgresAdapter,
-    error::{Result, TripPositionMatchSnafu},
+    error::Result,
     models::{
         CurrentTrip, NewTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning,
         Trip, TripAisVmsPosition, TripAndSucceedingEventsErs, TripAndSucceedingEventsLandings,
@@ -17,18 +17,13 @@ use kyogre_core::{
     VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
-pub struct TripPositions {
-    trip_id: TripId,
-    positions: Vec<AisVmsPosition>,
-    position_layers_output: Option<TripPositionLayerOutput>,
-}
-
-pub struct TripPositionsOutput {
-    positions: Vec<AisVmsPosition>,
-    position_layers_output: Option<TripPositionLayerOutput>,
-    period_start: i64,
+pub(crate) enum InvalidateTripPositionsTripId<'a> {
+    // We assume that the trip that is passed has a track.
+    TripWithTrack(TripId),
+    // We rely on checking 'has_track' on the trips_detailed table.
+    TripsWithUpdatedTripsDetailed(&'a [TripId]),
 }
 
 impl PostgresAdapter {
@@ -221,6 +216,43 @@ WHERE
 
         Ok(())
     }
+    pub(crate) async fn delete_uncommited_trips_impl(&self) -> Result<()> {
+        sqlx::query!(
+            r#"
+DELETE FROM trip_ids i
+WHERE
+    NOT EXISTS (
+        SELECT
+            1
+        FROM
+            trips t
+        WHERE
+            t.trip_id = i.trip_id
+    )
+            "#
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn reserve_trip_id_impl(&self) -> Result<TripId> {
+        let trip_id = sqlx::query!(
+            r#"
+INSERT INTO
+    trip_ids
+DEFAULT VALUES
+RETURNING
+    trip_id AS "trip_id!: TripId"
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .trip_id;
+
+        Ok(trip_id)
+    }
 
     pub(crate) async fn check_for_out_of_order_vms_insertion_impl(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
@@ -286,7 +318,7 @@ WHERE
     ) -> Result<()> {
         let positions = positions
             .into_iter()
-            .map(|v| TripAisVmsPosition::new(id, v));
+            .map(|v| TripAisVmsPosition::new(id, &v));
 
         let (track_coverage, pruned_positions) = output
             .map(|v| {
@@ -347,66 +379,86 @@ WHERE
         .execute(&mut **tx)
         .await?;
 
-        self.invalidate_fuel_estimates(&[id], tx).await?;
+        self.invalidate_fuel_estimates(InvalidateTripPositionsTripId::TripWithTrack(id), tx)
+            .await?;
 
         Ok(())
     }
 
-    pub(crate) async fn add_trip_positions(
+    pub(crate) async fn add_trip_positions_impl(
         &self,
-        input: Vec<TripPositions>,
-        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        trip_id: TripId,
+        positions: &[AisVmsPosition],
+        position_layers_output: Option<TripPositionLayerOutput>,
     ) -> Result<()> {
-        let len = input.len();
-        let mut trip_ids = Vec::with_capacity(len);
-        let mut trip_positions = Vec::with_capacity(len);
-        let mut pruned_positions = Vec::with_capacity(len);
+        let mut tx = self.pool.begin().await?;
 
-        for t in input {
-            let id = t.trip_id;
+        let positions = positions
+            .iter()
+            .map(|p| TripAisVmsPosition::new(trip_id, p));
 
-            trip_ids.push(id);
+        self.unnest_insert(positions, &mut *tx).await?;
 
-            for p in t.positions {
-                trip_positions.push(TripAisVmsPosition::new(id, p));
-            }
-            if let Some(output) = t.position_layers_output {
-                for p in output.pruned_positions {
-                    pruned_positions.push(TripPrunedAisVmsPosition::new(id, p));
-                }
-            }
+        if let Some(pruned) = position_layers_output {
+            let pruned = pruned
+                .pruned_positions
+                .into_iter()
+                .map(|p| TripPrunedAisVmsPosition::new(trip_id, p));
+            self.unnest_insert(pruned, &mut *tx).await?;
         }
 
-        self.unnest_insert(trip_positions, &mut **tx).await?;
-        self.unnest_insert(pruned_positions, &mut **tx).await?;
-
-        self.invalidate_fuel_estimates(&trip_ids, tx).await?;
+        tx.commit().await?;
 
         Ok(())
     }
 
     pub(crate) async fn invalidate_fuel_estimates(
         &self,
-        trip_ids: &[TripId],
+        trip_ids: InvalidateTripPositionsTripId<'_>,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
-        sqlx::query!(
-            r#"
+        match trip_ids {
+            InvalidateTripPositionsTripId::TripWithTrack(trip_id) => {
+                sqlx::query!(
+                    r#"
 UPDATE fuel_estimates e
 SET
     status = $1
 FROM
     trips t
 WHERE
-    t.trip_id = ANY ($2::BIGINT[])
+    t.trip_id = $2
     AND e.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     AND e.day_range && t.period
             "#,
-            ProcessingStatus::Unprocessed as i32,
-            trip_ids as &[TripId],
-        )
-        .execute(&mut **tx)
-        .await?;
+                    ProcessingStatus::Unprocessed as i32,
+                    trip_id as TripId
+                )
+                .execute(&mut **tx)
+                .await?;
+            }
+            InvalidateTripPositionsTripId::TripsWithUpdatedTripsDetailed(trip_ids) => {
+                sqlx::query!(
+                    r#"
+UPDATE fuel_estimates e
+SET
+    status = $1
+FROM
+    trips_detailed t
+WHERE
+    t.trip_id = ANY ($2::BIGINT[])
+    AND t.has_track != $3
+    AND e.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    AND e.day_range && t.period
+            "#,
+                    ProcessingStatus::Unprocessed as i32,
+                    trip_ids as &[TripId],
+                    HasTrack::NoTrack as i32
+                )
+                .execute(&mut **tx)
+                .await?;
+            }
+        };
         Ok(())
     }
 
@@ -1393,23 +1445,16 @@ VALUES
             conflict_strategy: value.conflict_strategy,
         };
 
-        let mut new_trips = Vec::with_capacity(value.values.len());
-        let mut trip_positions = Vec::new();
-        for v in value.values {
-            new_trips.push(crate::models::NewTrip::from(&v));
-
-            trip_positions.push(TripPositionsOutput {
-                positions: v.positions,
-                position_layers_output: v.position_layers_output,
-                period_start: v.trip.period.start().timestamp(),
-            });
-        }
+        let new_trips = value
+            .values
+            .into_iter()
+            .map(|v| crate::models::NewTrip::from(&v))
+            .collect();
 
         if let Err(e) = self
             .add_trips_inner(
                 new_trips,
                 &earliest_trip,
-                trip_positions,
                 value.fiskeridir_vessel_id,
                 value.trip_assembler_id,
                 value.conflict_strategy,
@@ -1430,7 +1475,6 @@ VALUES
         &self,
         new_trips: Vec<NewTrip>,
         earliest_trip: &kyogre_core::NewTrip,
-        trip_positions: Vec<TripPositionsOutput>,
         vessel_id: FiskeridirVesselId,
         trip_assembler_id: TripAssemblerId,
         conflict_strategy: TripsConflictStrategy,
@@ -1439,8 +1483,6 @@ VALUES
     ) -> Result<()> {
         let earliest_trip_start = earliest_trip.period.start();
         let earliest_trip_period = PgRange::from(&earliest_trip.period);
-
-        let mut trip_positions_insert_mapping: HashMap<i64, TripId> = HashMap::new();
 
         let mut tx = self.pool.begin().await?;
         // We assume that trip assemblers process all events and conflicts on each run and can
@@ -1556,30 +1598,10 @@ RETURNING
             .try_collect::<Vec<_>>()
             .await?;
 
-        for t in &inserted_trips {
-            let range = DateRange::try_from(&t.period)?;
-            trip_positions_insert_mapping.insert(range.start().timestamp(), t.trip_id);
-        }
+        let trips_to_invalidate_fuel_estimates =
+            inserted_trips.iter().map(|t| t.trip_id).collect::<Vec<_>>();
 
-        // We use the start of the trips period to map the inserted trips trip_ids to the trip positions,
-        // as trips cannot overlap we are guranteed that the start of trips are unique
-        let mut trip_positions_with_trip_id = Vec::with_capacity(trip_positions.len());
-        for v in trip_positions {
-            let trip_id = trip_positions_insert_mapping
-                .remove(&v.period_start)
-                .ok_or_else(|| TripPositionMatchSnafu.build())?;
-
-            trip_positions_with_trip_id.push(TripPositions {
-                trip_id,
-                positions: v.positions,
-                position_layers_output: v.position_layers_output,
-            })
-        }
-
-        self.add_trip_positions(trip_positions_with_trip_id, &mut tx)
-            .await?;
-
-        let mut trip_ids = inserted_trips
+        let mut inserted_trip_ids = inserted_trips
             .iter()
             .map(|v| v.trip_id)
             .collect::<HashSet<_>>();
@@ -1617,14 +1639,22 @@ WHERE
         .try_collect::<Vec<_>>()
         .await?;
 
-        trip_ids.extend(refresh_trip_ids);
+        inserted_trip_ids.extend(refresh_trip_ids);
 
-        let trip_ids = trip_ids.into_iter().collect::<Vec<_>>();
+        let trips_to_update = inserted_trip_ids.into_iter().collect::<Vec<_>>();
 
-        self.add_trips_detailed(&trip_ids, &mut tx).await?;
+        self.add_trips_detailed(&trips_to_update, &mut tx).await?;
 
         self.reset_trips_refresh_boundary(vessel_id, &mut tx)
             .await?;
+
+        self.invalidate_fuel_estimates(
+            InvalidateTripPositionsTripId::TripsWithUpdatedTripsDetailed(
+                &trips_to_invalidate_fuel_estimates,
+            ),
+            &mut tx,
+        )
+        .await?;
 
         match trip_assembler_id {
             TripAssemblerId::Landings => (),
@@ -1865,6 +1895,8 @@ SELECT
                 'port_id',
                 NULL
             )
+            ORDER BY
+                l.report_timestamp
         ) FILTER (
             WHERE
                 l.vessel_event_id IS NOT NULL
@@ -1947,7 +1979,9 @@ WITH
             report_timestamp,
             vessel_event_type_id,
             port_id,
-            estimated_timestamp
+            estimated_timestamp,
+            message_number,
+            relevant_year
         FROM
             (
                 SELECT
@@ -2039,6 +2073,10 @@ SELECT
                 'port_id',
                 e.port_id
             )
+            ORDER BY
+                e.estimated_timestamp,
+                e.relevant_year,
+                e.message_number
         ) FILTER (
             WHERE
                 e.vessel_event_id IS NOT NULL
@@ -2069,6 +2107,7 @@ GROUP BY
     pub(crate) fn trips_without_precision_impl(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> impl Stream<Item = Result<Trip>> + '_ {
         sqlx::query_as!(
             Trip,
@@ -2091,9 +2130,14 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
     AND trip_precision_status_id = $2
+ORDER BY
+    period
+LIMIT
+    $3
             "#,
             vessel_id.into_inner(),
             ProcessingStatus::Unprocessed as i32,
+            limit as i32
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -2102,6 +2146,7 @@ WHERE
     pub(crate) fn trips_without_position_cargo_weight_distribution_impl(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> impl Stream<Item = Result<Trip>> + '_ {
         sqlx::query_as!(
             Trip,
@@ -2124,9 +2169,14 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
     AND trip_position_cargo_weight_distribution_status = $2
+ORDER BY
+    period
+LIMIT
+    $3
             "#,
             vessel_id.into_inner(),
             ProcessingStatus::Unprocessed as i32,
+            limit as i32
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -2135,6 +2185,7 @@ WHERE
     pub(crate) fn trips_without_position_fuel_consumption_distribution_impl(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> impl Stream<Item = Result<Trip>> + '_ {
         sqlx::query_as!(
             Trip,
@@ -2157,9 +2208,14 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
     AND trip_position_fuel_consumption_distribution_status = $2
+ORDER BY
+    period
+LIMIT
+    $3
             "#,
             vessel_id.into_inner(),
             ProcessingStatus::Unprocessed as i32,
+            limit as i32
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -2168,6 +2224,7 @@ WHERE
     pub(crate) fn trips_without_trip_layers_impl(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> impl Stream<Item = Result<Trip>> + '_ {
         sqlx::query_as!(
             Trip,
@@ -2190,9 +2247,14 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
     AND position_layers_status = $2
+ORDER BY
+    period
+LIMIT
+    $3
             "#,
             vessel_id.into_inner(),
             ProcessingStatus::Unprocessed as i32,
+            limit as i32
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
@@ -2201,6 +2263,7 @@ WHERE
     pub(crate) fn trips_without_distance_impl(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> impl Stream<Item = Result<Trip>> + '_ {
         sqlx::query_as!(
             Trip,
@@ -2223,8 +2286,13 @@ FROM
 WHERE
     fiskeridir_vessel_id = $1
     AND distancer_id IS NULL
+ORDER BY
+    period
+LIMIT
+    $2
             "#,
             vessel_id.into_inner(),
+            limit as i32
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())

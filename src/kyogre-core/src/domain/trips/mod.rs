@@ -80,7 +80,7 @@ pub struct TripSet {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub conflict_strategy: TripsConflictStrategy,
     pub trip_assembler_id: TripAssemblerId,
-    pub values: Vec<TripProcessingUnit>,
+    pub values: Vec<TripToInsert>,
     pub conflict: Option<TripAssemblerConflict>,
     pub queued_reset: bool,
     pub new_trip_events: Vec<MinimalVesselEvent>,
@@ -89,10 +89,25 @@ pub struct TripSet {
 }
 
 #[derive(Debug)]
+pub struct TripToInsert {
+    pub vessel_id: FiskeridirVesselId,
+    pub trip: NewTrip,
+    pub trip_id: TripId,
+    pub trip_assembler_id: TripAssemblerId,
+    pub start_port: Option<Port>,
+    pub end_port: Option<Port>,
+    pub start_dock_points: Vec<PortDockPoint>,
+    pub end_dock_points: Vec<PortDockPoint>,
+    pub precision_outcome: Option<PrecisionOutcome>,
+    pub distance_output: Option<TripDistanceOutput>,
+    pub track_coverage: f64,
+}
+
+#[derive(Debug)]
 pub struct TripProcessingUnit {
     pub vessel_id: FiskeridirVesselId,
     pub trip: NewTrip,
-    pub trip_id: Option<TripId>,
+    pub trip_id: TripId,
     pub trip_assembler_id: TripAssemblerId,
     pub start_port: Option<Port>,
     pub end_port: Option<Port>,

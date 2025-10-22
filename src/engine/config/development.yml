@@ -1,5 +1,5 @@
 log_level: Info
-num_trip_state_workers: 1
+num_trip_state_workers: 4
 tracing_mode: Regular
 fuel_estimation_mode: Maru
 fishing_predictors:

@@ -10,7 +10,7 @@ use kyogre_core::{
     AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, HasTrack, Haul,
     MinimalVesselEvent, PositionType, PrecisionId, PrecisionOutcome, ProcessingStatus,
     PrunedTripPosition, TripAssemblerConflict, TripAssemblerId, TripDistancerId, TripId,
-    TripPositionLayerId, TripProcessingUnit, TripsConflictStrategy, VesselEventType,
+    TripPositionLayerId, TripToInsert, TripsConflictStrategy, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use std::str::FromStr;
@@ -67,6 +67,8 @@ pub struct NewTripAssemblerLogEntry<'a> {
     returning = "trip_id:TripId, period, landing_coverage, fiskeridir_vessel_id"
 )]
 pub struct NewTrip {
+    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
+    pub trip_id: TripId,
     pub start_vessel_event_id: Option<i64>,
     pub end_vessel_event_id: i64,
     pub first_arrival: Option<DateTime<Utc>>,
@@ -261,9 +263,9 @@ impl TryFrom<TripAndSucceedingEventsErs> for kyogre_core::TripAndSucceedingEvent
     }
 }
 
-impl From<&TripProcessingUnit> for NewTrip {
-    fn from(value: &TripProcessingUnit) -> Self {
-        let TripProcessingUnit {
+impl From<&TripToInsert> for NewTrip {
+    fn from(value: &TripToInsert) -> Self {
+        let TripToInsert {
             vessel_id,
             trip:
                 kyogre_core::NewTrip {
@@ -276,16 +278,15 @@ impl From<&TripProcessingUnit> for NewTrip {
                     start_vessel_event_id,
                     end_vessel_event_id,
                 },
-            trip_id: _,
+            trip_id,
             trip_assembler_id,
             start_port,
             end_port,
             start_dock_points: _,
             end_dock_points: _,
-            positions: _,
             precision_outcome,
             distance_output,
-            position_layers_output,
+            track_coverage,
         } = value;
 
         let (
@@ -342,14 +343,12 @@ impl From<&TripProcessingUnit> for NewTrip {
             distancer_id,
             start_port_id: start_port.clone().map(|p| p.id),
             end_port_id: end_port.clone().map(|p| p.id),
-            track_coverage: position_layers_output
-                .as_ref()
-                .map(|v| v.track_coverage)
-                .unwrap_or(0.),
+            track_coverage: *track_coverage,
             position_layers_status: ProcessingStatus::Successful,
             trip_position_cargo_weight_distribution_status: ProcessingStatus::Successful,
             trip_position_fuel_consumption_distribution_status: ProcessingStatus::Successful,
             first_arrival: *first_arrival,
+            trip_id: *trip_id,
         }
     }
 }
@@ -636,7 +635,7 @@ impl TryFrom<TripAssemblerLogEntry> for kyogre_core::TripAssemblerLogEntry {
 }
 
 impl TripAisVmsPosition {
-    pub fn new(id: TripId, p: AisVmsPosition) -> Self {
+    pub fn new(id: TripId, p: &AisVmsPosition) -> Self {
         Self {
             trip_id: id,
             latitude: p.latitude,

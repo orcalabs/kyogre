@@ -1305,37 +1305,45 @@ impl TripPipelineOutbound for PostgresAdapter {
     async fn trips_without_position_cargo_weight_distribution(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> CoreResult<Vec<Trip>> {
-        self.trips_without_position_cargo_weight_distribution_impl(vessel_id)
+        self.trips_without_position_cargo_weight_distribution_impl(vessel_id, limit)
             .convert_collect()
             .await
     }
     async fn trips_without_position_fuel_consumption_distribution(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> CoreResult<Vec<Trip>> {
-        self.trips_without_position_fuel_consumption_distribution_impl(vessel_id)
+        self.trips_without_position_fuel_consumption_distribution_impl(vessel_id, limit)
             .convert_collect()
             .await
     }
     async fn trips_without_position_layers(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> CoreResult<Vec<Trip>> {
-        self.trips_without_trip_layers_impl(vessel_id)
+        self.trips_without_trip_layers_impl(vessel_id, limit)
             .convert_collect()
             .await
     }
-    async fn trips_without_distance(&self, vessel_id: FiskeridirVesselId) -> CoreResult<Vec<Trip>> {
-        self.trips_without_distance_impl(vessel_id)
+    async fn trips_without_distance(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        limit: u32,
+    ) -> CoreResult<Vec<Trip>> {
+        self.trips_without_distance_impl(vessel_id, limit)
             .convert_collect()
             .await
     }
     async fn trips_without_precision(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> CoreResult<Vec<Trip>> {
-        self.trips_without_precision_impl(vessel_id)
+        self.trips_without_precision_impl(vessel_id, limit)
             .convert_collect()
             .await
     }
@@ -1343,6 +1351,24 @@ impl TripPipelineOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineInbound for PostgresAdapter {
+    async fn delete_uncommited_trips(&self) -> CoreResult<()> {
+        self.delete_uncommited_trips_impl().await?;
+        Ok(())
+    }
+    async fn reserve_trip_id(&self) -> CoreResult<TripId> {
+        let trip_id = self.reserve_trip_id_impl().await?;
+        Ok(trip_id)
+    }
+    async fn add_trip_positions(
+        &self,
+        trip_id: TripId,
+        positions: &[AisVmsPosition],
+        position_layers_output: Option<TripPositionLayerOutput>,
+    ) -> CoreResult<()> {
+        self.add_trip_positions_impl(trip_id, positions, position_layers_output)
+            .await?;
+        Ok(())
+    }
     async fn check_for_out_of_order_vms_insertion(&self) -> CoreResult<()> {
         self.check_for_out_of_order_vms_insertion_impl().await?;
         Ok(())

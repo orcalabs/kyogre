@@ -13,10 +13,15 @@ impl TripComputationStep for AisVms {
         unit.distance_output = Some(self.calculate_trip_distance(&unit)?);
         Ok(unit)
     }
-    async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>> {
+    async fn fetch_missing(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+        limit: u32,
+    ) -> Result<Vec<Trip>> {
         Ok(shared
             .trip_pipeline_outbound
-            .trips_without_distance(vessel.fiskeridir.id)
+            .trips_without_distance(vessel.fiskeridir.id, limit)
             .await?)
     }
     async fn set_state(

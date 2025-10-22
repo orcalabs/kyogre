@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fuel_estimates e\nSET\n    status = $1\nFROM\n    trips t\nWHERE\n    t.trip_id = $2\n    AND e.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    AND e.day_range && t.period\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f9614dc0a673bf9470c20913a761ceef87cf416d27d5f3813295efd30522ddbb"
+}

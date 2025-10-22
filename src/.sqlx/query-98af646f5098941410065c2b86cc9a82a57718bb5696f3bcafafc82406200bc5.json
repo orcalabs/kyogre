@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fuel_estimates e\nSET\n    status = $1\nFROM\n    trips_detailed t\nWHERE\n    t.trip_id = ANY ($2::BIGINT[])\n    AND t.has_track != $3\n    AND e.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    AND e.day_range && t.period\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8Array",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "98af646f5098941410065c2b86cc9a82a57718bb5696f3bcafafc82406200bc5"
+}
