@@ -11,6 +11,8 @@ use crate::{error::Result, *};
 
 mod computation_step;
 
+static UNPROCESSED_TRIPS_BATCH_SIZE: u32 = 100;
+
 pub use computation_step::*;
 
 pub struct TripsState;
@@ -119,6 +121,11 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
     shared_state
         .trip_pipeline_inbound
         .check_for_out_of_order_vms_insertion()
+        .await?;
+
+    shared_state
+        .trip_pipeline_inbound
+        .delete_uncommited_trips()
         .await?;
 
     let mut vessels = shared_state
@@ -260,6 +267,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                     MasterTask::Unprocessed(vessel, result) => {
                         match result {
                             Ok(updates) => {
+                                let more_updates_to_process = !updates.is_empty();
                                 for update in updates {
                                     let trip_id = update.trip_id;
                                     if let Err(e) =
@@ -278,6 +286,13 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                                         "failed to refresh detailed trips for vessel: {}, err: {e:?}",
                                         vessel.fiskeridir.id,
                                     );
+                                }
+
+                                // Processing unprocessed trips occurs in batches and should stop
+                                // once there are no more updates to be processed which is
+                                // indicated by the update vec being empty.
+                                if more_updates_to_process {
+                                    worker_tx.try_send(WorkerTask::Unprocessed(vessel)).unwrap();
                                 }
                             }
                             Err(e) => error!(
@@ -339,6 +354,7 @@ async fn process_vessel(
             queued_reset: outcome.state == AssemblerState::QueuedReset,
         };
         for t in trips.trips {
+            let trip_id = shared.trip_pipeline_inbound.reserve_trip_id().await?;
             let mut unit = TripProcessingUnit {
                 precision_outcome: None,
                 distance_output: None,
@@ -370,14 +386,52 @@ async fn process_vessel(
                 trip_assembler_id: output.trip_assembler_id,
                 position_layers_output: None,
                 trip: t,
-                trip_id: None,
+                trip_id,
             };
 
             for step in TRIP_COMPUTATION_STEPS.iter() {
                 unit = step.run(shared, vessel, unit).await?;
             }
 
-            output.values.push(unit);
+            let pruned_positions = unit.position_layers_output.take();
+            let track_coverage = pruned_positions
+                .as_ref()
+                .map(|p| p.track_coverage)
+                .unwrap_or(0.);
+
+            shared
+                .trip_pipeline_inbound
+                .add_trip_positions(unit.trip_id, &unit.positions, pruned_positions)
+                .await?;
+
+            let TripProcessingUnit {
+                vessel_id,
+                trip,
+                trip_id,
+                trip_assembler_id,
+                start_port,
+                end_port,
+                start_dock_points,
+                end_dock_points,
+                positions: _,
+                precision_outcome,
+                distance_output,
+                position_layers_output: _,
+            } = unit;
+
+            output.values.push(TripToInsert {
+                vessel_id,
+                trip,
+                trip_id,
+                trip_assembler_id,
+                start_port,
+                end_port,
+                start_dock_points,
+                end_dock_points,
+                precision_outcome,
+                distance_output,
+                track_coverage,
+            });
         }
 
         Ok((outcome, Some(output)))
@@ -523,7 +577,10 @@ async fn process_unprocessed_trips(
     let mut trips = HashMap::new();
 
     for (i, step) in TRIP_COMPUTATION_STEPS.iter().enumerate() {
-        for trip in step.fetch_missing(shared_state, vessel).await? {
+        for trip in step
+            .fetch_missing(shared_state, vessel, UNPROCESSED_TRIPS_BATCH_SIZE)
+            .await?
+        {
             trips
                 .entry(trip.trip_id)
                 .and_modify(|(_, idx)| *idx = min(*idx, i))
@@ -566,7 +623,7 @@ async fn process_unprocessed_trips(
                 end_vessel_event_id: None,
             },
             position_layers_output: None,
-            trip_id: Some(t.trip_id),
+            trip_id: t.trip_id,
         };
 
         TRIP_COMPUTATION_STEPS[computation_step_idx]

@@ -350,18 +350,28 @@ pub trait TripPipelineOutbound: Send + Sync {
     async fn trips_without_position_cargo_weight_distribution(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> CoreResult<Vec<Trip>>;
     async fn trips_without_position_fuel_consumption_distribution(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> CoreResult<Vec<Trip>>;
     async fn trips_without_position_layers(
         &self,
         vessel_id: FiskeridirVesselId,
+        limit: u32,
     ) -> CoreResult<Vec<Trip>>;
-    async fn trips_without_distance(&self, vessel_id: FiskeridirVesselId) -> CoreResult<Vec<Trip>>;
-    async fn trips_without_precision(&self, vessel_id: FiskeridirVesselId)
-    -> CoreResult<Vec<Trip>>;
+    async fn trips_without_distance(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        limit: u32,
+    ) -> CoreResult<Vec<Trip>>;
+    async fn trips_without_precision(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        limit: u32,
+    ) -> CoreResult<Vec<Trip>>;
 }
 
 #[async_trait]

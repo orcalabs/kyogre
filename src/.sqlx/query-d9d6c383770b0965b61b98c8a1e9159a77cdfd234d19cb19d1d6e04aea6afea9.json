@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM trip_ids i\nWHERE\n    NOT EXISTS (\n        SELECT\n            1\n        FROM\n            trips t\n        WHERE\n            t.trip_id = i.trip_id\n    )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "d9d6c383770b0965b61b98c8a1e9159a77cdfd234d19cb19d1d6e04aea6afea9"
+}

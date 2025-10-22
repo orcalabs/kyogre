@@ -34,7 +34,12 @@ pub trait TripComputationStep: Send + Sync {
         vessel: &Vessel,
         unit: TripProcessingUnit,
     ) -> Result<TripProcessingUnit>;
-    async fn fetch_missing(&self, shared: &SharedState, vessel: &Vessel) -> Result<Vec<Trip>>;
+    async fn fetch_missing(
+        &self,
+        shared: &SharedState,
+        vessel: &Vessel,
+        limit: u32,
+    ) -> Result<Vec<Trip>>;
     async fn set_state(
         &self,
         shared: &SharedState,

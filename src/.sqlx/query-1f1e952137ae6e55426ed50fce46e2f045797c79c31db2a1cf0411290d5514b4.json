@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_extended AS \"period_extended: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id,\n    first_arrival\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND trip_position_fuel_consumption_distribution_status = $2\n            ",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period!: DateRange\",\n    period_extended AS \"period_extended: DateRange\",\n    period_precision AS \"period_precision: DateRange\",\n    landing_coverage AS \"landing_coverage!: DateRange\",\n    distance,\n    trip_assembler_id AS \"trip_assembler_id!: TripAssemblerId\",\n    start_port_id,\n    end_port_id,\n    target_species_fiskeridir_id,\n    target_species_fao_id,\n    first_arrival\nFROM\n    trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND position_layers_status = $2\nORDER BY\n    period\nLIMIT\n    $3\n            ",
   "describe": {
     "columns": [
       {
@@ -67,7 +67,8 @@
     "parameters": {
       "Left": [
         "Int8",
-        "Int4"
+        "Int4",
+        "Int8"
       ]
     },
     "nullable": [
@@ -85,5 +86,5 @@
       true
     ]
   },
-  "hash": "4d10867b8f816eabce946ff53fdca98dd95aac3a60d3e591888752e7d069e51d"
+  "hash": "1f1e952137ae6e55426ed50fce46e2f045797c79c31db2a1cf0411290d5514b4"
 }

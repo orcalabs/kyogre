@@ -191,6 +191,14 @@ pub trait TripPipelineInbound: Send + Sync {
     async fn update_preferred_trip_assemblers(&self) -> CoreResult<()>;
     async fn update_trip(&self, update: TripUpdate) -> CoreResult<()>;
     async fn add_trip_set(&self, value: TripSet) -> CoreResult<()>;
+    async fn add_trip_positions(
+        &self,
+        trip_id: TripId,
+        positions: &[AisVmsPosition],
+        position_layers_output: Option<TripPositionLayerOutput>,
+    ) -> CoreResult<()>;
+    async fn reserve_trip_id(&self) -> CoreResult<TripId>;
+    async fn delete_uncommited_trips(&self) -> CoreResult<()>;
 
     /// Trips contain different types of events which can all be scraped out of order (events
     /// that occurred in the past are added later).

@@ -1,0 +1,55 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    trip AS (\n        SELECT\n            trip_id,\n            start_vessel_event_id,\n            end_vessel_event_id,\n            fiskeridir_vessel_id,\n            UPPER(period) AS trip_end\n        FROM\n            trips\n        WHERE\n            fiskeridir_vessel_id = $1\n            AND (\n                (\n                    $2 = 1\n                    AND UPPER(period) <= $3\n                )\n                OR (\n                    $2 = 2\n                    AND UPPER(period) < $3\n                )\n            )\n        ORDER BY\n            period DESC\n        LIMIT\n            1\n    ),\n    landings_after_trip AS (\n        SELECT\n            v.vessel_event_id,\n            v.fiskeridir_vessel_id,\n            v.report_timestamp,\n            v.occurence_timestamp AS estimated_timestamp,\n            v.vessel_event_type_id\n        FROM\n            trip t\n            INNER JOIN vessel_events v ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND v.report_timestamp > t.trip_end\n        WHERE\n            v.fiskeridir_vessel_id = $1\n            AND v.vessel_event_type_id = $4\n    )\nSELECT\n    MAX(t.fiskeridir_vessel_id) AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    MAX(start_landing.vessel_event_id) AS \"start_vessel_event_id!\",\n    MAX(start_landing.report_timestamp) AS \"start_report_timestamp!\",\n    MAX(end_landing.vessel_event_id) AS \"end_vessel_event_id!\",\n    MAX(end_landing.report_timestamp) AS \"end_report_timestamp!\",\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'vessel_event_id',\n                l.vessel_event_id,\n                'fiskeridir_vessel_id',\n                l.fiskeridir_vessel_id,\n                'report_timestamp',\n                l.report_timestamp,\n                'estimated_timestamp',\n                l.estimated_timestamp,\n                'vessel_event_type_id',\n                l.vessel_event_type_id,\n                'departure_port_id',\n                NULL,\n                'arrival_port_id',\n                NULL,\n                'port_id',\n                NULL\n            )\n            ORDER BY\n                l.report_timestamp\n        ) FILTER (\n            WHERE\n                l.vessel_event_id IS NOT NULL\n        ),\n        '[]'\n    )::TEXT AS \"landings_after_trip!\"\nFROM\n    trip t\n    -- We can assume that start/end vessel event id is set here as the only case in which they are null is when a landing has been deleted from the csv files at fiskeridir.\n    -- This will result in a conflict in the trip assembler which in turn will re-construct the affected trips.\n    -- During re-construction we will always be retrieving the trip *PRIOR* to where the conflict occured,\n    -- hence, the trip that had its landings (start/end event) deleted will not be consulted in this query during re-construction.\n    INNER JOIN vessel_events start_landing ON start_landing.vessel_event_id = t.start_vessel_event_id\n    INNER JOIN vessel_events end_landing ON end_landing.vessel_event_id = t.end_vessel_event_id\n    LEFT JOIN landings_after_trip l ON TRUE\nGROUP BY\n    t.trip_id\n           ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "start_vessel_event_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "start_report_timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "end_vessel_event_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 4,
+        "name": "end_report_timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "landings_after_trip!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4",
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "5454bffdbb3b34eff4d330aa2139bdaa9a08f8e2ec0ab4b3c29d2a4a35b4e948"
+}
