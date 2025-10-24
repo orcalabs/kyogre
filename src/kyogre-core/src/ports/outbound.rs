@@ -53,6 +53,11 @@ pub trait WebApiOutboundPort {
     fn species_fiskeridir(&self) -> PinBoxStream<'_, SpeciesFiskeridir>;
     fn species_fao(&self) -> PinBoxStream<'_, SpeciesFao>;
     fn vessels(&self) -> PinBoxStream<'_, Vessel>;
+    fn vessel_events(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        query: &VesselEventQuery,
+    ) -> PinBoxStream<'_, VesselEvent>;
     fn hauls(&self, query: HaulsQuery) -> PinBoxStream<'_, Haul>;
     async fn org_benchmarks(
         &self,

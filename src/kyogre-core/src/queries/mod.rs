@@ -11,6 +11,7 @@ mod pagination;
 mod trip;
 mod trip_benchmark;
 mod vessel_benchmark;
+mod vessel_event;
 mod weather;
 
 pub use fishing_facility::*;
@@ -23,6 +24,7 @@ use strum::{AsRefStr, EnumString};
 pub use trip::*;
 pub use trip_benchmark::*;
 pub use vessel_benchmark::*;
+pub use vessel_event::*;
 pub use weather::*;
 
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
