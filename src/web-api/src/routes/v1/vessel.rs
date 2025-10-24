@@ -1,4 +1,5 @@
 use crate::error::error::UpdateVesselNotFoundSnafu;
+use crate::routes::v1::trip::VesselEvent;
 use crate::{
     Database,
     error::Result,
@@ -6,13 +7,14 @@ use crate::{
     response::{Response, StreamResponse},
     stream_response,
 };
-use actix_web::web::{self};
+use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
     DEFAULT_LIVE_FUEL_THRESHOLD, EngineType, FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi,
-    NaiveDateRange, VesselCurrentTrip,
+    NaiveDateRange, Ordering, Pagination, VesselCurrentTrip, VesselEventQuery, VesselEventType,
+    VesselEvents,
 };
 use kyogre_core::{LiveFuel, UpdateVessel};
 use oasgen::{OaSchema, oasgen};
@@ -33,6 +35,45 @@ pub struct FuelParams {
 #[serde(rename_all = "camelCase")]
 pub struct LiveFuelParams {
     pub threshold: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Deserialize, OaSchema)]
+pub struct VesselEventPath {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct VesselEventParams {
+    pub start_timestamp: Option<DateTime<Utc>>,
+    pub end_timestamp: Option<DateTime<Utc>>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub vessel_event_type: Option<VesselEventType>,
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
+    pub ordering: Option<Ordering>,
+}
+
+impl From<VesselEventParams> for VesselEventQuery {
+    fn from(value: VesselEventParams) -> Self {
+        let VesselEventParams {
+            start_timestamp,
+            end_timestamp,
+            vessel_event_type,
+            limit,
+            offset,
+            ordering,
+        } = value;
+
+        Self {
+            start_timestamp,
+            end_timestamp,
+            vessel_event_type,
+            ordering,
+            pagination: Pagination::<VesselEvents>::new(limit, offset),
+        }
+    }
 }
 
 /// Updates the vessel with the provided information.
@@ -58,6 +99,18 @@ pub async fn update_vessel<T: Database + Send + Sync + 'static>(
             })?
             .into(),
     ))
+}
+
+#[oasgen(skip(db), tags("Vessel"))]
+#[tracing::instrument(skip(db))]
+pub async fn vessel_events<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    params: Query<VesselEventParams>,
+    path: Path<VesselEventPath>,
+) -> StreamResponse<VesselEvent> {
+    stream_response! {
+        db.vessel_events(path.fiskeridir_vessel_id, &params.into_inner().into()).map_ok(VesselEvent::from)
+    }
 }
 
 /// Returns all known vessels.
