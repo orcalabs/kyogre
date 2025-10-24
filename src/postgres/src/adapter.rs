@@ -699,6 +699,13 @@ impl LiveFuelInbound for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    fn vessel_events(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        query: &VesselEventQuery,
+    ) -> PinBoxStream<'_, VesselEvent> {
+        self.vessel_events_impl(vessel_id, query).convert().boxed()
+    }
     async fn fui(&self, query: FuiQuery) -> WebApiResult<Option<f64>> {
         Ok(retry(|| self.fui_impl(&query)).await?)
     }
