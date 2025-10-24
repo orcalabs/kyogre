@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    v.vessel_event_id,\n    v.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    v.vessel_event_type_id AS \"vessel_event_type_id!: VesselEventType\",\n    v.report_timestamp,\n    v.occurence_timestamp\nFROM\n    vessel_events v\nWHERE\n    v.fiskeridir_vessel_id = $1\n    AND (\n        $2::TIMESTAMPTZ IS NULL\n        OR v.occurence_timestamp >= $2\n    )\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR v.occurence_timestamp <= $3\n    )\n    AND (\n        $4::INT IS NULL\n        OR v.vessel_event_type_id = $4\n    )\nORDER BY\n    CASE\n        WHEN $5::INT = 1 THEN v.occurence_timestamp\n    END ASC,\n    CASE\n        WHEN $5::INT = 2 THEN v.occurence_timestamp\n    END DESC\nOFFSET\n    $6\nLIMIT\n    $7\n           ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "vessel_event_id",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "vessel_event_type_id!: VesselEventType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "report_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "occurence_timestamp",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int4",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "92811e81e3a816c212af34f45806958d933e9d6bbb2a9d1419f1932a14155f59"
+}

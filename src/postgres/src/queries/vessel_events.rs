@@ -1,9 +1,67 @@
-use crate::{PostgresAdapter, error::Result, models::VesselEventDetailed};
+use crate::{
+    PostgresAdapter,
+    error::Result,
+    models::{VesselEvent, VesselEventDetailed},
+};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::{FiskeridirVesselId, VesselEventType};
+use kyogre_core::{FiskeridirVesselId, VesselEventQuery, VesselEventType};
 use strum::IntoEnumIterator;
 
 impl PostgresAdapter {
+    pub(crate) fn vessel_events_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        query: &VesselEventQuery,
+    ) -> impl Stream<Item = Result<VesselEvent>> + '_ {
+        sqlx::query_as!(
+            VesselEvent,
+            r#"
+SELECT
+    v.vessel_event_id,
+    v.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    v.vessel_event_type_id AS "vessel_event_type_id!: VesselEventType",
+    v.report_timestamp,
+    v.occurence_timestamp
+FROM
+    vessel_events v
+WHERE
+    v.fiskeridir_vessel_id = $1
+    AND (
+        $2::TIMESTAMPTZ IS NULL
+        OR v.occurence_timestamp >= $2
+    )
+    AND (
+        $3::TIMESTAMPTZ IS NULL
+        OR v.occurence_timestamp <= $3
+    )
+    AND (
+        $4::INT IS NULL
+        OR v.vessel_event_type_id = $4
+    )
+ORDER BY
+    CASE
+        WHEN $5::INT = 1 THEN v.occurence_timestamp
+    END ASC,
+    CASE
+        WHEN $5::INT = 2 THEN v.occurence_timestamp
+    END DESC
+OFFSET
+    $6
+LIMIT
+    $7
+           "#,
+            vessel_id as FiskeridirVesselId,
+            query.start_timestamp,
+            query.end_timestamp,
+            query.vessel_event_type.map(|v| v as i32),
+            query.ordering.unwrap_or_default() as i32,
+            query.pagination.offset() as i64,
+            query.pagination.limit() as i64,
+        )
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
+    }
+
     pub(crate) fn all_landing_events(
         &self,
         vessel_id: FiskeridirVesselId,

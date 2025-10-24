@@ -117,6 +117,10 @@ where
             )
             .route("/vessels", get().to(routes::v1::vessel::vessels::<T>))
             .route(
+                "/vessel_events/{fiskeridir_vessel_id}",
+                get().to(routes::v1::vessel::vessel_events::<T>),
+            )
+            .route(
                 "/vms/{call_sign}",
                 get().to(routes::v1::vms::vms_positions::<T>),
             )

@@ -4,6 +4,8 @@ pub struct Trips;
 pub struct FishingFacilities;
 #[derive(Debug, Clone, Copy)]
 pub struct Landings;
+#[derive(Debug, Clone, Copy)]
+pub struct VesselEvents;
 
 const MAX_TRIPS_LIMIT: u64 = 100;
 const DEFAULT_TRIPS_LIMIT: u64 = 20;
@@ -13,6 +15,9 @@ const DEFAULT_FISHING_FACILITIES_LIMIT: u64 = 20;
 
 const MAX_LANDINGS_LIMIT: u64 = 100;
 const DEFAULT_LANDINGS_LIMIT: u64 = 20;
+
+const MAX_VESSEL_EVENTS_LIMIT: u64 = 100;
+const DEFAULT_VESSEL_EVENTS_LIMIT: u64 = 20;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Pagination<T> {
@@ -36,6 +41,11 @@ macro_rules! impl_pagination {
     };
 }
 
+impl_pagination!(
+    VesselEvents,
+    MAX_VESSEL_EVENTS_LIMIT,
+    DEFAULT_VESSEL_EVENTS_LIMIT
+);
 impl_pagination!(Landings, MAX_LANDINGS_LIMIT, DEFAULT_LANDINGS_LIMIT);
 impl_pagination!(Trips, MAX_TRIPS_LIMIT, DEFAULT_TRIPS_LIMIT);
 impl_pagination!(
