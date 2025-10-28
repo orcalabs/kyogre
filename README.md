@@ -13,8 +13,9 @@ The following build dependencies are required:
 - protobuf
 - cargo
 
+For experimenting with the `fishing_predictor` AI models
 [NVIDIA container toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)
-is also required for local deployment and testing.
+is needed.
 
 ## Local deployment
 
