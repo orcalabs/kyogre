@@ -61,13 +61,6 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
 
   duckdb:
     image: ghcr.io/orcalabs/kyogre/duckdb
