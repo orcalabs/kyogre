@@ -346,6 +346,8 @@ pub enum Condition {
     RyggMedSkinn = 361,
     RyggUtenSkinn = 362,
     Ryggbein = 363,
+    // There is no name specified in the dataset
+    Ukjent = 364,
     Rotskjaer = 410,
     Splitt = 411,
     Flekt = 412,
@@ -518,6 +520,7 @@ impl Condition {
             Olje => "Olje",
             Slo => "Slo",
             Uspesifisert => "Uspesifisert",
+            Ukjent => "Ukjent",
         }
     }
 }
