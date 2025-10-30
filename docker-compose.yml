@@ -50,6 +50,8 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+      - KYOGRE_AIS_CONSUMER__POSTGRES__IP=postgres
+      - KYOGRE_AIS_CONSUMER__POSTGRES__PORT=5432
 
   engine:
     image: ghcr.io/orcalabs/kyogre/engine
@@ -61,6 +63,8 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+      - KYOGRE_ENGINE__POSTGRES__IP=postgres
+      - KYOGRE_ENGINE__POSTGRES__PORT=5432
 
   duckdb:
     image: ghcr.io/orcalabs/kyogre/duckdb
@@ -74,6 +78,8 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+      - KYOGRE_DUCKDB__POSTGRES__IP=postgres
+      - KYOGRE_DUCKDB__POSTGRES__PORT=5432
 
   meilisearch:
     image: getmeili/meilisearch:v1.4.2
@@ -92,6 +98,8 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+      - KYOGRE_DATABASE_MIGRATOR__POSTGRES__IP=postgres
+      - KYOGRE_DATABASE_MIGRATOR__POSTGRES__PORT=5432
 
   ais-data-migrator:
     image: ghcr.io/orcalabs/kyogre/ais-data-migrator
@@ -114,6 +122,8 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+      - KYOGRE_PROCESSORS__POSTGRES__IP=postgres
+      - KYOGRE_PROCESSORS__POSTGRES__PORT=5432
 
   api:
     image: ghcr.io/orcalabs/kyogre/api
@@ -125,6 +135,9 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=local
+      - KYOGRE_API__POSTGRES__IP=postgres
+      - KYOGRE_API__POSTGRES__PORT=5432
+      - KYOGRE_API__DUCK_DB_API__IP=duckdb
     ports:
       - 8080:8080
 
