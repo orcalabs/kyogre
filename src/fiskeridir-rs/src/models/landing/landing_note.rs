@@ -240,7 +240,7 @@ pub struct LandingRaw {
     // Product
     //
     #[serde(rename = "Produkttilstand")]
-    pub condition_name: NonEmptyString,
+    pub condition_name: Option<NonEmptyString>,
     #[serde(rename = "Produkttilstand (kode)")]
     pub condition: Condition,
     #[serde(rename = "Konserveringsmåte (kode)")]
