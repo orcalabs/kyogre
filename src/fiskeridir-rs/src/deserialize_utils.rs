@@ -207,12 +207,22 @@ fn parse_naive_date_time_from_str(
         )),
         Err(_) => {
             let formatted = if include_milliseconds {
-                format!("%d.%m.%Y %H{time_delimiter}%M{time_delimiter}%S%.f")
+                [
+                    format!("%d.%m.%Y %H{time_delimiter}%M{time_delimiter}%S%.f"),
+                    format!("%d-%b-%y %H{time_delimiter}%M{time_delimiter}%S%.f"),
+                ]
             } else {
-                format!("%d.%m.%Y %H{time_delimiter}%M{time_delimiter}%S")
+                [
+                    format!("%d.%m.%Y %H{time_delimiter}%M{time_delimiter}%S"),
+                    format!("%d-%b-%y %H{time_delimiter}%M{time_delimiter}%S"),
+                ]
             };
 
-            NaiveDateTime::parse_from_str(s, &formatted)
+            if let Ok(first) = NaiveDateTime::parse_from_str(s, &formatted[0]) {
+                return Ok(first);
+            }
+
+            NaiveDateTime::parse_from_str(s, &formatted[1])
         }
     }
 }

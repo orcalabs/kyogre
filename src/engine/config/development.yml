@@ -50,8 +50,8 @@ scraper:
   vms:
     - year: 2025
       url: https://register.fiskeridir.no/vms-ers/2025-VMS.csv.zip
-    # - year: 2024
-    #   url: https://register.fiskeridir.no/vms-ers/2024-VMS.csv.zip
+    - year: 2024
+      url: https://register.fiskeridir.no/vms-ers/2024-VMS.csv.zip
     - year: 2023
       url: https://www.fiskeridir.no/Tall-og-analyse/AApne-data/posisjonsrapportering-vms/_/attachment/download/458958c9-b0a3-4bb6-9457-72a898f681b6:a087911b8c6b76b4cf69eab64a33f0e8250abd4a/2023-VMS.zip
     - year: 2022
