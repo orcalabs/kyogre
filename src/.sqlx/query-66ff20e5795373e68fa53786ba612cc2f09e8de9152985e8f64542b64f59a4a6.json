@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    NEXTVAL(\n        PG_GET_SERIAL_SEQUENCE('trip_assembler_processing_ids', 'id')\n    ) AS \"id!: TripAssemblerProcessingId\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: TripAssemblerProcessingId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "66ff20e5795373e68fa53786ba612cc2f09e8de9152985e8f64542b64f59a4a6"
+}

@@ -12,9 +12,9 @@ use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, V
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     AisVmsPosition, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack, Ordering,
-    PrecisionOutcome, ProcessingStatus, TripAssemblerId, TripId, TripPositionLayerOutput,
-    TripSearchTimestamp, TripSet, TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery,
-    VesselEventType,
+    PrecisionOutcome, ProcessingStatus, TripAssemblerId, TripAssemblerProcessingId, TripId,
+    TripPositionLayerOutput, TripSearchTimestamp, TripSet, TripSorting, TripUpdate,
+    TripsConflictStrategy, TripsQuery, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use std::collections::HashSet;
@@ -27,6 +27,23 @@ pub(crate) enum InvalidateTripPositionsTripId<'a> {
 }
 
 impl PostgresAdapter {
+    pub(crate) async fn new_trip_assembler_processing_id_impl(
+        &self,
+    ) -> Result<TripAssemblerProcessingId> {
+        let id = sqlx::query!(
+            r#"
+SELECT
+    NEXTVAL(
+        PG_GET_SERIAL_SEQUENCE('trip_assembler_processing_ids', 'id')
+    ) AS "id!: TripAssemblerProcessingId"
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .id;
+        Ok(id)
+    }
+
     pub(crate) async fn set_current_trip_impl(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -1338,7 +1355,11 @@ VALUES
         Ok(())
     }
 
-    pub(crate) async fn add_trip_set_impl(&self, value: TripSet) -> Result<()> {
+    pub(crate) async fn add_trip_set_impl(
+        &self,
+        value: TripSet,
+        id: TripAssemblerProcessingId,
+    ) -> Result<()> {
         let earliest_trip = value
             .values
             .iter()
@@ -1385,6 +1406,8 @@ VALUES
                 value.conflict_strategy,
                 calculation_timer,
                 value.queued_reset,
+                id,
+                value.processed_event_ids,
             )
             .await
         {
@@ -1405,6 +1428,8 @@ VALUES
         conflict_strategy: TripsConflictStrategy,
         new_trip_calculation_time: DateTime<Utc>,
         queued_reset: bool,
+        id: TripAssemblerProcessingId,
+        processed_event_ids: Vec<i64>,
     ) -> Result<()> {
         let earliest_trip_start = earliest_trip.period.start();
         let earliest_trip_period = PgRange::from(&earliest_trip.period);
@@ -1587,6 +1612,20 @@ WHERE
                 self.set_current_trip_impl(vessel_id, &mut tx).await?;
             }
         };
+
+        sqlx::query!(
+            r#"
+UPDATE vessel_events
+SET
+    trip_assembler_processing_ids = trip_assembler_processing_ids || $1
+WHERE
+    vessel_event_id = ANY ($2)
+            "#,
+            id as TripAssemblerProcessingId,
+            &processed_event_ids
+        )
+        .execute(&mut *tx)
+        .await?;
 
         tx.commit().await?;
 

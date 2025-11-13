@@ -1358,6 +1358,10 @@ impl TripPipelineOutbound for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineInbound for PostgresAdapter {
+    async fn new_trip_assembler_processing_id(&self) -> CoreResult<TripAssemblerProcessingId> {
+        let id = self.new_trip_assembler_processing_id_impl().await?;
+        Ok(id)
+    }
     async fn delete_uncommited_trips(&self) -> CoreResult<()> {
         self.delete_uncommited_trips_impl().await?;
         Ok(())
@@ -1388,8 +1392,8 @@ impl TripPipelineInbound for PostgresAdapter {
         self.update_trip_impl(update).await?;
         Ok(())
     }
-    async fn add_trip_set(&self, value: TripSet) -> CoreResult<()> {
-        self.add_trip_set_impl(value).await?;
+    async fn add_trip_set(&self, value: TripSet, id: TripAssemblerProcessingId) -> CoreResult<()> {
+        self.add_trip_set_impl(value, id).await?;
         Ok(())
     }
     async fn refresh_detailed_trips(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()> {

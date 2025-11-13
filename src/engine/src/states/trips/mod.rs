@@ -42,6 +42,7 @@ pub struct TripAssembly {
     pub conflict: Option<TripAssemblerConflict>,
     pub new_trip_events: Vec<MinimalVesselEvent>,
     pub prior_trip_events: Vec<MinimalVesselEvent>,
+    pub processed_event_ids: Vec<i64>,
 }
 
 impl std::ops::Add<TripProcessingOutcome> for TripsReport {
@@ -141,6 +142,11 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
         return Ok(Default::default());
     }
 
+    let processing_id = shared_state
+        .trip_pipeline_inbound
+        .new_trip_assembler_processing_id()
+        .await?;
+
     let ports: HashMap<String, Port> = shared_state
         .trip_assembler_outbound_port
         .ports()
@@ -233,7 +239,7 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                                 trips_report = trips_report + report;
 
                                 if let Some(trips) = trips {
-                                    if let Err(e) = shared_state.trip_pipeline_inbound.add_trip_set(trips).await {
+                                    if let Err(e) = shared_state.trip_pipeline_inbound.add_trip_set(trips, processing_id).await {
                                         error!(
                                             "failed to store trips for vessel: {}, err: {e:?}",
                                             vessel.fiskeridir.id,
@@ -352,6 +358,7 @@ async fn process_vessel(
             prior_trip_events: trips.prior_trip_events,
             prior_trip_calculation_time: trips.prior_trip_calculation_time,
             queued_reset: outcome.state == AssemblerState::QueuedReset,
+            processed_event_ids: trips.processed_event_ids,
         };
         for t in trips.trips {
             let trip_id = shared.trip_pipeline_inbound.reserve_trip_id().await?;
@@ -498,6 +505,12 @@ async fn run_trip_assembler(
         .map(MinimalVesselEvent::from)
         .collect();
 
+    let processed_event_ids: Vec<i64> = new_trip_events
+        .iter()
+        .map(|e| e.vessel_event_id as i64)
+        .chain(prior_trip_events.iter().map(|e| e.vessel_event_id as i64))
+        .collect();
+
     let trips = assembler
         .assemble(start_and_end_event, succeeding_events)
         .await?;
@@ -528,6 +541,7 @@ async fn run_trip_assembler(
                 conflict,
                 new_trip_events,
                 prior_trip_events,
+                processed_event_ids,
             }),
         ))
     } else {
