@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE vessel_events\nSET\n    trip_assembler_processing_ids = trip_assembler_processing_ids || $1\nWHERE\n    vessel_event_id = ANY ($2)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b6e6f88215fc69b35a9d5ecf5bcaac08d4f257964bcc5ac399571b4958dbb4b8"
+}

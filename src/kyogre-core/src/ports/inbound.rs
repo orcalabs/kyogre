@@ -181,6 +181,10 @@ pub trait TripPipelineInbound: Send + Sync {
     /// processing status reset.
     async fn check_for_out_of_order_vms_insertion(&self) -> CoreResult<()>;
 
+    /// Reserves the next processing id.
+    /// Used to identify which events have been processed on each TripAssembler run.
+    async fn new_trip_assembler_processing_id(&self) -> CoreResult<TripAssemblerProcessingId>;
+
     /// All vessels that have a single [`crate::Departure`] message will use the
     /// [`crate::TripAssemblerId::Ers`] trip assembler.
     /// This has the drawback where a vessel that has operated without ERS messages
@@ -190,7 +194,7 @@ pub trait TripPipelineInbound: Send + Sync {
     /// This method updates all vessels preferred trip assembler.
     async fn update_preferred_trip_assemblers(&self) -> CoreResult<()>;
     async fn update_trip(&self, update: TripUpdate) -> CoreResult<()>;
-    async fn add_trip_set(&self, value: TripSet) -> CoreResult<()>;
+    async fn add_trip_set(&self, value: TripSet, id: TripAssemblerProcessingId) -> CoreResult<()>;
     async fn add_trip_positions(
         &self,
         trip_id: TripId,

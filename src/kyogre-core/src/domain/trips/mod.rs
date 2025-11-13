@@ -28,6 +28,11 @@ use strum::{AsRefStr, Display, EnumString};
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct TripId(i64);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct TripAssemblerProcessingId(i64);
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Trip {
     pub trip_id: TripId,
@@ -86,6 +91,7 @@ pub struct TripSet {
     pub new_trip_events: Vec<MinimalVesselEvent>,
     pub prior_trip_events: Vec<MinimalVesselEvent>,
     pub prior_trip_calculation_time: Option<DateTime<Utc>>,
+    pub processed_event_ids: Vec<i64>,
 }
 
 #[derive(Debug)]
