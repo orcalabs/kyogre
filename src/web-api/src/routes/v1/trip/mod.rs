@@ -19,7 +19,6 @@ use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{DisplayFromStr, serde_as};
-use tracing::error;
 use v1::haul::Haul;
 
 pub mod benchmarks;
@@ -72,10 +71,9 @@ pub struct CurrentTripPositionsPath {
 /// All vessels below 15m have significantly reduced trip data quality as they do not report
 /// ERS POR and DEP messages.
 #[oasgen(skip(db, meilisearch), tags("Trip"))]
-#[tracing::instrument(skip(db, meilisearch), fields(user_id = profile.tracing_id()))]
-pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
+pub async fn trips<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
-    meilisearch: web::Data<Option<M>>,
     profile: OptionBwProfile,
     params: Query<TripsParameters>,
 ) -> Result<ResponseOrStream<Trip>> {
@@ -94,17 +92,6 @@ pub async fn trips<T: Database + Send + Sync + 'static, M: Meilisearch + 'static
     }?;
 
     let query = TripsQuery::from(params);
-
-    if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch.trips(&query, read_fishing_facility).await {
-            Ok(v) => {
-                return Ok(Response::new(v.into_iter().map(Trip::from).collect::<Vec<_>>()).into());
-            }
-            Err(e) => {
-                error!("meilisearch cache returned error: {e:?}");
-            }
-        }
-    }
 
     let response = stream_response! {
         db.detailed_trips(query, read_fishing_facility)
@@ -291,7 +278,6 @@ impl From<kyogre_core::TripDetailed> for Trip {
             vessel_events,
             landing_ids,
             distance,
-            cache_version: _,
             target_species_fiskeridir_id,
             target_species_fao_id,
             fuel_consumption_liter,

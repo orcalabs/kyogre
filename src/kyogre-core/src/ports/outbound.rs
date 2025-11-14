@@ -3,7 +3,7 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, LandingId, OrgId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, OrgId, SpeciesGroup};
 use futures::Stream;
 
 use crate::*;
@@ -217,27 +217,6 @@ pub trait TripBenchmarkOutbound: Send + Sync {
 pub trait MatrixCacheOutbound: Send + Sync {
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> CoreResult<HaulsMatrix>;
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> CoreResult<LandingMatrix>;
-}
-
-#[async_trait]
-pub trait MeilisearchOutbound: Send + Sync {
-    async fn trips(
-        &self,
-        query: &TripsQuery,
-        read_fishing_facility: bool,
-    ) -> CoreResult<Vec<TripDetailed>>;
-    async fn hauls(&self, query: &HaulsQuery) -> CoreResult<Vec<Haul>>;
-    async fn landings(&self, query: &LandingsQuery) -> CoreResult<Vec<Landing>>;
-}
-
-#[async_trait]
-pub trait MeilisearchSource: Send + Sync + Clone {
-    async fn trips_by_ids(&self, trip_ids: &[TripId]) -> CoreResult<Vec<TripDetailed>>;
-    async fn hauls_by_ids(&self, haul_ids: &[HaulId]) -> CoreResult<Vec<Haul>>;
-    async fn landings_by_ids(&self, haul_ids: &[LandingId]) -> CoreResult<Vec<Landing>>;
-    async fn all_trip_versions(&self) -> CoreResult<Vec<(TripId, i64)>>;
-    async fn all_haul_versions(&self) -> CoreResult<Vec<(HaulId, i64)>>;
-    async fn all_landing_versions(&self) -> CoreResult<Vec<(LandingId, i64)>>;
 }
 
 #[async_trait]

@@ -5,7 +5,7 @@ use crate::{
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, LandingId, OrgId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, OrgId, SpeciesGroup};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -1611,32 +1611,6 @@ impl HaulWeatherOutbound for PostgresAdapter {
         query: OceanClimateQuery,
     ) -> CoreResult<Option<HaulOceanClimate>> {
         Ok(self.haul_ocean_climate_impl(query).await?)
-    }
-}
-
-#[async_trait]
-impl MeilisearchSource for PostgresAdapter {
-    async fn trips_by_ids(&self, trip_ids: &[TripId]) -> CoreResult<Vec<TripDetailed>> {
-        self.detailed_trips_by_ids_impl(trip_ids)
-            .try_convert_collect()
-            .await
-    }
-    async fn hauls_by_ids(&self, haul_ids: &[HaulId]) -> CoreResult<Vec<Haul>> {
-        self.hauls_by_ids_impl(haul_ids).try_convert_collect().await
-    }
-    async fn landings_by_ids(&self, landing_ids: &[LandingId]) -> CoreResult<Vec<Landing>> {
-        self.landings_by_ids_impl(landing_ids)
-            .try_convert_collect()
-            .await
-    }
-    async fn all_trip_versions(&self) -> CoreResult<Vec<(TripId, i64)>> {
-        Ok(self.all_trip_cache_versions_impl().await?)
-    }
-    async fn all_haul_versions(&self) -> CoreResult<Vec<(HaulId, i64)>> {
-        Ok(self.all_haul_cache_versions_impl().await?)
-    }
-    async fn all_landing_versions(&self) -> CoreResult<Vec<(LandingId, i64)>> {
-        Ok(self.all_landing_versions_impl().await?)
     }
 }
 

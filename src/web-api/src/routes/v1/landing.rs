@@ -15,7 +15,7 @@ use serde_with::{DisplayFromStr, serde_as};
 use tracing::error;
 
 use crate::{
-    Cache, Database, Meilisearch,
+    Cache, Database,
     error::Result,
     response::{Response, ResponseOrStream, StreamResponse},
     routes::utils::*,
@@ -71,27 +71,13 @@ pub struct LandingMatrixParams {
 }
 
 /// Returns all landings matching the provided parameters.
-#[oasgen(skip(db, meilisearch), tags("Landing"))]
-#[tracing::instrument(skip(db, meilisearch))]
-pub async fn landings<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
+#[oasgen(skip(db), tags("Landing"))]
+#[tracing::instrument(skip(db))]
+pub async fn landings<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
-    meilisearch: web::Data<Option<M>>,
     params: Query<LandingsParams>,
 ) -> Result<ResponseOrStream<Landing>> {
     let query: LandingsQuery = params.into_inner().into();
-
-    if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch.landings(&query).await {
-            Ok(v) => {
-                return Ok(
-                    Response::new(v.into_iter().map(Landing::from).collect::<Vec<_>>()).into(),
-                );
-            }
-            Err(e) => {
-                error!("meilisearch cache returned error: {e:?}");
-            }
-        }
-    }
 
     let response = stream_response! {
         db.landings(query).map_ok(Landing::from)

@@ -81,13 +81,6 @@ services:
       - KYOGRE_DUCKDB__POSTGRES__IP=postgres
       - KYOGRE_DUCKDB__POSTGRES__PORT=5432
 
-  meilisearch:
-    image: getmeili/meilisearch:v1.4.2
-    environment:
-      - MEILI_MASTER_KEY=test123
-    ports:
-      - 7700:7700
-
   database-migrator:
     image: ghcr.io/orcalabs/kyogre/database-migrator
     build:

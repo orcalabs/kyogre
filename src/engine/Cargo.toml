@@ -13,7 +13,6 @@ kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
 trip-benchmark = { path = "../trip-benchmark" }
-meilisearch = { path = "../meilisearch" }
 http-client = { path = "../http-client" }
 processors = { path = "../processors" }
 

@@ -5,7 +5,6 @@ use actix_web::{
     web::Data,
 };
 use http_client::HttpClient;
-use meilisearch::MeilisearchAdapter;
 use oasgen::{
     ImplicitOAuth2Flow, IndexMap, MediaType, OAuth2Flows, OaSchema, RefOr, Response,
     SecurityRequirement, SecurityScheme, StatusCode,
@@ -17,7 +16,7 @@ use serde_qs::actix::QsQueryConfig;
 use std::{io::Error, net::TcpListener};
 
 use crate::{
-    Cache, Database, Meilisearch,
+    Cache, Database,
     error::ErrorResponse,
     routes,
     settings::Settings,
@@ -46,15 +45,7 @@ impl App {
             _ => None,
         };
 
-        let meilisearch = match &settings.meilisearch {
-            Some(m) => {
-                let adapter = MeilisearchAdapter::new(m, postgres.clone());
-                Some(adapter)
-            }
-            _ => None,
-        };
-
-        let server = create_server(postgres, duck_db, meilisearch, listener, settings)
+        let server = create_server(postgres, duck_db, listener, settings)
             .await
             .unwrap();
 
@@ -70,17 +61,15 @@ impl App {
     }
 }
 
-async fn create_server<T, S, M>(
+async fn create_server<T, S>(
     database: T,
     cache: Option<S>,
-    meilisearch: Option<M>,
     listener: TcpListener,
     settings: &Settings,
 ) -> Result<Server, Error>
 where
     T: Database + Clone + Send + Sync + 'static,
     S: Cache + Clone + Send + 'static,
-    M: Meilisearch + Clone + Send + 'static,
 {
     let environment = settings.environment;
     let not_prod = environment != Environment::Production;
@@ -124,7 +113,7 @@ where
                 "/vms/{call_sign}",
                 get().to(routes::v1::vms::vms_positions::<T>),
             )
-            .route("/trips", get().to(routes::v1::trip::trips::<T, M>))
+            .route("/trips", get().to(routes::v1::trip::trips::<T>))
             .route(
                 "/trips/current/{fiskeridir_vessel_id}",
                 get().to(routes::v1::trip::current_trip::<T>),
@@ -133,12 +122,12 @@ where
                 "/trips/current/{fiskeridir_vessel_id}/positions",
                 get().to(routes::v1::trip::current_trip_positions::<T>),
             )
-            .route("/hauls", get().to(routes::v1::haul::hauls::<T, M>))
+            .route("/hauls", get().to(routes::v1::haul::hauls::<T>))
             .route(
                 "/hauls_matrix/{active_filter}",
                 get().to(routes::v1::haul::hauls_matrix::<T, S>),
             )
-            .route("/landings", get().to(routes::v1::landing::landings::<T, M>))
+            .route("/landings", get().to(routes::v1::landing::landings::<T>))
             .route(
                 "/fishing_spot_predictions/{model_id}/{species_group_id}",
                 get().to(routes::v1::fishing_prediction::fishing_spot_predictions::<T>),
@@ -385,7 +374,6 @@ where
             .app_data(Data::new(cache.clone()))
             .app_data(Data::new(auth0_state.clone()))
             .app_data(Data::new(bw_state.clone()))
-            .app_data(Data::new(meilisearch.clone()))
             .app_data(Data::new(HttpClient::new()))
             .app_data(QsQueryConfig::default().qs_config(serde_qs::Config::new(5, false)))
             .wrap(Compress::default())

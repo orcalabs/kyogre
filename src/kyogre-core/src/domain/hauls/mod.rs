@@ -26,7 +26,6 @@ pub struct Haul {
     #[serde(alias = "haul_id")]
     pub id: HaulId,
     pub trip_id: Option<TripId>,
-    pub cache_version: i64,
     pub catch_locations: Option<Vec<CatchLocationId>>,
     pub gear_group_id: GearGroup,
     pub gear_id: Gear,

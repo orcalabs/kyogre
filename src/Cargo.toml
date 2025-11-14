@@ -10,7 +10,6 @@ members = [
     "scraper",
     "trip-benchmark",
     "duckdb-rs",
-    "meilisearch",
     "fiskeridir-rs",
     "http-client",
     "processors",

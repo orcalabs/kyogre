@@ -13,7 +13,6 @@ all-tests = []
 kyogre-core = { path = "../kyogre-core", features = ["oasgen"] }
 postgres = { path = "../postgres" }
 duckdb-rs = { path = "../duckdb-rs" }
-meilisearch = { path = "../meilisearch" }
 http-client = { path = "../http-client" }
 processors = { path = "../processors" }
 

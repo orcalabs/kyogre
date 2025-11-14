@@ -53,8 +53,6 @@ SELECT
                     JSONB_BUILD_OBJECT(
                         'haul_id',
                         h.haul_id,
-                        'cache_version',
-                        h.cache_version,
                         'catch_locations',
                         h.catch_locations,
                         'gear_group_id',
@@ -731,8 +729,6 @@ SELECT
                 h.haul_id,
                 'trip_id',
                 t.trip_id,
-                'cache_version',
-                h.cache_version,
                 'catch_locations',
                 h.catch_locations,
                 'gear_group_id',
@@ -1153,7 +1149,6 @@ SELECT
         ELSE '[]'
     END AS "fishing_facilities!",
     t.distance,
-    t.cache_version,
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
     t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
@@ -1238,76 +1233,6 @@ LIMIT
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
-    }
-
-    pub(crate) fn detailed_trips_by_ids_impl(
-        &self,
-        ids: &[TripId],
-    ) -> impl Stream<Item = Result<TripDetailed>> + '_ {
-        sqlx::query_as!(
-            TripDetailed,
-            r#"
-SELECT
-    t.trip_id AS "trip_id!: TripId",
-    t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    t.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
-    t.period AS "period!: DateRange",
-    t.period_extended AS "period_extended: DateRange",
-    t.period_precision AS "period_precision: DateRange",
-    t.landing_coverage AS "landing_coverage!: DateRange",
-    t.num_landings AS num_deliveries,
-    t.landing_total_living_weight AS total_living_weight,
-    t.landing_total_gross_weight AS total_gross_weight,
-    t.landing_total_product_weight AS total_product_weight,
-    t.landing_total_price_for_fisher AS total_price_for_fisher,
-    t.price_for_fisher_is_estimated,
-    t.delivery_point_ids AS "delivery_points: Vec<DeliveryPointId>",
-    t.landing_gear_ids AS "gear_ids: Vec<Gear>",
-    t.landing_gear_group_ids AS "gear_group_ids: Vec<GearGroup>",
-    t.landing_species_group_ids AS "species_group_ids: Vec<SpeciesGroup>",
-    t.most_recent_landing AS latest_landing_timestamp,
-    t.landings::TEXT AS "catches!",
-    t.start_port_id,
-    t.end_port_id,
-    t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
-    t.vessel_events::TEXT AS "vessel_events!",
-    t.hauls::TEXT AS "hauls!",
-    t.tra::TEXT AS "tra!",
-    t.landing_ids AS "landing_ids: Vec<LandingId>",
-    t.fishing_facilities::TEXT AS "fishing_facilities!",
-    t.distance,
-    t.cache_version,
-    t.target_species_fiskeridir_id,
-    t.target_species_fao_id,
-    t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
-    t.track_coverage,
-    t.has_track AS "has_track: HasTrack",
-    t.first_arrival
-FROM
-    trips_detailed AS t
-WHERE
-    t.trip_id = ANY ($1)
-            "#,
-            ids as &[TripId],
-        )
-        .fetch(&self.pool)
-        .map_err(|e| e.into())
-    }
-
-    pub(crate) async fn all_trip_cache_versions_impl(&self) -> Result<Vec<(TripId, i64)>> {
-        Ok(sqlx::query!(
-            r#"
-SELECT
-    t.trip_id AS "trip_id!: TripId",
-    t.cache_version
-FROM
-    trips_detailed AS t
-            "#,
-        )
-        .fetch(&self.pool)
-        .map_ok(|r| (r.trip_id, r.cache_version))
-        .try_collect()
-        .await?)
     }
 
     pub(crate) async fn current_trip_impl(

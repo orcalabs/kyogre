@@ -1,4 +1,4 @@
-use super::helper::test_with_cache;
+use super::helper::test;
 use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
@@ -7,10 +7,8 @@ use web_api::routes::v1::haul::HaulsParams;
 
 #[tokio::test]
 async fn test_hauls_returns_all_hauls() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.hauls(3).build().await;
-
-        helper.refresh_cache().await;
 
         let hauls = helper
             .app
@@ -30,14 +28,12 @@ async fn test_hauls_returns_all_hauls() {
 
 #[tokio::test]
 async fn test_hauls_sorts_by_weight() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let mut state = builder
             .hauls(4)
             .modify_idx(|i, v| v.dca.catch.species.living_weight = Some(i as u32))
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = HaulsParams {
             sorting: Some(HaulsSorting::Weight),
@@ -57,7 +53,7 @@ async fn test_hauls_sorts_by_weight() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_in_specified_months() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let month1: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
 
@@ -77,8 +73,6 @@ async fn test_hauls_returns_hauls_in_specified_months() {
             .build()
             .await;
 
-        helper.refresh_cache().await;
-
         let params = HaulsParams {
             months: Some(vec![month1, month2]),
             ..Default::default()
@@ -94,7 +88,7 @@ async fn test_hauls_returns_hauls_in_specified_months() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_in_catch_location() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .hauls(4)
             .modify_idx(|i, v| match i {
@@ -111,8 +105,6 @@ async fn test_hauls_returns_hauls_in_catch_location() {
             .build()
             .await;
 
-        helper.refresh_cache().await;
-
         let params = HaulsParams {
             catch_locations: Some(vec![CatchLocationId::new(9, 5), CatchLocationId::new(9, 4)]),
             ..Default::default()
@@ -128,7 +120,7 @@ async fn test_hauls_returns_hauls_in_catch_location() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_gear_group_ids() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .hauls(4)
             .modify_idx(|i, v| match i {
@@ -142,8 +134,6 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = HaulsParams {
             gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::LobsterTrapAndFykeNets]),
@@ -160,7 +150,7 @@ async fn test_hauls_returns_hauls_with_gear_group_ids() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_species_group_ids() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .hauls(4)
             .modify_idx(|i, v| match i {
@@ -174,8 +164,6 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = HaulsParams {
             species_group_ids: Some(vec![
@@ -195,7 +183,7 @@ async fn test_hauls_returns_hauls_with_species_group_ids() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_vessel_length_groups() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .hauls(4)
             .modify_idx(|i, v| match i {
@@ -209,8 +197,6 @@ async fn test_hauls_returns_hauls_with_vessel_length_groups() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = HaulsParams {
             vessel_length_groups: Some(vec![
@@ -230,10 +216,8 @@ async fn test_hauls_returns_hauls_with_vessel_length_groups() {
 
 #[tokio::test]
 async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.hauls(2).vessels(2).hauls(2).build().await;
-
-        helper.refresh_cache().await;
 
         let params = HaulsParams {
             fiskeridir_vessel_ids: Some(vec![
@@ -255,10 +239,8 @@ async fn test_hauls_returns_hauls_with_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_hauls_sorts_by_start_timestamp() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.hauls(4).build().await;
-
-        helper.refresh_cache().await;
 
         let params = HaulsParams {
             sorting: Some(HaulsSorting::StartDate),
@@ -276,15 +258,13 @@ async fn test_hauls_sorts_by_start_timestamp() {
 
 #[tokio::test]
 async fn test_hauls_sorts_by_stop_timestamp() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.hauls(4).build().await;
         let params = HaulsParams {
             sorting: Some(HaulsSorting::StopDate),
             ordering: Some(Ordering::Asc),
             ..Default::default()
         };
-
-        helper.refresh_cache().await;
 
         let hauls = helper.app.get_hauls(params).await.unwrap();
 
@@ -296,14 +276,12 @@ async fn test_hauls_sorts_by_stop_timestamp() {
 
 #[tokio::test]
 async fn test_hauls_species_fiskeridir_defaults_to_zero() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .hauls(1)
             .modify(|v| v.dca.catch.species.species_fdir_code = None)
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let hauls = helper.app.get_hauls(Default::default()).await.unwrap();
 

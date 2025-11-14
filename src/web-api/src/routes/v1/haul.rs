@@ -13,7 +13,7 @@ use serde_with::{DisplayFromStr, serde_as};
 use tracing::error;
 
 use crate::{
-    Cache, Database, Meilisearch,
+    Cache, Database,
     error::Result,
     response::{Response, ResponseOrStream, StreamResponse},
     routes::utils::*,
@@ -69,25 +69,13 @@ pub struct HaulsMatrixParams {
 }
 
 /// Returns all hauls matching the provided parameters.
-#[oasgen(skip(db, meilisearch), tags("Haul"))]
-#[tracing::instrument(skip(db, meilisearch))]
-pub async fn hauls<T: Database + Send + Sync + 'static, M: Meilisearch + 'static>(
+#[oasgen(skip(db), tags("Haul"))]
+#[tracing::instrument(skip(db))]
+pub async fn hauls<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
-    meilisearch: web::Data<Option<M>>,
     params: Query<HaulsParams>,
 ) -> Result<ResponseOrStream<Haul>> {
     let query: HaulsQuery = params.into_inner().into();
-
-    if let Some(meilisearch) = meilisearch.as_ref() {
-        match meilisearch.hauls(&query).await {
-            Ok(v) => {
-                return Ok(Response::new(v.into_iter().map(Haul::from).collect::<Vec<_>>()).into());
-            }
-            Err(e) => {
-                error!("meilisearch cache returned error: {e:?}");
-            }
-        }
-    }
 
     let response = stream_response! {
         db.hauls(query).map_ok(Haul::from)
@@ -232,7 +220,6 @@ impl From<kyogre_core::Haul> for Haul {
         let kyogre_core::Haul {
             id,
             trip_id,
-            cache_version: _,
             catch_locations,
             gear_group_id,
             gear_id,

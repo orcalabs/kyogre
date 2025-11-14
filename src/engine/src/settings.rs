@@ -12,7 +12,6 @@ pub struct Settings {
     pub fuel_estimation_mode: FuelImplDiscriminants,
     pub local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
     pub postgres: PsqlSettings,
-    pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,
     pub scraper: scraper::Config,
     pub single_state_run: Option<FisheryDiscriminants>,
