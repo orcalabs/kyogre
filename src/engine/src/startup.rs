@@ -63,9 +63,6 @@ impl App {
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
-            postgres.clone(),
-            postgres.clone(),
-            postgres.clone(),
             postgres_arc,
             Some(Box::new(scraper)),
             trip_assemblers,
@@ -134,15 +131,6 @@ impl App {
                     let engine = FisheryEngine::HaulDistribution(step);
                     engine.run_single().await;
                 }
-                FisheryDiscriminants::HaulWeather => {
-                    let step = crate::Step::initial(
-                        crate::HaulWeatherState,
-                        self.shared_state,
-                        Box::new(self.transition_log),
-                    );
-                    let engine = FisheryEngine::HaulWeather(step);
-                    engine.run_single().await;
-                }
                 FisheryDiscriminants::VerifyDatabase => {
                     let step = crate::Step::initial(
                         crate::VerifyDatabaseState,
@@ -150,15 +138,6 @@ impl App {
                         Box::new(self.transition_log),
                     );
                     let engine = FisheryEngine::VerifyDatabase(step);
-                    engine.run_single().await;
-                }
-                FisheryDiscriminants::DailyWeather => {
-                    let step = crate::Step::initial(
-                        crate::DailyWeatherState,
-                        self.shared_state,
-                        Box::new(self.transition_log),
-                    );
-                    let engine = FisheryEngine::DailyWeather(step);
                     engine.run_single().await;
                 }
             };

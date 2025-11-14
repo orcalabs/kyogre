@@ -148,11 +148,6 @@ where
                 "/ais_vms_positions",
                 get().to(routes::v1::ais_vms::ais_vms_positions::<T>),
             )
-            .route("/weather", get().to(routes::v1::weather::weather::<T>))
-            .route(
-                "/weather_locations",
-                get().to(routes::v1::weather::weather_locations::<T>),
-            )
             .route(
                 "/trip/benchmarks/average",
                 get().to(routes::v1::trip::benchmarks::average::<T>),

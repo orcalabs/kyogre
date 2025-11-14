@@ -16,7 +16,6 @@ mod herring;
 mod landing;
 mod landing_entry;
 mod norwegian_land;
-mod ocean_climate;
 mod port;
 mod species;
 #[cfg(feature = "test")]
@@ -26,7 +25,6 @@ mod trip_benchmarks;
 mod vessel;
 mod vessel_events;
 mod vms;
-mod weather;
 
 pub use ais::*;
 pub use catch_area::*;
@@ -46,7 +44,6 @@ pub use herring::*;
 pub use landing::*;
 pub use landing_entry::*;
 pub use norwegian_land::*;
-pub use ocean_climate::*;
 pub use port::*;
 pub use species::*;
 #[cfg(feature = "test")]
@@ -56,4 +53,3 @@ pub use trip_benchmarks::*;
 pub use vessel::*;
 pub use vessel_events::*;
 pub use vms::*;
-pub use weather::*;

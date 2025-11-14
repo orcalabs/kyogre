@@ -32,14 +32,7 @@ macro_rules! impl_cycleable {
     };
 }
 
-impl_cycleable!(WeatherBuilder, WeatherConstructor, state, cycle);
 impl_cycleable!(AisVesselBuilder, AisVesselConstructor, state, cycle);
-impl_cycleable!(
-    OceanClimateHaulBuilder,
-    OceanClimateConstructor,
-    state.state.state,
-    cycle
-);
 impl_cycleable!(
     AisVmsPositionTripBuilder,
     AisVmsPositionConstructor,
@@ -109,12 +102,6 @@ impl_cycleable!(LandingVesselBuilder, LandingConstructor, state.state, cycle);
 impl_cycleable!(
     LandingTripBuilder,
     LandingConstructor,
-    state.state.state,
-    cycle
-);
-impl_cycleable!(
-    WeatherHaulBuilder,
-    WeatherConstructor,
     state.state.state,
     cycle
 );
@@ -241,12 +228,6 @@ impl_modifiable!(
     state.state.state.landings
 );
 impl_modifiable!(PorVesselBuilder, PorConstructor, state.state.por);
-impl_modifiable!(
-    WeatherHaulBuilder,
-    WeatherConstructor,
-    state.state.state.weather
-);
-impl_modifiable!(WeatherBuilder, WeatherConstructor, state.weather);
 impl_modifiable!(WeeklySaleBuilder, WeeklySaleContructor, state.weekly_sales);
 impl_modifiable!(
     WeeklySaleLandingTripBuilder,
@@ -305,34 +286,6 @@ impl Modifiable for TripBuilder {
         self
     }
 }
-
-#[async_trait]
-pub trait HaulVesselLevel
-where
-    Self: Sized,
-{
-    fn up(self) -> HaulVesselBuilder;
-    fn base(self) -> TestStateBuilder;
-    async fn build(self) -> TestState {
-        self.base().build().await
-    }
-}
-
-macro_rules! impl_haul_vessel_level {
-    ($type: ty) => {
-        impl HaulVesselLevel for $type {
-            fn up(self) -> HaulVesselBuilder {
-                self.state
-            }
-            fn base(self) -> TestStateBuilder {
-                self.state.state.state
-            }
-        }
-    };
-}
-
-impl_haul_vessel_level!(WeatherHaulBuilder);
-impl_haul_vessel_level!(OceanClimateHaulBuilder);
 
 #[async_trait]
 pub trait VesselLevel
@@ -453,7 +406,6 @@ impl_global_level!(TraBuilder);
 impl_global_level!(LandingBuilder);
 impl_global_level!(FishingFacilityBuilder);
 impl_global_level!(DeliveryPointBuilder);
-impl_global_level!(WeatherBuilder);
 impl_global_level!(WeeklySaleBuilder);
 
 #[async_trait]

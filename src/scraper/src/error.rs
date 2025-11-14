@@ -36,13 +36,6 @@ pub enum Error {
         #[snafu(source)]
         error: csv::Error,
     },
-    #[snafu(display("Python error"))]
-    Python {
-        #[snafu(implicit)]
-        location: Location,
-        #[snafu(source)]
-        error: pyo3::PyErr,
-    },
     #[snafu(display("Oauth error"))]
     Oauth {
         #[snafu(implicit)]

@@ -1,7 +1,0 @@
-aiofiles == 24.1.0
-aiohttp == 3.10.10
-asyncio == 3.4.3
-netCDF4 == 1.7.2
-pandas == 2.2.3
-threddsclient == 0.4.6
-xarray == 2024.10.0

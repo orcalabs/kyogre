@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    catch_location_id AS \"id!: CatchLocationId\",\n    \"polygon\" AS \"polygon!: _\",\n    longitude,\n    latitude,\n    weather_location_ids\nFROM\n    catch_locations\nWHERE\n    CARDINALITY(weather_location_ids) > 0\n    OR $1\n            ",
+  "query": "\nSELECT\n    catch_location_id AS \"id!: CatchLocationId\",\n    \"polygon\" AS \"polygon!: _\",\n    longitude,\n    latitude\nFROM\n    catch_locations\nWHERE\n    $1\n            ",
   "describe": {
     "columns": [
       {
@@ -27,11 +27,6 @@
         "ordinal": 3,
         "name": "latitude",
         "type_info": "Float8"
-      },
-      {
-        "ordinal": 4,
-        "name": "weather_location_ids",
-        "type_info": "Int8Array"
       }
     ],
     "parameters": {
@@ -43,9 +38,8 @@
       false,
       false,
       false,
-      false,
       false
     ]
   },
-  "hash": "ca3cf3f7e33cde6c813e93d812efcc8adba18ccfd0cf2cf36bf2d4ed6d0da6ae"
+  "hash": "7edc7ca368a2e99b22c2d00c28b03a2ab2fd8584288915a5f361608b3cb316db"
 }

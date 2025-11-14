@@ -23,7 +23,6 @@ chrono = { workspace = true }
 wkt = { workspace = true }
 uuid = { workspace = true }
 csv = { workspace = true }
-pyo3 = { workspace = true }
 num-traits = { workspace = true }
 
 geozero = "0.14.0"

@@ -34,7 +34,6 @@ pub struct CatchLocation {
     pub polygon: Polygon,
     pub latitude: f64,
     pub longitude: f64,
-    pub weather_location_ids: Vec<i64>,
 }
 
 impl std::fmt::Display for CatchLocationId {

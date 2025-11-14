@@ -11,13 +11,6 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[snafu(module, visibility(pub))]
 #[stack_error(to = [CoreError::Unexpected])]
 pub enum Error {
-    #[snafu(display("Python error"))]
-    Python {
-        #[snafu(implicit)]
-        location: Location,
-        #[snafu(source)]
-        error: pyo3::PyErr,
-    },
     #[snafu(display("Json error"))]
     Json {
         #[snafu(implicit)]

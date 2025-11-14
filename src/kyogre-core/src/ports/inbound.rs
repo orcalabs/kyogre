@@ -115,8 +115,6 @@ pub trait ScraperInboundPort {
         &self,
         delivery_points: Vec<MattilsynetDeliveryPoint>,
     ) -> CoreResult<()>;
-    async fn add_weather(&self, weather: Vec<NewWeather>) -> CoreResult<()>;
-    async fn add_ocean_climate(&self, ocean_climate: Vec<NewOceanClimate>) -> CoreResult<()>;
 }
 
 #[async_trait]
@@ -203,23 +201,6 @@ pub trait TestHelperInbound: Send + Sync {
         &self,
         old: fiskeridir_rs::DeliveryPointId,
         new: fiskeridir_rs::DeliveryPointId,
-    ) -> CoreResult<()>;
-}
-
-#[async_trait]
-pub trait HaulWeatherInbound: Send + Sync {
-    async fn add_haul_weather(&self, values: Vec<HaulWeatherOutput>) -> CoreResult<()>;
-}
-
-#[async_trait]
-pub trait DailyWeatherInbound: Send + Sync {
-    async fn catch_locations_with_weather(&self) -> CoreResult<Vec<CatchLocationId>>;
-    async fn dirty_dates(&self) -> CoreResult<Vec<NaiveDate>>;
-    async fn prune_dirty_dates(&self) -> CoreResult<()>;
-    async fn update_daily_weather(
-        &self,
-        catch_locations: &[CatchLocationId],
-        date: NaiveDate,
     ) -> CoreResult<()>;
 }
 

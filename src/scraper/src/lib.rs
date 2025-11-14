@@ -10,24 +10,20 @@ use fiskeridir::{
 use http_client::HttpClient;
 use kyogre_core::{OauthConfig, ScraperInboundPort, ScraperOutboundPort};
 use mattilsynet::MattilsynetScraper;
-use ocean_climate::OceanClimateScraper;
 use orca_core::Environment;
 use rafisklaget::WeeklySalesScraper;
 use serde::Deserialize;
 use std::sync::Arc;
 use std::{fmt::Debug, path::PathBuf};
 use tracing::{error, instrument};
-use weather::WeatherScraper;
 
 mod barentswatch;
 mod chunks;
 mod error;
 mod fiskeridir;
 mod mattilsynet;
-mod ocean_climate;
 mod rafisklaget;
 mod utils;
-mod weather;
 
 pub use barentswatch::BarentswatchSource;
 pub use error::{Error, Result};
@@ -164,9 +160,6 @@ impl Scraper {
         let weekly_sales_scraper =
             WeeklySalesScraper::new(config.rafisklaget_weekly_sales, http_client);
 
-        let _weather_scraper = WeatherScraper::new();
-        let _ocean_climate_scraper = OceanClimateScraper::new();
-
         Scraper {
             environment,
             scrapers: vec![
@@ -182,8 +175,6 @@ impl Scraper {
                 ],
                 vec![Arc::new(vms_scraper)],
                 vec![Arc::new(mattilsynet_scraper)],
-                // vec![Arc::new(weather_scraper)],
-                // vec![Box::new(ocean_climate_scraper)],
             ],
             processor,
         }
@@ -247,8 +238,6 @@ pub enum ScraperId {
     FishingFacilityHistoric,
     AquaCultureRegister,
     Mattilsynet,
-    Weather,
-    OceanClimate,
     RafisklagetWeeklySales,
 }
 
@@ -264,8 +253,6 @@ impl std::fmt::Display for ScraperId {
             ScraperId::FishingFacilityHistoric => write!(f, "fishing_facility_historic_scraper"),
             ScraperId::AquaCultureRegister => write!(f, "aqua_culture_register"),
             ScraperId::Mattilsynet => write!(f, "mattilsynet"),
-            ScraperId::Weather => write!(f, "weather"),
-            ScraperId::OceanClimate => write!(f, "ocean_climate"),
             ScraperId::RafisklagetWeeklySales => write!(f, "rafisklaget_weekly_sales"),
         }
     }

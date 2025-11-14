@@ -73,11 +73,9 @@ pub struct AisVms {}
 #[machine(shared_state = SharedState, order_chain)]
 pub enum Fishery {
     Scrape(ScrapeState),
-    DailyWeather(DailyWeatherState),
     Trips(TripsState),
     Benchmark(BenchmarkState),
     HaulDistribution(HaulDistributionState),
-    HaulWeather(HaulWeatherState),
     VerifyDatabase(VerifyDatabaseState),
 }
 
@@ -96,14 +94,11 @@ pub struct SharedState {
     pub benchmark_outbound: Box<dyn TripBenchmarkOutbound>,
     pub haul_distributor_inbound: Box<dyn HaulDistributorInbound>,
     pub haul_distributor_outbound: Box<dyn HaulDistributorOutbound>,
-    pub haul_weather_inbound: Box<dyn HaulWeatherInbound>,
-    pub haul_weather_outbound: Box<dyn HaulWeatherOutbound>,
     pub scraper: Option<Box<dyn Scraper>>,
     pub trip_assemblers: Vec<Box<dyn TripAssembler>>,
     pub benchmarks: Vec<Box<dyn TripBenchmark>>,
     pub trip_distancer: Box<dyn TripDistancer>,
     pub trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
-    pub catch_location_weather: Box<dyn DailyWeatherInbound>,
     pub fuel_estimation: Arc<dyn FuelEstimation>,
 }
 
@@ -136,9 +131,6 @@ impl SharedState {
         benchmark_outbound: Box<dyn TripBenchmarkOutbound>,
         haul_distributor_inbound: Box<dyn HaulDistributorInbound>,
         haul_distributor_outbound: Box<dyn HaulDistributorOutbound>,
-        haul_weather_inbound: Box<dyn HaulWeatherInbound>,
-        haul_weather_outbound: Box<dyn HaulWeatherOutbound>,
-        catch_location_weather: Box<dyn DailyWeatherInbound>,
         fuel_estimation: Arc<dyn FuelEstimation>,
         scraper: Option<Box<dyn Scraper>>,
         trip_assemblers: Vec<Box<dyn TripAssembler>>,
@@ -162,12 +154,9 @@ impl SharedState {
             benchmark_outbound,
             haul_distributor_inbound,
             haul_distributor_outbound,
-            haul_weather_inbound,
-            haul_weather_outbound,
             trip_pipeline_inbound,
             trip_pipeline_outbound,
             trip_position_layers,
-            catch_location_weather,
             fuel_estimation,
             fuel_mode,
         }
