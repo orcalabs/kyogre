@@ -47,8 +47,7 @@ SELECT
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,
     COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS "call_sign!: CallSign",
-    h.catches::TEXT AS "catches!",
-    h.cache_version
+    h.catches::TEXT AS "catches!"
 FROM
     hauls h
     LEFT JOIN vessel_events e ON h.vessel_event_id = e.vessel_event_id

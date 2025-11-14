@@ -1,4 +1,4 @@
-use super::helper::{test, test_with_cache};
+use super::helper::test;
 use chrono::{DateTime, Utc};
 use engine::*;
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
@@ -7,10 +7,8 @@ use web_api::routes::v1::landing::LandingsParams;
 
 #[tokio::test]
 async fn test_landings_returns_all_landings() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.vessels(1).landings(3).build().await;
-
-        helper.refresh_cache().await;
 
         let landings = helper
             .app
@@ -29,7 +27,7 @@ async fn test_landings_returns_all_landings() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_in_specified_months() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let month1: DateTime<Utc> = "2000-06-1T00:00:00Z".parse().unwrap();
         let month2: DateTime<Utc> = "2001-01-1T00:00:00Z".parse().unwrap();
 
@@ -42,8 +40,6 @@ async fn test_landings_returns_landings_in_specified_months() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = LandingsParams {
             months: Some(vec![month1, month2]),
@@ -61,7 +57,7 @@ async fn test_landings_returns_landings_in_specified_months() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_in_catch_location() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
@@ -77,8 +73,6 @@ async fn test_landings_returns_landings_in_catch_location() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = LandingsParams {
             catch_locations: Some(vec![CatchLocationId::new(9, 5), CatchLocationId::new(9, 4)]),
@@ -96,7 +90,7 @@ async fn test_landings_returns_landings_in_catch_location() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_gear_group_ids() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
@@ -106,8 +100,6 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = LandingsParams {
             gear_group_ids: Some(vec![GearGroup::Seine, GearGroup::LobsterTrapAndFykeNets]),
@@ -125,7 +117,7 @@ async fn test_landings_returns_landings_with_gear_group_ids() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_species_group_ids() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
@@ -135,8 +127,6 @@ async fn test_landings_returns_landings_with_species_group_ids() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = LandingsParams {
             species_group_ids: Some(vec![
@@ -157,7 +147,7 @@ async fn test_landings_returns_landings_with_species_group_ids() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_vessel_length_groups() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| match i {
@@ -167,8 +157,6 @@ async fn test_landings_returns_landings_with_vessel_length_groups() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = LandingsParams {
             vessel_length_groups: Some(vec![
@@ -189,10 +177,8 @@ async fn test_landings_returns_landings_with_vessel_length_groups() {
 
 #[tokio::test]
 async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.landings(2).vessels(2).landings(2).build().await;
-
-        helper.refresh_cache().await;
 
         let params = LandingsParams {
             fiskeridir_vessel_ids: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
@@ -208,10 +194,8 @@ async fn test_landings_returns_landings_with_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_landings_sorts_by_landing_timestamp() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.landings(4).build().await;
-
-        helper.refresh_cache().await;
 
         let params = LandingsParams {
             sorting: Some(LandingsSorting::LandingTimestamp),
@@ -229,7 +213,7 @@ async fn test_landings_sorts_by_landing_timestamp() {
 
 #[tokio::test]
 async fn test_landings_sorts_by_weight() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder
             .landings(4)
             .modify_idx(|i, v| {
@@ -237,8 +221,6 @@ async fn test_landings_sorts_by_weight() {
             })
             .build()
             .await;
-
-        helper.refresh_cache().await;
 
         let params = LandingsParams {
             sorting: Some(LandingsSorting::LivingWeight),
@@ -289,10 +271,8 @@ async fn test_landing_deletion_only_deletes_removed_landings() {
 
 #[tokio::test]
 async fn test_landings_filter_by_limit() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.vessels(1).landings(2).build().await;
-
-        helper.refresh_cache().await;
 
         let landings = helper
             .app
@@ -310,10 +290,8 @@ async fn test_landings_filter_by_limit() {
 
 #[tokio::test]
 async fn test_landings_filter_by_offset() {
-    test_with_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let state = builder.vessels(1).landings(2).build().await;
-
-        helper.refresh_cache().await;
 
         let landings = helper
             .app

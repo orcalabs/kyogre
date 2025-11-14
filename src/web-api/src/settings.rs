@@ -10,7 +10,6 @@ pub static BW_PROFILES_URL: OnceLock<String> = OnceLock::new();
 pub struct Settings {
     pub api: ApiSettings,
     pub postgres: PsqlSettings,
-    pub meilisearch: Option<meilisearch::Settings>,
     pub environment: Environment,
     pub bw_settings: Option<BwSettings>,
     pub duck_db_api: Option<Duckdb>,

@@ -4,7 +4,6 @@ use duckdb_rs::{CacheStorage, adapter};
 use engine::*;
 use futures::Future;
 use kyogre_core::*;
-use meilisearch::MeilisearchAdapter;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{HAULS_VERIFY_CHUNK_SIZE, LANDINGS_VERIFY_CHUNK_SIZE, PostgresAdapter, TestDb};
 use std::f64;
@@ -34,7 +33,6 @@ pub struct TestHelper {
     pub db: TestDb,
     duck_db: Option<duckdb_rs::Client>,
     db_settings: PsqlSettings,
-    meilisearch: Option<MeilisearchAdapter<PostgresAdapter>>,
 }
 
 impl TestHelper {
@@ -69,7 +67,6 @@ impl TestHelper {
         app: App,
         bw_helper: &'static BarentswatchHelper,
         duck_db: Option<duckdb_rs::Client>,
-        meilisearch: Option<MeilisearchAdapter<PostgresAdapter>>,
     ) -> TestHelper {
         let address = format!("http://127.0.0.1:{}/v1.0", app.port());
 
@@ -80,18 +77,11 @@ impl TestHelper {
             db: TestDb { db },
             duck_db,
             db_settings,
-            meilisearch,
         }
     }
     pub async fn refresh_matrix_cache(&self) {
         if let Some(duck_db) = self.duck_db.as_ref() {
             duck_db.refresh().await.unwrap();
-        }
-    }
-    pub async fn refresh_cache(&self) {
-        if let Some(meilisearch) = self.meilisearch.as_ref() {
-            meilisearch.create_indexes().await.unwrap();
-            meilisearch.refresh().await.unwrap();
         }
     }
 }
@@ -132,27 +122,10 @@ where
     test_impl(test, CacheMode::NoCache, PgTag::Local).await;
 }
 
-pub async fn test_with_cache<T, Fut>(test: T)
-where
-    T: FnOnce(TestHelper, TestStateBuilder) -> Fut
-        + panic::UnwindSafe
-        + Send
-        + Sync
-        + Clone
-        + 'static,
-    Fut: Future<Output = ()> + Send + 'static,
-{
-    #[cfg(feature = "all-tests")]
-    test_impl(test.clone(), CacheMode::Meilisearch, PgTag::Local).await;
-
-    test_impl(test, CacheMode::NoCache, PgTag::Local).await;
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CacheMode {
     NoCache,
     MatrixCache,
-    Meilisearch,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -188,16 +161,12 @@ where
     Fut: Future<Output = ()> + Send + 'static,
 {
     let container_name = pg_tag.container_name();
-    let mut test_helper = TestHelperBuilder::default().add_postgres(
+    let test_helper = TestHelperBuilder::default().add_postgres(
         Some(container_name),
         "ghcr.io/orcalabs/kyogre/test-postgres",
         Some(pg_tag.tag()),
         Some(pg_tag.port()),
     );
-
-    if cache_mode == CacheMode::Meilisearch {
-        test_helper = test_helper.add_meilisearch(None);
-    }
 
     HAULS_VERIFY_CHUNK_SIZE.get_or_init(|| 1);
     LANDINGS_VERIFY_CHUNK_SIZE.get_or_init(|| 1);
@@ -254,20 +223,6 @@ where
                 (None, None)
             };
 
-            let (meilisearch, m_settings) = if cache_mode == CacheMode::Meilisearch {
-                let handle = ops.handle("meilisearch");
-                let settings = meilisearch::Settings {
-                    host: format!("http://{}:7700", handle.ip()),
-                    api_key: "test123".to_string(),
-                    refresh_timeout: None,
-                    index_suffix: db_name,
-                };
-                let meilisearch = MeilisearchAdapter::new(&settings, adapter.clone());
-                (Some(meilisearch), Some(settings))
-            } else {
-                (None, None)
-            };
-
             let bw_profiles_url = format!("{bw_address}/profiles");
 
             let api_settings = Settings {
@@ -277,7 +232,6 @@ where
                     num_workers: Some(1),
                 },
                 postgres: db_settings.clone(),
-                meilisearch: m_settings,
                 environment: Environment::Test,
                 bw_settings: Some(BwSettings {
                     jwks_url: format!("{bw_address}/jwks"),
@@ -296,7 +250,6 @@ where
                 App::build(&api_settings).await,
                 bw_helper,
                 duck_db_client,
-                meilisearch.clone(),
             )
             .await;
 
@@ -306,9 +259,6 @@ where
             test(app, builder).await;
 
             adapter.verify_database().await.unwrap();
-            if cache_mode == CacheMode::Meilisearch {
-                meilisearch.unwrap().cleanup().await.unwrap();
-            }
             adapter.close().await;
         })
         .await;

@@ -2,12 +2,9 @@ use std::sync::Arc;
 
 use kyogre_core::FiskeridirVesselId;
 use machine::StateMachine;
-use meilisearch::MeilisearchAdapter;
 use orca_core::Environment;
 use postgres::PostgresAdapter;
 use scraper::{FiskeridirSource, Scraper};
-use tokio::select;
-use tracing::error;
 
 use crate::{FisheryDiscriminants, FisheryEngine, SharedState, settings::Settings};
 
@@ -15,7 +12,6 @@ pub struct App {
     pub shared_state: SharedState,
     pub transition_log: machine::PostgresAdapter,
     pub single_state_run: Option<FisheryDiscriminants>,
-    meilisearch: Option<MeilisearchAdapter<PostgresAdapter>>,
     local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
 }
 
@@ -26,19 +22,6 @@ impl App {
         if settings.environment == Environment::Local {
             postgres.do_migrations().await;
         }
-
-        let meilisearch = if let Some(s) = &settings.meilisearch {
-            let meilisearch = MeilisearchAdapter::new(s, postgres.clone());
-            if matches!(
-                settings.environment,
-                Environment::Local | Environment::Development
-            ) {
-                meilisearch.create_indexes().await.unwrap();
-            }
-            Some(meilisearch)
-        } else {
-            None
-        };
 
         std::fs::create_dir_all(&settings.scraper.file_download_dir)
             .expect("failed to create download dir");
@@ -100,7 +83,6 @@ impl App {
             transition_log,
             shared_state,
             single_state_run: settings.single_state_run,
-            meilisearch,
             local_processing_vessels: settings.local_processing_vessels.clone(),
         }
     }
@@ -201,21 +183,7 @@ impl App {
             );
             let engine = FisheryEngine::Pending(step);
 
-            if let Some(meilisearch) = self.meilisearch {
-                let engine = tokio::spawn(engine.run());
-                let meilisearch = tokio::spawn(meilisearch.run());
-
-                select! {
-                    _ = engine => {
-                        error!("engine exited unexpectedly");
-                    },
-                    _ = meilisearch => {
-                        error!("meilisearch exited unexpectedly");
-                    },
-                }
-            } else {
-                engine.run().await;
-            }
+            engine.run().await;
         }
     }
 }

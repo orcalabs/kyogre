@@ -207,8 +207,7 @@ SELECT
     h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
     COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,
     COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS "call_sign!: CallSign",
-    h.catches::TEXT AS "catches!",
-    h.cache_version AS "cache_version!"
+    h.catches::TEXT AS "catches!"
 FROM
     hauls h
     LEFT JOIN vessel_events e ON h.vessel_event_id = e.vessel_event_id
@@ -284,61 +283,6 @@ ORDER BY
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())
-    }
-
-    pub(crate) fn hauls_by_ids_impl(
-        &self,
-        haul_ids: &[HaulId],
-    ) -> impl Stream<Item = Result<Haul>> + '_ {
-        sqlx::query_as!(
-            Haul,
-            r#"
-SELECT
-    h.haul_id AS "haul_id!: HaulId",
-    e.trip_id AS "trip_id: TripId",
-    h.haul_distance,
-    h.catch_locations AS "catch_locations?: Vec<CatchLocationId>",
-    h.species_group_ids AS "species_group_ids!: Vec<SpeciesGroup>",
-    h.start_latitude,
-    h.start_longitude,
-    h.stop_latitude,
-    h.stop_longitude,
-    h.start_timestamp,
-    h.stop_timestamp,
-    h.gear_group_id AS "gear_group_id!: GearGroup",
-    h.gear_id AS "gear_id!: Gear",
-    h.fiskeridir_vessel_id AS "fiskeridir_vessel_id?: FiskeridirVesselId",
-    h.vessel_length_group AS "vessel_length_group!: VesselLengthGroup",
-    COALESCE(h.vessel_name, h.vessel_name_ers) AS vessel_name,
-    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers) AS "call_sign!: CallSign",
-    h.catches::TEXT AS "catches!",
-    h.cache_version
-FROM
-    hauls h
-    LEFT JOIN vessel_events e ON h.vessel_event_id = e.vessel_event_id
-WHERE
-    h.haul_id = ANY ($1)
-            "#,
-            &haul_ids as &[HaulId],
-        )
-        .fetch(&self.pool)
-        .map_err(|e| e.into())
-    }
-
-    pub(crate) async fn all_haul_cache_versions_impl(&self) -> Result<Vec<(HaulId, i64)>> {
-        Ok(sqlx::query!(
-            r#"
-SELECT
-    haul_id AS "haul_id!: HaulId",
-    cache_version
-FROM
-    hauls
-            "#,
-        )
-        .fetch(&self.pool)
-        .map_ok(|r| (r.haul_id, r.cache_version))
-        .try_collect()
-        .await?)
     }
 
     pub(crate) async fn haul_messages_of_vessel_impl(

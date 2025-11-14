@@ -270,7 +270,6 @@ pub struct TripDetailed {
     pub vessel_events: Vec<VesselEvent>,
     pub landing_ids: Vec<LandingId>,
     pub distance: Option<f64>,
-    pub cache_version: i64,
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption_liter: Option<f64>,
