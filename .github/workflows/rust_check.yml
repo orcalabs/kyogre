@@ -17,8 +17,8 @@ jobs:
     secrets: inherit
     with:
       dependencies: protobuf-compiler
-      pip-requirements: scripts/python/fishing_predictor/requirements.txt
-      image-build-command: docker build -f dockerfiles/test-db/Dockerfile -t ghcr.io/orcalabs/kyogre/test-postgres
+      image-build-command:
+        docker build -f dockerfiles/test-db/Dockerfile -t ghcr.io/orcalabs/kyogre/test-postgres
         --build-arg MIGRATIONS_DIR_PATH=src/postgres/migrations
         --build-arg TEST_MIGRATIONS_DIR_PATH=src/postgres/test_migrations .
       image-pull-command: docker pull ghcr.io/orcalabs/kyogre/test-postgres:master

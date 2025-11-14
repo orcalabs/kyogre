@@ -1,20 +1,17 @@
 use crate::{
     AisConsumeLoop, AisPosition, AisVms, Arrival, Cluster, DataMessage, Departure,
     ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility,
-    FishingSpotPredictor, FishingSpotWeatherPredictor, FishingWeightPredictor,
-    FishingWeightWeatherPredictor, Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery,
-    LandingsSorting, Mmsi, NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination,
-    PrecisionId, PredictionRange, ScrapeState, SharedState, SpotPredictorSettings, Step,
-    TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather, WeightPredictorSettings,
+    Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery, LandingsSorting, Mmsi,
+    NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, ScrapeState,
+    SharedState, Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
 };
 use async_channel::Sender;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    BuyerLocation, CatchLocationId, FiskeridirVesselId, MLModel, NewVesselConflict, NewWeather,
-    TestStorage, Tra, TrainingMode, TripAssembler, TripDistancer, TripPositionLayer, UpdateVessel,
-    WeeklySale, WeeklySaleId,
+    BuyerLocation, FiskeridirVesselId, NewVesselConflict, NewWeather, TestStorage, Tra,
+    TripAssembler, TripDistancer, TripPositionLayer, UpdateVessel, WeeklySale, WeeklySaleId,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -134,7 +131,6 @@ pub struct TestStateBuilder {
     pub processors: processors::App,
     cycle: Cycle,
     trip_queue_reset: Option<Cycle>,
-    enabled_ml_models: Vec<Box<dyn MLModel>>,
 }
 
 enum TripPrecisonStartPoint {
@@ -166,64 +162,6 @@ enum TripPrecisonStartPoint {
         start: DateTime<Utc>,
         mmsi: Mmsi,
     },
-}
-
-pub fn default_fishing_spot_weather_predictor() -> Box<dyn MLModel> {
-    Box::new(FishingSpotWeatherPredictor::new(SpotPredictorSettings {
-        running_in_test: true,
-        test_fraction: None,
-        use_gpu: false,
-        training_rounds: 1,
-        predict_batch_size: 53,
-        catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-        range: PredictionRange::DaysFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_DAYS),
-        training_mode: TrainingMode::Single,
-    }))
-}
-
-pub fn default_fishing_spot_predictor() -> Box<dyn MLModel> {
-    Box::new(FishingSpotPredictor::new(SpotPredictorSettings {
-        running_in_test: true,
-        training_mode: TrainingMode::Single,
-        test_fraction: None,
-        use_gpu: false,
-        training_rounds: 1,
-        predict_batch_size: 53,
-        range: PredictionRange::DaysFromStartOfYear(FISHING_SPOT_PREDICTOR_NUM_DAYS),
-        catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-    }))
-}
-
-pub fn default_fishing_weight_predictor() -> Box<dyn MLModel> {
-    Box::new(FishingWeightPredictor::new(WeightPredictorSettings {
-        running_in_test: true,
-        use_gpu: false,
-        training_rounds: 1,
-        predict_batch_size: 100,
-        range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
-        catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-        training_mode: TrainingMode::Single,
-        test_fraction: None,
-        bycatch_percentage: None,
-        majority_species_group: false,
-    }))
-}
-
-pub fn default_fishing_weight_weather_predictor() -> Box<dyn MLModel> {
-    Box::new(FishingWeightWeatherPredictor::new(
-        WeightPredictorSettings {
-            running_in_test: true,
-            test_fraction: None,
-            training_mode: TrainingMode::Single,
-            use_gpu: false,
-            training_rounds: 1,
-            predict_batch_size: 100,
-            range: PredictionRange::DaysFromStartOfYear(FISHING_WEIGHT_PREDICTOR_NUM_DAYS),
-            catch_locations: vec![CatchLocationId::new(10, 4), CatchLocationId::new(10, 5)],
-            bycatch_percentage: None,
-            majority_species_group: false,
-        },
-    ))
 }
 
 pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> FisheryEngine {
@@ -267,14 +205,11 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         db.clone(),
         db.clone(),
         db.clone(),
-        db.clone(),
-        db.clone(),
         db_arc,
         None,
         trip_assemblers,
         benchmarks,
         trip_distancer,
-        vec![],
         trip_layers,
         FuelImplDiscriminants::Maru,
     );
@@ -333,7 +268,6 @@ impl TestStateBuilder {
             trip_queue_reset: None,
             ais_static: vec![],
             call_sign_counter: 1,
-            enabled_ml_models: vec![],
             processors: processors::App::build(&processors::Settings {
                 fuel_estimation_vessels: None,
                 num_fuel_estimation_workers: 1,
@@ -344,16 +278,6 @@ impl TestStateBuilder {
             })
             .await,
         }
-    }
-
-    pub fn add_ml_models(mut self, models: Vec<Box<dyn MLModel>>) -> TestStateBuilder {
-        self.enabled_ml_models = models;
-        self
-    }
-
-    pub fn add_ml_model(mut self, model: Box<dyn MLModel>) -> TestStateBuilder {
-        self.enabled_ml_models.push(model);
-        self
     }
 
     pub fn data_increment(mut self, duration: Duration) -> TestStateBuilder {
@@ -614,8 +538,6 @@ impl TestStateBuilder {
         let mut ocean_climate = Vec::new();
 
         let mut delivery_point_ids: HashSet<DeliveryPointId> = HashSet::new();
-
-        self.engine.add_ml_models(self.enabled_ml_models);
 
         // TODO: dont clone in cycles
         // Use this (https://github.com/rust-lang/rust/issues/43244) if it ever merges

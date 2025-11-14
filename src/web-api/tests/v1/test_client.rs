@@ -1,9 +1,9 @@
 use actix_web::http::Method;
-use fiskeridir_rs::{CallSign, OrgId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, OrgId};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, CreateFuelMeasurement,
-    DeleteFuelMeasurement, FiskeridirVesselId, FuelEntry, FuelMeasurement, LiveFuel, Mmsi, ModelId,
+    DeleteFuelMeasurement, FiskeridirVesselId, FuelEntry, FuelMeasurement, LiveFuel, Mmsi,
     OrgBenchmarks, UpdateVessel, VesselBenchmarks,
 };
 use serde::{Serialize, de::DeserializeOwned};
@@ -15,17 +15,12 @@ use web_api::{
         ais_vms::{AisVmsParameters, AisVmsPosition, CurrentPosition, CurrentPositionParameters},
         delivery_point::DeliveryPoint,
         fishing_facility::{FishingFacilitiesParams, FishingFacility},
-        fishing_prediction::{
-            FishingSpotPrediction, FishingSpotPredictionParams, FishingWeightPrediction,
-            FishingWeightPredictionParams,
-        },
         fuel_measurement::{FuelMeasurementsParams, UploadFuelMeasurement},
         haul::{Haul, HaulsMatrix, HaulsMatrixParams, HaulsParams},
         landing::{Landing, LandingMatrix, LandingMatrixParams, LandingsParams},
         org::OrgBenchmarkParameters,
         species::{
-            Species, SpeciesFao, SpeciesFiskeridir, SpeciesGroupDetailed, SpeciesGroupParams,
-            SpeciesMainGroupDetailed,
+            Species, SpeciesFao, SpeciesFiskeridir, SpeciesGroupDetailed, SpeciesMainGroupDetailed,
         },
         trip::{
             CurrentTrip, Trip, TripsParameters,
@@ -167,11 +162,8 @@ impl ApiClient {
     pub async fn get_species(&self) -> Result<Vec<Species>, Error> {
         self.send("species", Method::GET, &(), None::<&()>).await
     }
-    pub async fn get_species_groups(
-        &self,
-        params: SpeciesGroupParams,
-    ) -> Result<Vec<SpeciesGroupDetailed>, Error> {
-        self.send("species_groups", Method::GET, &(), Some(&params))
+    pub async fn get_species_groups(&self) -> Result<Vec<SpeciesGroupDetailed>, Error> {
+        self.send("species_groups", Method::GET, &(), None::<&()>)
             .await
     }
     pub async fn get_species_main_groups(&self) -> Result<Vec<SpeciesMainGroupDetailed>, Error> {
@@ -249,60 +241,6 @@ impl ApiClient {
     pub async fn get_delivery_points(&self) -> Result<Vec<DeliveryPoint>, Error> {
         self.send("delivery_points", Method::GET, &(), None::<&()>)
             .await
-    }
-    pub async fn get_all_fishing_spot_predictions(
-        &self,
-        model_id: ModelId,
-    ) -> Result<Vec<FishingSpotPrediction>, Error> {
-        self.send(
-            format!("fishing_spot_predictions/{model_id}"),
-            Method::GET,
-            &(),
-            None::<&()>,
-        )
-        .await
-    }
-    pub async fn get_all_fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-    ) -> Result<Vec<FishingWeightPrediction>, Error> {
-        self.send(
-            format!("fishing_weight_predictions/{model_id}"),
-            Method::GET,
-            &(),
-            None::<&()>,
-        )
-        .await
-    }
-
-    pub async fn get_fishing_spot_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        params: FishingSpotPredictionParams,
-    ) -> Result<Option<FishingSpotPrediction>, Error> {
-        self.send(
-            format!("fishing_spot_predictions/{model_id}/{species}"),
-            Method::GET,
-            &(),
-            Some(&params),
-        )
-        .await
-    }
-
-    pub async fn get_fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        params: FishingWeightPredictionParams,
-    ) -> Result<Vec<FishingWeightPrediction>, Error> {
-        self.send(
-            format!("fishing_weight_predictions/{model_id}/{species}"),
-            Method::GET,
-            &(),
-            Some(&params),
-        )
-        .await
     }
 
     pub async fn get_hauls(&self, params: HaulsParams) -> Result<Vec<Haul>, Error> {

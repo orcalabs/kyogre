@@ -5,7 +5,7 @@ use crate::{
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, OrgId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, OrgId};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -157,49 +157,6 @@ impl PostgresAdapter {
             | Environment::Local => self.no_plan_cache_pool.as_ref().unwrap(),
             Environment::Test => &self.pool,
         }
-    }
-
-    pub async fn reset_models(&self, models: &[ModelId]) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
-
-        let models: Vec<i32> = models.iter().map(|v| *v as i32).collect();
-
-        sqlx::query!(
-            r#"
-DELETE FROM ml_hauls_training_log
-WHERE
-    ml_model_id = ANY ($1)
-            "#,
-            &models
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        sqlx::query!(
-            r#"
-DELETE FROM fishing_spot_predictions
-WHERE
-    ml_model_id = ANY ($1)
-            "#,
-            &models
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        sqlx::query!(
-            r#"
-DELETE FROM fishing_weight_predictions
-WHERE
-    ml_model_id = ANY ($1)
-            "#,
-            &models
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        tx.commit().await?;
-
-        Ok(())
     }
 
     #[instrument(skip_all)]
@@ -905,45 +862,6 @@ impl WebApiOutboundPort for PostgresAdapter {
         self.weather_locations_impl().try_convert().boxed()
     }
 
-    async fn fishing_spot_prediction(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        date: NaiveDate,
-    ) -> WebApiResult<Option<FishingSpotPrediction>> {
-        Ok(retry(|| self.fishing_spot_prediction_impl(model_id, species, date)).await?)
-    }
-
-    fn fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        date: NaiveDate,
-        limit: u32,
-    ) -> PinBoxStream<'_, FishingWeightPrediction> {
-        self.fishing_weight_predictions_impl(model_id, species, date, limit)
-            .map_err(|e| e.into())
-            .boxed()
-    }
-
-    fn all_fishing_spot_predictions(
-        &self,
-        model_id: ModelId,
-    ) -> PinBoxStream<'_, FishingSpotPrediction> {
-        self.all_fishing_spot_predictions_impl(model_id)
-            .map_err(|e| e.into())
-            .boxed()
-    }
-
-    fn all_fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-    ) -> PinBoxStream<'_, FishingWeightPrediction> {
-        self.all_fishing_weight_predictions_impl(model_id)
-            .map_err(|e| e.into())
-            .boxed()
-    }
-
     fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement> {
         self.fuel_measurements_impl(query)
             .map_err(|e| e.into())
@@ -1426,147 +1344,6 @@ impl MatrixCacheVersion for PostgresAdapter {
 impl VerificationOutbound for PostgresAdapter {
     async fn verify_database(&self) -> CoreResult<()> {
         self.verify_database_impl().await?;
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl MLModelsOutbound for PostgresAdapter {
-    async fn catch_locations_weather_dates(
-        &self,
-        dates: Vec<NaiveDate>,
-    ) -> CoreResult<Vec<CatchLocationWeather>> {
-        Ok(self.catch_locations_weather_dates_impl(dates).await?)
-    }
-
-    async fn catch_locations_weather(
-        &self,
-        keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> CoreResult<Vec<CatchLocationWeather>> {
-        Ok(self.catch_locations_weather_impl(keys).await?)
-    }
-
-    async fn save_model(
-        &self,
-        model_id: ModelId,
-        model: &[u8],
-        species: SpeciesGroup,
-    ) -> CoreResult<()> {
-        self.save_model_impl(model_id, model, species).await?;
-        Ok(())
-    }
-    async fn catch_locations(
-        &self,
-        overlap: WeatherLocationOverlap,
-    ) -> CoreResult<Vec<CatchLocation>> {
-        self.catch_locations_impl(overlap)
-            .try_convert_collect()
-            .await
-    }
-
-    async fn model(&self, model_id: ModelId, species: SpeciesGroup) -> CoreResult<Vec<u8>> {
-        Ok(self.model_impl(model_id, species).await?)
-    }
-    async fn fishing_weight_predictor_training_data(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        weather_data: WeatherData,
-        limit: Option<u32>,
-        bycatch_percentage: Option<f64>,
-        majority_species_group: bool,
-    ) -> CoreResult<Vec<WeightPredictorTrainingData>> {
-        self.fishing_weight_predictor_training_data_impl(
-            model_id,
-            species,
-            weather_data,
-            limit,
-            bycatch_percentage,
-            majority_species_group,
-        )
-        .convert_collect()
-        .await
-    }
-
-    async fn fishing_spot_predictor_training_data(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        limit: Option<u32>,
-    ) -> CoreResult<Vec<FishingSpotTrainingData>> {
-        Ok(self
-            .fishing_spot_predictor_training_data_impl(model_id, species, limit)
-            .await?)
-    }
-
-    async fn commit_hauls_training(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        hauls: Vec<TrainingHaul>,
-    ) -> CoreResult<()> {
-        self.commit_hauls_training_impl(model_id, species, hauls)
-            .await?;
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl MLModelsInbound for PostgresAdapter {
-    async fn catch_locations_weather_dates(
-        &self,
-        dates: Vec<NaiveDate>,
-    ) -> CoreResult<Vec<CatchLocationWeather>> {
-        Ok(self.catch_locations_weather_dates_impl(dates).await?)
-    }
-
-    async fn catch_locations_weather(
-        &self,
-        keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> CoreResult<Vec<CatchLocationWeather>> {
-        Ok(self.catch_locations_weather_impl(keys).await?)
-    }
-
-    async fn existing_fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        year: u32,
-    ) -> CoreResult<Vec<FishingWeightPrediction>> {
-        Ok(self
-            .existing_fishing_weight_predictions_impl(model_id, species, year)
-            .await?)
-    }
-    async fn existing_fishing_spot_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        year: u32,
-    ) -> CoreResult<Vec<FishingSpotPrediction>> {
-        Ok(self
-            .existing_fishing_spot_predictions_impl(model_id, species, year)
-            .await?)
-    }
-    async fn catch_locations(
-        &self,
-        overlap: WeatherLocationOverlap,
-    ) -> CoreResult<Vec<CatchLocation>> {
-        self.catch_locations_impl(overlap)
-            .try_convert_collect()
-            .await
-    }
-    async fn add_fishing_spot_predictions(
-        &self,
-        predictions: Vec<NewFishingSpotPrediction>,
-    ) -> CoreResult<()> {
-        self.add_fishing_spot_predictions_impl(predictions).await?;
-        Ok(())
-    }
-    async fn add_fishing_weight_predictions(
-        &self,
-        predictions: Vec<NewFishingWeightPrediction>,
-    ) -> CoreResult<()> {
-        self.add_weight_predictions_impl(predictions).await?;
         Ok(())
     }
 }

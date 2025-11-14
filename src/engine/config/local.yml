@@ -2,10 +2,6 @@ log_level: Info
 num_trip_state_workers: 8
 tracing_mode: Regular
 fuel_estimation_mode: Maru
-fishing_predictors:
-  training_rounds: 200
-  training_mode:
-    Batches: 1000
 postgres:
   ip: localhost
   port: 5532
@@ -19,10 +15,10 @@ postgres:
 #   api_key: test123
 #   refresh_timeout: 10m
 scraper:
-  file_download_dir: '/tmp/kyogre-engine-download-data'
+  file_download_dir: "/tmp/kyogre-engine-download-data"
   register_vessels_url: https://api.fiskeridir.no/vessel-api/api/v1/vessels
   buyer_register_url: https://api.fiskeridir.no/buyer-api/v1/locations
-  aqua_culture_register_url: 'https://api.fiskeridir.no/pub-aqua/api/v1/dump/new-legacy-csv'
+  aqua_culture_register_url: "https://api.fiskeridir.no/pub-aqua/api/v1/dump/new-legacy-csv"
   mattilsynet_fishery_products_url: https://mattilsynet-xp7prod.enonic.cloud/_/attachment/inline/7122be80-455a-4c62-93d3-7999114d3661:46ed88c64defa163ca5d961292015b49f010e81f/v_virklist_food_sections.csv
   mattilsynet_fishery_establishements_url: https://mattilsynet-xp7prod.enonic.cloud/_/attachment/inline/1af0e9c5-8719-4cf9-91bf-ce19a4c2f078:53edb65f86f6ef1ec7b6cd3780d958374a0a231f/v_virklist_fishery_establishements.csv
   mattilsynet_urls:

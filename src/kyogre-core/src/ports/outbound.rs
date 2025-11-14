@@ -3,7 +3,7 @@ use std::pin::Pin;
 
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, OrgId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId, OrgId};
 use futures::Stream;
 
 use crate::*;
@@ -108,27 +108,6 @@ pub trait WebApiOutboundPort {
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint>;
     fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation>;
-    async fn fishing_spot_prediction(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        date: NaiveDate,
-    ) -> WebApiResult<Option<FishingSpotPrediction>>;
-    fn fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        date: NaiveDate,
-        limit: u32,
-    ) -> PinBoxStream<'_, FishingWeightPrediction>;
-    fn all_fishing_spot_predictions(
-        &self,
-        model_id: ModelId,
-    ) -> PinBoxStream<'_, FishingSpotPrediction>;
-    fn all_fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-    ) -> PinBoxStream<'_, FishingWeightPrediction>;
     fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement>;
     async fn update_vessel(
         &self,
@@ -356,50 +335,6 @@ pub trait TripPipelineOutbound: Send + Sync {
         vessel_id: FiskeridirVesselId,
         limit: u32,
     ) -> CoreResult<Vec<Trip>>;
-}
-
-#[async_trait]
-pub trait MLModelsOutbound: Send + Sync {
-    async fn save_model(
-        &self,
-        model_id: ModelId,
-        model: &[u8],
-        species: SpeciesGroup,
-    ) -> CoreResult<()>;
-    async fn fishing_spot_predictor_training_data(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        limit: Option<u32>,
-    ) -> CoreResult<Vec<FishingSpotTrainingData>>;
-    async fn fishing_weight_predictor_training_data(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        weather: WeatherData,
-        limit: Option<u32>,
-        bycatch_percentage: Option<f64>,
-        majority_species_group: bool,
-    ) -> CoreResult<Vec<WeightPredictorTrainingData>>;
-    async fn commit_hauls_training(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        haul: Vec<TrainingHaul>,
-    ) -> CoreResult<()>;
-    async fn model(&self, model_id: ModelId, species: SpeciesGroup) -> CoreResult<Vec<u8>>;
-    async fn catch_locations_weather_dates(
-        &self,
-        dates: Vec<NaiveDate>,
-    ) -> CoreResult<Vec<CatchLocationWeather>>;
-    async fn catch_locations(
-        &self,
-        overlap: WeatherLocationOverlap,
-    ) -> CoreResult<Vec<CatchLocation>>;
-    async fn catch_locations_weather(
-        &self,
-        keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> CoreResult<Vec<CatchLocationWeather>>;
 }
 
 #[cfg(feature = "test")]

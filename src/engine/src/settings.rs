@@ -15,13 +15,6 @@ pub struct Settings {
     pub environment: Environment,
     pub scraper: scraper::Config,
     pub single_state_run: Option<FisheryDiscriminants>,
-    pub fishing_predictors: Option<FishingPredictorSettings>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct FishingPredictorSettings {
-    pub training_rounds: u32,
-    pub training_mode: TrainingMode,
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,9 +39,7 @@ impl Settings {
 
         vec
     }
-    pub fn ml_models(&self) -> Vec<Box<dyn MLModel>> {
-        vec![]
-    }
+
     pub fn benchmarks(&self) -> Vec<Box<dyn TripBenchmark>> {
         // Order is significant as some benchmarks depends on the output of others.
         // Currently most benchmarks depends on 'FuelConsumption'.

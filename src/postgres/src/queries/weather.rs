@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use chrono::{DateTime, NaiveDate, TimeZone, Utc};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    CatchLocationId, CatchLocationWeather, HaulId, HaulWeather, HaulWeatherOutput, Weather,
-    WeatherLocationId, WeatherQuery,
+    CatchLocationId, HaulId, HaulWeather, HaulWeatherOutput, Weather, WeatherLocationId,
+    WeatherQuery,
 };
 
 use crate::{
@@ -33,36 +33,6 @@ WHERE
         Ok(locs)
     }
 
-    pub(crate) async fn catch_locations_weather_dates_impl(
-        &self,
-        dates: Vec<NaiveDate>,
-    ) -> Result<Vec<CatchLocationWeather>> {
-        let weather = sqlx::query_as!(
-            CatchLocationWeather,
-            r#"
-SELECT
-    catch_location_id AS "id!: CatchLocationId",
-    date,
-    wind_speed_10m,
-    wind_direction_10m,
-    air_temperature_2m,
-    relative_humidity_2m,
-    air_pressure_at_sea_level,
-    precipitation_amount,
-    cloud_area_fraction
-FROM
-    catch_location_daily_weather c
-WHERE
-    date = ANY ($1)
-            "#,
-            &dates
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(weather)
-    }
-
     pub(crate) async fn weather_location_ids(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -79,41 +49,6 @@ FROM
         .map_ok(|v| v.id)
         .try_collect()
         .await?)
-    }
-
-    pub(crate) async fn catch_locations_weather_impl(
-        &self,
-        keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> Result<Vec<CatchLocationWeather>> {
-        let catch_location_daily_weather_ids: Vec<String> = keys
-            .into_iter()
-            .map(|v| format!("{}-{}", v.0.as_ref(), v.1))
-            .collect();
-
-        let weather = sqlx::query_as!(
-            CatchLocationWeather,
-            r#"
-SELECT
-    catch_location_id AS "id!: CatchLocationId",
-    date,
-    wind_speed_10m,
-    wind_direction_10m,
-    air_temperature_2m,
-    relative_humidity_2m,
-    air_pressure_at_sea_level,
-    precipitation_amount,
-    cloud_area_fraction
-FROM
-    catch_location_daily_weather c
-WHERE
-    catch_location_daily_weather_id = ANY ($1)
-            "#,
-            &catch_location_daily_weather_ids
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(weather)
     }
 
     pub(crate) async fn update_catch_locations_daily_weather(

@@ -1,10 +1,8 @@
 use actix_web::web;
 use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
-use kyogre_core::ML_SPECIES_GROUPS;
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
-use serde_qs::actix::QsQuery as Query;
 use serde_with::{DisplayFromStr, serde_as};
 use strum::IntoEnumIterator;
 
@@ -13,12 +11,6 @@ use crate::{
     response::{Response, StreamResponse},
     stream_response,
 };
-
-#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
-#[serde(rename_all = "camelCase")]
-pub struct SpeciesGroupParams {
-    pub has_ml_models: Option<bool>,
-}
 
 #[oasgen(skip(db), tags("Species"))]
 #[tracing::instrument(skip(db))]
@@ -32,23 +24,13 @@ pub async fn species<T: Database + Send + Sync + 'static>(
 
 #[oasgen(skip(db), tags("Species"))]
 #[tracing::instrument]
-pub async fn species_groups<T: Database + 'static + 'static>(
-    params: Query<SpeciesGroupParams>,
-) -> Response<Vec<SpeciesGroupDetailed>> {
-    if params.into_inner().has_ml_models.unwrap_or(false) {
-        Response::new(
-            ML_SPECIES_GROUPS
-                .iter()
-                .map(|v| SpeciesGroupDetailed::from(*v))
-                .collect(),
-        )
-    } else {
-        Response::new(
-            fiskeridir_rs::SpeciesGroup::iter()
-                .map(SpeciesGroupDetailed::from)
-                .collect(),
-        )
-    }
+pub async fn species_groups<T: Database + 'static + 'static>() -> Response<Vec<SpeciesGroupDetailed>>
+{
+    Response::new(
+        fiskeridir_rs::SpeciesGroup::iter()
+            .map(SpeciesGroupDetailed::from)
+            .collect(),
+    )
 }
 
 #[oasgen(skip(db), tags("Species"))]

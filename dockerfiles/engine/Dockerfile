@@ -43,9 +43,7 @@ RUN apt update -y && \
 
 COPY scripts/python/weather/requirements.txt weather_requirements.txt
 COPY scripts/python/ocean_climate/requirements.txt ocean_requirements.txt
-COPY scripts/python/fishing_predictor/requirements.txt fishing_predictor.txt
 RUN pip install --break-system-packages \
-    -r fishing_predictor.txt \
     -r weather_requirements.txt \
     -r ocean_requirements.txt
 
