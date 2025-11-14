@@ -316,32 +316,6 @@ WHERE
         Ok(messages)
     }
 
-    pub(crate) async fn haul_messages_of_vessel_without_weather_impl(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> Result<Vec<HaulMessage>> {
-        let messages = sqlx::query_as!(
-            HaulMessage,
-            r#"
-SELECT
-    haul_id AS "haul_id!: HaulId",
-    start_timestamp,
-    stop_timestamp
-FROM
-    hauls
-WHERE
-    fiskeridir_vessel_id = $1::BIGINT
-    AND haul_weather_status_id = $2::INT
-            "#,
-            vessel_id.into_inner(),
-            HaulWeatherStatus::Unprocessed as i32,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(messages)
-    }
-
     pub(crate) async fn update_bycatch_status_impl(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 

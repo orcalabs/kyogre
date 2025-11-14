@@ -20,13 +20,11 @@ SELECT
     catch_location_id AS "id!: CatchLocationId",
     "polygon" AS "polygon!: _",
     longitude,
-    latitude,
-    weather_location_ids
+    latitude
 FROM
     catch_locations
 WHERE
-    CARDINALITY(weather_location_ids) > 0
-    OR $1
+    $1
             "#,
             overlap
         )

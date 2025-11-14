@@ -32,7 +32,6 @@ futures = { workspace = true }
 strum = { workspace = true }
 geo = { workspace = true }
 rand = { workspace = true }
-pyo3 = { workspace = true }
 num-traits = { workspace = true }
 geoutils = { workspace = true }
 async-channel = { workspace = true }

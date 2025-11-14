@@ -106,8 +106,6 @@ pub trait WebApiOutboundPort {
     ) -> PinBoxStream<'_, FishingFacility>;
     async fn get_user(&self, user_id: BarentswatchUserId) -> WebApiResult<Option<User>>;
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint>;
-    fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather>;
-    fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation>;
     fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement>;
     async fn update_vessel(
         &self,
@@ -271,34 +269,11 @@ pub trait VerificationOutbound: Send + Sync {
 }
 
 #[async_trait]
-pub trait HaulWeatherOutbound: Send + Sync {
-    async fn all_vessels(&self) -> CoreResult<Vec<Vessel>>;
-    async fn haul_messages_of_vessel_without_weather(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<HaulMessage>>;
-    async fn ais_vms_positions(
-        &self,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
-    ) -> CoreResult<Vec<AisVmsPosition>>;
-    async fn weather_locations(&self) -> CoreResult<Vec<WeatherLocation>>;
-    async fn haul_weather(&self, query: WeatherQuery) -> CoreResult<Option<HaulWeather>>;
-    async fn haul_ocean_climate(
-        &self,
-        query: OceanClimateQuery,
-    ) -> CoreResult<Option<HaulOceanClimate>>;
-}
-
-#[async_trait]
 pub trait ScraperOutboundPort {
     async fn latest_fishing_facility_update(
         &self,
         source: Option<FishingFacilityApiSource>,
     ) -> CoreResult<Option<DateTime<Utc>>>;
-    async fn latest_weather_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
-    async fn latest_ocean_climate_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>>;
     async fn latest_buyer_location_update(&self) -> CoreResult<Option<NaiveDateTime>>;
     async fn latest_weekly_sale(&self) -> CoreResult<Option<NaiveDate>>;
 }

@@ -13,10 +13,6 @@ The following build dependencies are required:
 - protobuf
 - cargo
 
-For experimenting with the `fishing_predictor` AI models
-[NVIDIA container toolkit](https://github.com/NVIDIA/nvidia-container-toolkit)
-is needed.
-
 ## Local deployment
 
 For local development with real data the `engine` container can be started and
@@ -95,8 +91,6 @@ The following build dependencies are required:
 - docker
 - docker buildkit
 - docker-compose (to simplify image building)
-- python 3.9 with the packages specified
-  [here](scripts/python/fishing_predictor/requirements.txt)
 
 ## Cloudsmith access
 

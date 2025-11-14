@@ -13,15 +13,6 @@ RUN cd src && \
 FROM chef AS builder
 COPY --from=planner /app/src/recipe.json src/recipe.json
 
-RUN apt update -y && \
-    apt install -y \
-    git \
-    libssl-dev \
-    protobuf-compiler \
-    pkg-config \
-    python3 \
-    python3-dev
-
 RUN --mount=type=secret,id=cloudsmith-api-key,required=true \
     export CARGO_REGISTRIES_ORCALABS_ORCASTRATOR_TOKEN=$(cat /run/secrets/cloudsmith-api-key) && \
     export CARGO_REGISTRIES_ORCALABS_ORCASTRATOR_CREDENTIAL_PROVIDER=cargo:token && \
@@ -29,23 +20,11 @@ RUN --mount=type=secret,id=cloudsmith-api-key,required=true \
     cargo chef cook --release --recipe-path recipe.json
 
 COPY src src
-COPY scripts scripts
 
 RUN cd src && \
     cargo build --release --bin engine
 
-FROM debian:bookworm-slim
-
-RUN apt update -y && \
-    apt install -y \
-    python3 \
-    python3-pip
-
-COPY scripts/python/weather/requirements.txt weather_requirements.txt
-COPY scripts/python/ocean_climate/requirements.txt ocean_requirements.txt
-RUN pip install --break-system-packages \
-    -r weather_requirements.txt \
-    -r ocean_requirements.txt
+FROM gcr.io/distroless/cc
 
 COPY --from=builder /app/src/target/release/engine .
 

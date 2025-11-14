@@ -2,16 +2,16 @@ use crate::{
     AisConsumeLoop, AisPosition, AisVms, Arrival, Cluster, DataMessage, Departure,
     ErsTripAssembler, FisheryEngine, FishingFacilities, FishingFacilitiesQuery, FishingFacility,
     Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery, LandingsSorting, Mmsi,
-    NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, ScrapeState,
-    SharedState, Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
+    NewAisPosition, NewAisStatic, Ordering, Pagination, PrecisionId, ScrapeState, SharedState,
+    Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition,
 };
 use async_channel::Sender;
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    BuyerLocation, FiskeridirVesselId, NewVesselConflict, NewWeather, TestStorage, Tra,
-    TripAssembler, TripDistancer, TripPositionLayer, UpdateVessel, WeeklySale, WeeklySaleId,
+    BuyerLocation, FiskeridirVesselId, NewVesselConflict, TestStorage, Tra, TripAssembler,
+    TripDistancer, TripPositionLayer, UpdateVessel, WeeklySale, WeeklySaleId,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -36,13 +36,11 @@ mod haul;
 mod item_distribution;
 mod landing;
 pub mod levels;
-mod ocean_climate;
 mod por;
 mod tra;
 mod trip;
 mod vessel;
 mod vms;
-mod weather;
 mod weekly_sale;
 
 pub use ais::*;
@@ -53,13 +51,11 @@ pub use fishing_facility::*;
 pub use haul::*;
 pub use landing::*;
 pub use levels::*;
-pub use ocean_climate::*;
 pub use por::*;
 pub use tra::*;
 pub use trip::*;
 pub use vessel::*;
 pub use vms::*;
-pub use weather::*;
 pub use weekly_sale::*;
 
 use self::cycle::Cycle;
@@ -91,8 +87,6 @@ pub struct TestState {
     // Only includes the delivery points added by the builder
     pub delivery_points: Vec<kyogre_core::DeliveryPoint>,
     pub fishing_facilities: Vec<FishingFacility>,
-    pub weather: Vec<Weather>,
-    pub ocean_climate: Vec<OceanClimate>,
 }
 
 pub struct TestStateBuilder {
@@ -118,8 +112,6 @@ pub struct TestStateBuilder {
     weekly_sales: Vec<WeeklySaleContructor>,
     delivery_points: Vec<DeliveryPointConstructor>,
     fishing_facilities: Vec<FishingFacilityConctructor>,
-    weather: Vec<WeatherConstructor>,
-    ocean_climate: Vec<OceanClimateConstructor>,
     default_trip_duration: Duration,
     default_haul_duration: Duration,
     default_fishing_facility_duration: Duration,
@@ -202,9 +194,6 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         db.clone(),
         db.clone(),
         db.clone(),
-        db.clone(),
-        db.clone(),
-        db.clone(),
         db_arc,
         None,
         trip_assemblers,
@@ -258,8 +247,6 @@ impl TestStateBuilder {
             weekly_sales: vec![],
             global_data_timestamp_counter: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
             fishing_facilities: vec![],
-            weather: vec![],
-            ocean_climate: vec![],
             default_fishing_facility_duration: Duration::hours(1),
             dep: vec![],
             por: vec![],
@@ -459,24 +446,6 @@ impl TestStateBuilder {
         }
     }
 
-    pub fn weather(mut self, amount: usize) -> WeatherBuilder {
-        assert_ne!(amount, 0);
-
-        for _ in 0..amount {
-            let weather = NewWeather::test_default(self.global_data_timestamp_counter);
-            self.weather.push(WeatherConstructor {
-                weather,
-                cycle: self.cycle,
-            });
-            self.global_data_timestamp_counter += self.data_timestamp_gap;
-        }
-
-        WeatherBuilder {
-            current_index: self.weather.len() - amount,
-            state: self,
-        }
-    }
-
     pub fn vessels(mut self, amount: usize) -> VesselBuilder {
         let num_vessels = self.vessels.len();
         for i in 0..amount {
@@ -533,10 +502,6 @@ impl TestStateBuilder {
     }
 
     pub async fn build(mut self) -> TestState {
-        // TODO: get weather/climate from db and not conversion.
-        let mut weather = Vec::new();
-        let mut ocean_climate = Vec::new();
-
         let mut delivery_point_ids: HashSet<DeliveryPointId> = HashSet::new();
 
         // TODO: dont clone in cycles
@@ -954,40 +919,6 @@ impl TestStateBuilder {
 
             self.ais_data_confirmation.recv().await.unwrap();
 
-            let new_ocean_climate = self
-                .ocean_climate
-                .iter()
-                .filter_map(|w| {
-                    if w.cycle == i {
-                        Some(w.ocean_climate.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            ocean_climate.extend(new_ocean_climate.iter().map(OceanClimate::from));
-
-            self.storage
-                .add_ocean_climate(new_ocean_climate)
-                .await
-                .unwrap();
-
-            let new_weather = self
-                .weather
-                .iter()
-                .filter_map(|w| {
-                    if w.cycle == i {
-                        Some(w.weather.clone())
-                    } else {
-                        None
-                    }
-                })
-                .collect::<Vec<_>>();
-
-            weather.extend(new_weather.iter().map(Weather::from));
-            self.storage.add_weather(new_weather).await.unwrap();
-
             self.engine = self.engine.run_single().await;
             loop {
                 if self.engine.current_state_name() == "Pending" {
@@ -1116,8 +1047,6 @@ impl TestStateBuilder {
             all_delivery_points,
             delivery_points,
             fishing_facilities,
-            weather,
-            ocean_climate,
             tra,
         }
     }
