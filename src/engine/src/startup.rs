@@ -45,7 +45,6 @@ impl App {
 
         let benchmarks = settings.benchmarks();
         let trip_distancer = settings.trip_distancer();
-        let ml_models = settings.ml_models();
         let trip_position_layers = settings.trip_position_layers();
 
         let postgres_arc = Arc::new(postgres.clone());
@@ -67,14 +66,11 @@ impl App {
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
-            postgres.clone(),
-            postgres.clone(),
             postgres_arc,
             Some(Box::new(scraper)),
             trip_assemblers,
             benchmarks,
             trip_distancer,
-            ml_models,
             trip_position_layers,
             settings.fuel_estimation_mode,
         );
@@ -154,15 +150,6 @@ impl App {
                         Box::new(self.transition_log),
                     );
                     let engine = FisheryEngine::VerifyDatabase(step);
-                    engine.run_single().await;
-                }
-                FisheryDiscriminants::MLModels => {
-                    let step = crate::Step::initial(
-                        crate::MLModelsState,
-                        self.shared_state,
-                        Box::new(self.transition_log),
-                    );
-                    let engine = FisheryEngine::MLModels(step);
                     engine.run_single().await;
                 }
                 FisheryDiscriminants::DailyWeather => {

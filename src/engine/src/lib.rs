@@ -10,7 +10,6 @@ use serde::Deserialize;
 use strum::EnumDiscriminants;
 
 mod error;
-mod ml_models;
 mod trip_assembler;
 mod trip_distancer;
 mod trip_layers;
@@ -21,7 +20,6 @@ pub mod states;
 #[cfg(feature = "test")]
 pub mod test_helper;
 
-pub use ml_models::*;
 pub use settings::*;
 pub use startup::*;
 pub use states::*;
@@ -80,7 +78,6 @@ pub enum Fishery {
     Benchmark(BenchmarkState),
     HaulDistribution(HaulDistributionState),
     HaulWeather(HaulWeatherState),
-    MLModels(MLModelsState),
     VerifyDatabase(VerifyDatabaseState),
 }
 
@@ -89,8 +86,6 @@ pub struct SharedState {
     pub num_workers: u32,
     pub fuel_mode: FuelImplDiscriminants,
     pub local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
-    pub ml_models_inbound: Box<dyn MLModelsInbound>,
-    pub ml_models_outbound: Box<dyn MLModelsOutbound>,
     pub trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
     pub trips_precision_outbound_port: Box<dyn TripPrecisionOutboundPort>,
     pub trip_pipeline_inbound: Box<dyn TripPipelineInbound>,
@@ -107,29 +102,9 @@ pub struct SharedState {
     pub trip_assemblers: Vec<Box<dyn TripAssembler>>,
     pub benchmarks: Vec<Box<dyn TripBenchmark>>,
     pub trip_distancer: Box<dyn TripDistancer>,
-    pub ml_models: Vec<Box<dyn MLModel>>,
     pub trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
     pub catch_location_weather: Box<dyn DailyWeatherInbound>,
     pub fuel_estimation: Arc<dyn FuelEstimation>,
-}
-
-impl FisheryEngine {
-    pub fn add_ml_models(&mut self, models: Vec<Box<dyn MLModel>>) {
-        let shared = match self {
-            FisheryEngine::Pending(s) => &mut s.shared_state,
-            FisheryEngine::Sleep(s) => &mut s.shared_state,
-            FisheryEngine::Scrape(s) => &mut s.shared_state,
-            FisheryEngine::Trips(s) => &mut s.shared_state,
-            FisheryEngine::Benchmark(s) => &mut s.shared_state,
-            FisheryEngine::HaulDistribution(s) => &mut s.shared_state,
-            FisheryEngine::HaulWeather(s) => &mut s.shared_state,
-            FisheryEngine::VerifyDatabase(s) => &mut s.shared_state,
-            FisheryEngine::MLModels(s) => &mut s.shared_state,
-            FisheryEngine::DailyWeather(s) => &mut s.shared_state,
-        };
-
-        shared.ml_models = models;
-    }
 }
 
 impl SharedState {
@@ -151,8 +126,6 @@ impl SharedState {
     pub fn new(
         num_workers: u32,
         local_processing_vessels: Option<Vec<FiskeridirVesselId>>,
-        ml_models_inbound: Box<dyn MLModelsInbound>,
-        ml_models_outbound: Box<dyn MLModelsOutbound>,
         trip_assembler_outbound_port: Box<dyn TripAssemblerOutboundPort>,
         trips_precision_outbound_port: Box<dyn TripPrecisionOutboundPort>,
         trip_pipeline_inbound: Box<dyn TripPipelineInbound>,
@@ -171,7 +144,6 @@ impl SharedState {
         trip_assemblers: Vec<Box<dyn TripAssembler>>,
         benchmarks: Vec<Box<dyn TripBenchmark>>,
         trip_distancer: Box<dyn TripDistancer>,
-        ml_models: Vec<Box<dyn MLModel>>,
         trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
         fuel_mode: FuelImplDiscriminants,
     ) -> SharedState {
@@ -194,9 +166,6 @@ impl SharedState {
             haul_weather_outbound,
             trip_pipeline_inbound,
             trip_pipeline_outbound,
-            ml_models,
-            ml_models_inbound,
-            ml_models_outbound,
             trip_position_layers,
             catch_location_weather,
             fuel_estimation,

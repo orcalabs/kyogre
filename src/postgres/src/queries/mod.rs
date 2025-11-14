@@ -16,7 +16,6 @@ pub mod hash;
 pub mod haul;
 pub mod landing;
 pub mod landing_matrix;
-pub mod ml_models;
 pub mod ocean_climate;
 pub mod org;
 pub mod port;

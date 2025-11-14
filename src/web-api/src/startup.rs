@@ -129,22 +129,6 @@ where
             )
             .route("/landings", get().to(routes::v1::landing::landings::<T>))
             .route(
-                "/fishing_spot_predictions/{model_id}/{species_group_id}",
-                get().to(routes::v1::fishing_prediction::fishing_spot_predictions::<T>),
-            )
-            .route(
-                "/fishing_spot_predictions/{model_id}",
-                get().to(routes::v1::fishing_prediction::all_fishing_spot_predictions::<T>),
-            )
-            .route(
-                "/fishing_weight_predictions/{model_id}",
-                get().to(routes::v1::fishing_prediction::all_fishing_weight_predictions::<T>),
-            )
-            .route(
-                "/fishing_weight_predictions/{model_id}/{species_group_id}",
-                get().to(routes::v1::fishing_prediction::fishing_weight_predictions::<T>),
-            )
-            .route(
                 "/landing_matrix/{active_filter}",
                 get().to(routes::v1::landing::landing_matrix::<T, S>),
             )

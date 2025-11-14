@@ -2,7 +2,7 @@ use crate::*;
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, SpeciesGroup};
+use fiskeridir_rs::{CallSign, DataFileId};
 
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + Sync>;
 
@@ -20,42 +20,6 @@ pub trait LiveFuelInbound: Send + Sync {
     ) -> CoreResult<()>;
     async fn live_fuel_vessels(&self) -> CoreResult<Vec<LiveFuelVessel>>;
     async fn ais_positions(&self, mmsi: Mmsi, range: &DateRange) -> CoreResult<Vec<AisPosition>>;
-}
-
-#[async_trait]
-pub trait MLModelsInbound: Send + Sync {
-    async fn add_fishing_spot_predictions(
-        &self,
-        predictions: Vec<NewFishingSpotPrediction>,
-    ) -> CoreResult<()>;
-    async fn add_fishing_weight_predictions(
-        &self,
-        predictions: Vec<NewFishingWeightPrediction>,
-    ) -> CoreResult<()>;
-    async fn catch_locations(
-        &self,
-        overlap: WeatherLocationOverlap,
-    ) -> CoreResult<Vec<CatchLocation>>;
-    async fn existing_fishing_spot_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        year: u32,
-    ) -> CoreResult<Vec<FishingSpotPrediction>>;
-    async fn existing_fishing_weight_predictions(
-        &self,
-        model_id: ModelId,
-        species: SpeciesGroup,
-        year: u32,
-    ) -> CoreResult<Vec<FishingWeightPrediction>>;
-    async fn catch_locations_weather_dates(
-        &self,
-        dates: Vec<NaiveDate>,
-    ) -> CoreResult<Vec<CatchLocationWeather>>;
-    async fn catch_locations_weather(
-        &self,
-        keys: Vec<(CatchLocationId, NaiveDate)>,
-    ) -> CoreResult<Vec<CatchLocationWeather>>;
 }
 
 #[async_trait]
