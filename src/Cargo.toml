@@ -19,8 +19,8 @@ members = [
 [workspace.dependencies]
 fiskeridir-rs = { path = "./fiskeridir-rs/", features = ["oasgen", "sqlx"] }
 
-machine = { version = "0.19.0", registry = "orcalabs-orcastrator" }
-orca-core = { version = "0.37.0", registry = "orcalabs-orcastrator" }
+machine = { version = "0.20.0", registry = "orcalabs-orcastrator" }
+orca-core = { version = "0.38.0", registry = "orcalabs-orcastrator" }
 
 sqlx = { version = "0.8.3", features = [
     "runtime-tokio-rustls",
