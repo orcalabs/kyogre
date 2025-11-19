@@ -19,7 +19,7 @@ impl Settings {
 #[tokio::main]
 async fn main() {
     let settings = orca_core::Settings::new().unwrap();
-    settings.init_tracer("kyogre-database-migrator", "database-migrator");
+    settings.init_tracer("kyogre-database-migrator");
 
     let settings = Settings::new(settings).unwrap();
 
@@ -28,6 +28,4 @@ async fn main() {
         .unwrap()
         .do_migrations()
         .await;
-
-    orca_core::shutdown_tracer_provider();
 }
