@@ -12,4 +12,3 @@ pub mod trip;
 pub mod user;
 pub mod vessel;
 pub mod vms;
-pub mod weather;

@@ -16,7 +16,6 @@ pub mod hash;
 pub mod haul;
 pub mod landing;
 pub mod landing_matrix;
-pub mod ocean_climate;
 pub mod org;
 pub mod port;
 pub mod processor;
@@ -34,7 +33,6 @@ pub mod vessel;
 pub mod vessel_benchmarks;
 pub mod vessel_events;
 pub mod vms;
-pub mod weather;
 
 pub fn opt_type_to_f64<T: Into<f64>>(value: Option<T>) -> Option<f64> {
     value.map(|v| v.into())

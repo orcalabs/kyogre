@@ -426,29 +426,6 @@ impl TestHelperOutbound for PostgresAdapter {
     }
 }
 
-#[async_trait]
-impl DailyWeatherInbound for PostgresAdapter {
-    async fn dirty_dates(&self) -> CoreResult<Vec<NaiveDate>> {
-        Ok(self.dirty_dates_impl().await?)
-    }
-    async fn prune_dirty_dates(&self) -> CoreResult<()> {
-        Ok(self.prune_dirty_dates_impl().await?)
-    }
-    async fn catch_locations_with_weather(&self) -> CoreResult<Vec<CatchLocationId>> {
-        Ok(self.catch_locations_with_weather_impl().await?)
-    }
-
-    async fn update_daily_weather(
-        &self,
-        catch_locations: &[CatchLocationId],
-        date: NaiveDate,
-    ) -> CoreResult<()> {
-        Ok(self
-            .update_daily_weather_impl(catch_locations, date)
-            .await?)
-    }
-}
-
 #[cfg(feature = "test")]
 #[async_trait]
 impl TestHelperInbound for PostgresAdapter {
@@ -854,14 +831,6 @@ impl WebApiOutboundPort for PostgresAdapter {
         self.delivery_points_impl().map_err(|e| e.into()).boxed()
     }
 
-    fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather> {
-        self.weather_impl(query).map_err(|e| e.into()).boxed()
-    }
-
-    fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation> {
-        self.weather_locations_impl().try_convert().boxed()
-    }
-
     fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement> {
         self.fuel_measurements_impl(query)
             .map_err(|e| e.into())
@@ -974,14 +943,6 @@ impl ScraperInboundPort for PostgresAdapter {
             .await?;
         Ok(())
     }
-    async fn add_weather(&self, weather: Vec<NewWeather>) -> CoreResult<()> {
-        self.add_weather_impl(weather).await?;
-        Ok(())
-    }
-    async fn add_ocean_climate(&self, ocean_climate: Vec<NewOceanClimate>) -> CoreResult<()> {
-        self.add_ocean_climate_impl(ocean_climate).await?;
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -991,12 +952,6 @@ impl ScraperOutboundPort for PostgresAdapter {
         source: Option<FishingFacilityApiSource>,
     ) -> CoreResult<Option<DateTime<Utc>>> {
         Ok(self.latest_fishing_facility_update_impl(source).await?)
-    }
-    async fn latest_weather_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>> {
-        Ok(self.latest_weather_timestamp_impl().await?)
-    }
-    async fn latest_ocean_climate_timestamp(&self) -> CoreResult<Option<DateTime<Utc>>> {
-        Ok(self.latest_ocean_climate_timestamp_impl().await?)
     }
     async fn latest_buyer_location_update(&self) -> CoreResult<Option<NaiveDateTime>> {
         Ok(self.latest_buyer_location_update_impl().await?)
@@ -1345,53 +1300,6 @@ impl VerificationOutbound for PostgresAdapter {
     async fn verify_database(&self) -> CoreResult<()> {
         self.verify_database_impl().await?;
         Ok(())
-    }
-}
-
-#[async_trait]
-impl HaulWeatherInbound for PostgresAdapter {
-    async fn add_haul_weather(&self, values: Vec<HaulWeatherOutput>) -> CoreResult<()> {
-        self.add_haul_weather_impl(values).await?;
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl HaulWeatherOutbound for PostgresAdapter {
-    async fn all_vessels(&self) -> CoreResult<Vec<Vessel>> {
-        self.fiskeridir_ais_vessel_combinations()
-            .try_convert_collect()
-            .await
-    }
-    async fn haul_messages_of_vessel_without_weather(
-        &self,
-        vessel_id: FiskeridirVesselId,
-    ) -> CoreResult<Vec<HaulMessage>> {
-        Ok(self
-            .haul_messages_of_vessel_without_weather_impl(vessel_id)
-            .await?)
-    }
-    async fn ais_vms_positions(
-        &self,
-        mmsi: Option<Mmsi>,
-        call_sign: Option<&CallSign>,
-        range: &DateRange,
-    ) -> CoreResult<Vec<AisVmsPosition>> {
-        self.ais_vms_positions_impl(mmsi, call_sign, range, AisPermission::All)
-            .convert_collect()
-            .await
-    }
-    async fn weather_locations(&self) -> CoreResult<Vec<WeatherLocation>> {
-        self.weather_locations_impl().try_convert_collect().await
-    }
-    async fn haul_weather(&self, query: WeatherQuery) -> CoreResult<Option<HaulWeather>> {
-        Ok(self.haul_weather_impl(query).await?)
-    }
-    async fn haul_ocean_climate(
-        &self,
-        query: OceanClimateQuery,
-    ) -> CoreResult<Option<HaulOceanClimate>> {
-        Ok(self.haul_ocean_climate_impl(query).await?)
     }
 }
 
