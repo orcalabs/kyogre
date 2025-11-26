@@ -77,7 +77,7 @@ impl WeatherScraper {
 fn download_weather_data(latest: DateTime<Utc>) -> Result<Vec<String>> {
     let py_code = c_str!(include_str!("../../../../scripts/python/weather/main.py"));
 
-    Ok(Python::with_gil(|py| {
+    Ok(Python::attach(|py| {
         let tz = PyTzInfo::utc(py)?.into_bound();
         let py_datetime = PyDateTime::from_timestamp(py, latest.timestamp() as f64, Some(&tz))?;
 

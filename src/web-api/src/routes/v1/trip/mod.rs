@@ -30,25 +30,19 @@ pub struct TripsParameters {
     pub limit: Option<u64>,
     pub offset: Option<u64>,
     pub ordering: Option<Ordering>,
-    #[oasgen(rename = "deliveryPoints[]")]
     pub delivery_points: Option<Vec<String>>,
     #[serde(flatten)]
     pub range: OptionalDateTimeRange,
     pub min_weight: Option<f64>,
     pub max_weight: Option<f64>,
     pub sorting: Option<TripSorting>,
-    #[oasgen(rename = "gearGroupIds[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[oasgen(rename = "speciesGroupIds[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[oasgen(rename = "vesselLengthGroups[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    #[oasgen(rename = "tripIds[]")]
     pub trip_ids: Option<Vec<TripId>>,
 }
 

@@ -80,7 +80,7 @@ fn download_ocean_climate_data(latest: DateTime<Utc>) -> Result<Vec<String>> {
         "../../../../scripts/python/ocean_climate/main.py"
     ));
 
-    Ok(Python::with_gil(|py| {
+    Ok(Python::attach(|py| {
         let tz = PyTzInfo::utc(py)?.into_bound();
         let py_datetime = PyDateTime::from_timestamp(py, latest.timestamp() as f64, Some(&tz))?;
 

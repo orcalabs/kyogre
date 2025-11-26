@@ -25,17 +25,12 @@ use crate::{
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FishingFacilitiesParams {
-    #[oasgen(rename = "mmsis[]")]
     pub mmsis: Option<Vec<Mmsi>>,
-    #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    #[oasgen(rename = "toolTypes[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub tool_types: Option<Vec<FishingFacilityToolType>>,
     pub active: Option<bool>,
-    #[oasgen(rename = "setupRanges[]")]
     pub setup_ranges: Option<Vec<Range<DateTime<Utc>>>>,
-    #[oasgen(rename = "removedRanges[]")]
     pub removed_ranges: Option<Vec<Range<DateTime<Utc>>>>,
     pub limit: Option<u64>,
     pub offset: Option<u64>,

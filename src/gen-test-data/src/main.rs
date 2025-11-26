@@ -3,7 +3,7 @@ mod all {
     #![deny(warnings)]
     #![deny(rust_2018_idioms)]
 
-    use clap::{Parser, arg};
+    use clap::Parser;
     use engine::*;
     use orca_core::{PsqlLogStatements, PsqlSettings};
     use postgres::PostgresAdapter;

@@ -359,7 +359,13 @@ where
             .app_data(Data::new(auth0_state.clone()))
             .app_data(Data::new(bw_state.clone()))
             .app_data(Data::new(HttpClient::new()))
-            .app_data(QsQueryConfig::default().qs_config(serde_qs::Config::new(5, false)))
+            .app_data(
+                QsQueryConfig::default().qs_config(
+                    serde_qs::Config::new()
+                        .use_form_encoding(false)
+                        .max_depth(5),
+                ),
+            )
             .wrap(Compress::default())
             .wrap(Condition::new(not_prod, actix_cors::Cors::permissive()))
             .wrap(TracingLogger::<OrcaRootSpanBuilder>::new())

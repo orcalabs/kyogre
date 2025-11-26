@@ -26,20 +26,14 @@ use crate::{
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LandingsParams {
-    #[oasgen(rename = "months[]")]
     pub months: Option<Vec<DateTime<Utc>>>,
-    #[oasgen(rename = "catchLocations[]")]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[oasgen(rename = "gearGroupIds[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[oasgen(rename = "speciesGroupIds[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[oasgen(rename = "vesselLengthGroups[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
     #[serde(flatten)]
     pub range: OptionalDateTimeRange,
@@ -53,20 +47,14 @@ pub struct LandingsParams {
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(default, rename_all = "camelCase")]
 pub struct LandingMatrixParams {
-    #[oasgen(rename = "months[]")]
     pub months: Option<Vec<u32>>,
-    #[oasgen(rename = "catchLocations[]")]
     pub catch_locations: Option<Vec<CatchLocationId>>,
-    #[oasgen(rename = "gearGroupIds[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
-    #[oasgen(rename = "speciesGroupIds[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub species_group_ids: Option<Vec<SpeciesGroup>>,
-    #[oasgen(rename = "vesselLengthGroups[]")]
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
-    #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 

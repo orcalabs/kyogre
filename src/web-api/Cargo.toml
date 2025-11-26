@@ -41,10 +41,10 @@ oasgen = { workspace = true, features = ["actix", "swagger-ui", "serde_qs"] }
 
 actix-web = "4.9.0"
 actix-cors = "0.7.0"
-jsonwebtoken = "9.3.0"
-serde_qs = { version = "0.14.0", features = ["actix4"] }
+jsonwebtoken = { version = "10.2.0", features = ["aws_lc_rs"] }
+serde_qs = { version = "1", features = ["actix4"] }
 pin-project-lite = "0.2.16"
-calamine = "0.28.0"
+calamine = "0.32.0"
 base64 = "0.22.1"
 
 [dev-dependencies]

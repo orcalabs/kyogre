@@ -87,11 +87,11 @@ impl TripBenchmarkRunner {
 
         let trip_ids_to_benchmark = trips.iter().map(|t| t.trip_id).collect::<HashSet<TripId>>();
 
-        // If our `in_progress` set does no longer include a trip_id that exists in `trips_to_benchmark` that means
+        // If our `in_progress` set includes a trip_id that no longer exists in `trips_to_benchmark` that means
         // the trip has successfully been processed and we can remove it from our `in_progress`
         // set.
         self.in_progress
-            .extract_if(|t| !trip_ids_to_benchmark.contains(t));
+            .retain(|t| trip_ids_to_benchmark.contains(t));
 
         for trip in trips {
             self.in_progress.insert(trip.trip_id);
