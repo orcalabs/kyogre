@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use tonic_build::configure;
+use tonic_prost_build::configure;
 
 fn main() {
     let proto_path: PathBuf = "proto/matrix_cache.proto".into();
@@ -8,6 +8,9 @@ fn main() {
         .expect("proto file should reside in a directory");
     configure()
         .protoc_arg("--experimental_allow_proto3_optional")
-        .compile_protos(&["proto/matrix_cache.proto"], &[proto_dir])
+        .compile_protos(
+            &["proto/matrix_cache.proto"],
+            &[proto_dir.to_str().unwrap()],
+        )
         .unwrap_or_else(|e| panic!("Failed to compile protos {e:?}"));
 }
