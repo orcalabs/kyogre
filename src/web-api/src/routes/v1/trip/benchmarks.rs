@@ -43,11 +43,9 @@ pub struct AverageTripBenchmarksParams {
     #[serde(flatten)]
     pub range: DateTimeRange,
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    #[oasgen(rename = "gearGroups[]")]
     pub gear_groups: Option<Vec<GearGroup>>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub length_group: Option<VesselLengthGroup>,
-    #[oasgen(rename = "vesselIds[]")]
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
 }
 
@@ -58,11 +56,9 @@ pub struct AverageFuiParams {
     #[serde(flatten)]
     pub range: DateTimeRange,
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    #[oasgen(rename = "gearGroups[]")]
     pub gear_groups: Option<Vec<GearGroup>>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub length_group: Option<VesselLengthGroup>,
-    #[oasgen(rename = "vesselIds[]")]
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub species_group_id: Option<SpeciesGroup>,
@@ -75,11 +71,9 @@ pub struct AverageEeoiParams {
     #[serde(flatten)]
     pub range: DateTimeRange,
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    #[oasgen(rename = "gearGroups[]")]
     pub gear_groups: Option<Vec<GearGroup>>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub length_group: Option<VesselLengthGroup>,
-    #[oasgen(rename = "vesselIds[]")]
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub species_group_id: Option<SpeciesGroup>,

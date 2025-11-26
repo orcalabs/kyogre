@@ -3,9 +3,6 @@ name = "http-client"
 version = "0.1.0"
 edition = "2024"
 
-[features]
-default = ["reqwest/rustls-tls"]
-
 [dependencies]
 snafu = { workspace = true }
 stack-error = { workspace = true }
@@ -13,11 +10,13 @@ serde = { workspace = true }
 http = { workspace = true }
 futures = { workspace = true }
 reqwest = { workspace = true, default-features = false, features = [
+    "native-tls",
+    "http2",
     "json",
     "gzip",
     "stream",
 ] }
-reqwest-middleware = { version = "0.4", features = ["json"] }
-reqwest-retry = "0.7"
-reqwest-tracing = "0.5"
+reqwest-middleware = { version = "0.5", features = ["query", "json"] }
+reqwest-retry = "0.9"
+reqwest-tracing = "0.6"
 bytes = "1.9"

@@ -15,7 +15,6 @@ use crate::{response::StreamResponse, stream_response, *};
 pub struct WeatherParams {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
-    #[oasgen(rename = "weatherLocationIds[]")]
     pub weather_location_ids: Option<Vec<WeatherLocationId>>,
 }
 
