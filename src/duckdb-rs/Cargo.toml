@@ -31,8 +31,9 @@ http = { workspace = true }
 duckdb = { version = "1", features = ["r2d2", "bundled"] }
 libduckdb-sys = { version = "1" }
 r2d2 = { version = "0.8" }
-tonic = { version = "0.13.1", features = ["gzip"] }
-prost = "0.13"
+tonic = { version = "0.14.2", features = ["gzip"] }
+prost = "0.14"
+tonic-prost = "0.14"
 
 
 [dev-dependencies]
@@ -42,4 +43,4 @@ futures = { workspace = true }
 orca-core = { workspace = true, features = ["test-helper"] }
 
 [build-dependencies]
-tonic-build = "0.13"
+tonic-prost-build = "0.14"
