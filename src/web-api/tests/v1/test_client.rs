@@ -371,26 +371,36 @@ impl ApiClient {
 }
 
 fn handle_request_failure(error: http_client::Error) -> Error {
-    let body = error.body().unwrap();
-    let status = error.status().unwrap();
-    // When actix returns an error prior to hitting our handlers we do not
-    // return our normal error response.
-    // We therefore mimic the discriminant error to avoid having it as an option
-    // for ergonomics.
-    match serde_json::from_str::<ErrorResponse>(body) {
-        Ok(e) => Error {
-            error: e.error,
+    match error {
+        http_client::Error::Other { .. } => {
+            panic!("request failure: {:?}", error);
+        }
+        http_client::Error::FailedRequest {
+            location: _,
+            url: _,
             status,
-            description: e.description,
-        },
-        Err(e) => {
-            if status != StatusCode::NOT_FOUND {
-                panic!("error response failed to deserialize, body: {body}, error: {e}");
-            }
-            Error {
-                status,
-                description: body.to_string(),
-                error: ErrorDiscriminants::Unexpected,
+            body,
+        } => {
+            // When actix returns an error prior to hitting our handlers we do not
+            // return our normal error response.
+            // We therefore mimic the discriminant error to avoid having it as an option
+            // for ergonomics.
+            match serde_json::from_str::<ErrorResponse>(&body) {
+                Ok(e) => Error {
+                    error: e.error,
+                    status,
+                    description: e.description,
+                },
+                Err(e) => {
+                    if status != StatusCode::NOT_FOUND {
+                        panic!("error response failed to deserialize, body: {body}, error: {e}");
+                    }
+                    Error {
+                        status,
+                        description: body.to_string(),
+                        error: ErrorDiscriminants::Unexpected,
+                    }
+                }
             }
         }
     }
