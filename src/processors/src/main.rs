@@ -6,7 +6,7 @@ use processors::{settings::Settings, startup::App};
 #[tokio::main]
 async fn main() {
     let settings = orca_core::Settings::new().unwrap();
-    settings.init_tracer("kyogre-processors");
+    let _guard = settings.init_tracer("kyogre-processors");
 
     let settings = Settings::new(settings).unwrap();
 
