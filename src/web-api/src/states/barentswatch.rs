@@ -9,6 +9,7 @@ use jsonwebtoken::{
 use kyogre_core::BarentswatchUserId;
 use serde::de::DeserializeOwned;
 use tokio::sync::RwLock;
+use tracing::{error, info, instrument};
 
 use crate::{
     error::{
@@ -30,7 +31,7 @@ pub enum BwState {
 
 #[derive(Debug)]
 pub struct Inner {
-    jwks: HashMap<String, Jwk>,
+    jwks: std::sync::RwLock<HashMap<String, Jwk>>,
     audience: String,
     cache: RwLock<HashMap<BarentswatchUserId, CacheItem>>,
 }
@@ -41,27 +42,73 @@ struct CacheItem {
     expires: DateTime<Utc>,
 }
 
+#[derive(Debug)]
+pub struct BwJwksRefresher {
+    state: Arc<Inner>,
+    jwks_url: String,
+}
+
+impl BwJwksRefresher {
+    pub fn new(state: Arc<Inner>, jwks_url: String) -> Self {
+        Self { state, jwks_url }
+    }
+    pub async fn refresh_loop(&self) -> ! {
+        loop {
+            tokio::time::sleep(std::time::Duration::from_mins(30)).await;
+            self.refresh_wrapper().await;
+        }
+    }
+
+    #[instrument(skip(self))]
+    async fn refresh_wrapper(&self) {
+        match self.refresh_impl().await {
+            Ok(()) => {
+                info!("successfully refreshed barentswatch jwks");
+            }
+            Err(e) => {
+                error!("failed to update barentswatch jwks: {e:?}");
+            }
+        }
+    }
+
+    async fn refresh_impl(&self) -> Result<(), http_client::Error> {
+        let new_jwks = get_jwks(&self.jwks_url).await?;
+
+        // SAFETY: Panics if the lock is poisoned which requires us to restart the server anyway.
+        let mut jwks = self.state.jwks.write().unwrap();
+
+        *jwks = new_jwks;
+
+        Ok(())
+    }
+}
+
+async fn get_jwks(url: &str) -> Result<HashMap<String, Jwk>, http_client::Error> {
+    let jwks: JwkSet = HttpClient::new().get(url).send().await?.json().await?;
+
+    Ok(jwks
+        .keys
+        .into_iter()
+        .filter_map(|k| k.common.key_id.clone().map(|kid| (kid, k)))
+        .collect())
+}
 impl BwState {
     pub async fn new(settings: Option<&BwSettings>) -> Self {
         if let Some(settings) = settings {
-            let jwks: JwkSet = HttpClient::new()
-                .get(&settings.jwks_url)
-                .send()
-                .await
-                .unwrap()
-                .json()
-                .await
-                .unwrap();
-
-            Self::Enabled(Arc::new(Inner {
-                jwks: jwks
-                    .keys
-                    .into_iter()
-                    .filter_map(|k| k.common.key_id.clone().map(|kid| (kid, k)))
-                    .collect(),
+            let inner = Arc::new(Inner {
+                jwks: std::sync::RwLock::new(get_jwks(&settings.jwks_url).await.unwrap()),
                 audience: settings.audience.clone(),
                 cache: Default::default(),
-            }))
+            });
+
+            let updater = BwJwksRefresher {
+                state: inner.clone(),
+                jwks_url: settings.jwks_url.clone(),
+            };
+
+            tokio::spawn(async move { updater.refresh_loop().await });
+
+            Self::Enabled(inner)
         } else {
             Self::Disabled
         }
@@ -109,20 +156,24 @@ impl Inner {
             .kid
             .ok_or_else(|| MissingValueSnafu.build())?;
 
-        let jwk = self
-            .jwks
-            .get(&kid)
-            .ok_or_else(|| MissingValueSnafu.build())?;
-        let key = DecodingKey::from_jwk(jwk)?;
+        let (key, validation) = {
+            // SAFETY: Panics if the lock is poisoned which requires us to restart the server anyway.
+            let jwks = self.jwks.read().unwrap();
 
-        let mut validation = Validation::new(Algorithm::from_str(
-            jwk.common
-                .key_algorithm
-                .ok_or_else(|| MissingValueSnafu.build())?
-                .to_string()
-                .as_str(),
-        )?);
-        validation.set_audience(&[&self.audience]);
+            let jwk = jwks.get(&kid).ok_or_else(|| MissingValueSnafu.build())?;
+
+            let key = DecodingKey::from_jwk(jwk)?;
+
+            let mut validation = Validation::new(Algorithm::from_str(
+                jwk.common
+                    .key_algorithm
+                    .ok_or_else(|| MissingValueSnafu.build())?
+                    .to_string()
+                    .as_str(),
+            )?);
+            validation.set_audience(&[&self.audience]);
+            (key, validation)
+        };
 
         Ok(decode::<T>(token, &key, &validation)?)
     }
