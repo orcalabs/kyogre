@@ -10,7 +10,7 @@ kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 http-client = { path = "../http-client" }
 
-orca-core = { version = "0.37.0", registry = "orcalabs-orcastrator", features = [
+orca-core = { version = "0.38.0", registry = "orcalabs-orcastrator", features = [
     "telemetry",
 ] }
 stack-error = { version = "0.4.0", registry = "orcalabs-orcastrator" }
