@@ -1,4 +1,5 @@
 use std::{
+    any::type_name,
     fmt::{self, Display},
     marker::PhantomData,
     str::FromStr,
@@ -9,7 +10,7 @@ use chrono_tz::Europe::Oslo;
 use num_traits::FromPrimitive;
 use serde::{
     Deserialize, Deserializer, Serialize, Serializer,
-    de::{Error, Visitor},
+    de::{Error, Unexpected, Visitor},
 };
 use serde_with::{DeserializeAs, SerializeAs};
 
@@ -53,7 +54,7 @@ where
         type Value = Option<T>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("a primitive value")
+            formatter.write_fmt(format_args!("a '{}'", type_name::<T>()))
         }
 
         fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
@@ -62,7 +63,7 @@ where
         {
             T::from_i64(v)
                 .map(Some)
-                .ok_or_else(|| Error::custom("failed to deserialize primitive from i64"))
+                .ok_or_else(|| Error::invalid_value(Unexpected::Signed(v), &self))
         }
 
         fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -71,7 +72,7 @@ where
         {
             T::from_u64(v)
                 .map(Some)
-                .ok_or_else(|| Error::custom("failed to deserialize primitive from u64"))
+                .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -81,7 +82,9 @@ where
             if v.is_empty() || v.starts_with("*") {
                 Ok(None)
             } else {
-                v.parse().map(Some).map_err(Error::custom)
+                v.parse()
+                    .map(Some)
+                    .map_err(|_| Error::invalid_value(Unexpected::Str(v), &self))
             }
         }
 
@@ -292,30 +295,30 @@ where
             type Value = S;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a primitive value")
+                formatter.write_fmt(format_args!("a '{}'", type_name::<S>()))
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                S::from_i64(v)
-                    .ok_or_else(|| Error::custom("failed to deserialize primitive from i64"))
+                S::from_i64(v).ok_or_else(|| Error::invalid_value(Unexpected::Signed(v), &self))
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                S::from_u64(v)
-                    .ok_or_else(|| Error::custom("failed to deserialize primitive from u64"))
+                S::from_u64(v).ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                let v = v.parse().map_err(Error::custom)?;
+                let v = v
+                    .parse()
+                    .map_err(|_| Error::invalid_value(Unexpected::Str(v), &self))?;
                 self.visit_i64(v)
             }
         }
@@ -355,7 +358,7 @@ where
             type Value = Option<S>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a primitive value")
+                formatter.write_fmt(format_args!("a '{}'", type_name::<S>()))
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
@@ -364,7 +367,7 @@ where
             {
                 S::from_i64(v)
                     .map(Some)
-                    .ok_or_else(|| Error::custom("failed to deserialize primitive from i64"))
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Signed(v), &self))
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -373,7 +376,7 @@ where
             {
                 S::from_u64(v)
                     .map(Some)
-                    .ok_or_else(|| Error::custom("failed to deserialize primitive from u64"))
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -383,7 +386,9 @@ where
                 if v.is_empty() {
                     Ok(None)
                 } else {
-                    let v = v.parse().map_err(Error::custom)?;
+                    let v = v
+                        .parse()
+                        .map_err(|_| Error::invalid_value(Unexpected::Str(v), &self))?;
                     self.visit_i64(v)
                 }
             }
@@ -421,35 +426,37 @@ where
             type Value = S;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a float")
+                formatter.write_fmt(format_args!("a '{}'", type_name::<S>()))
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                S::from_i64(v).ok_or_else(|| Error::custom("failed to deserialize float from i64"))
+                S::from_i64(v).ok_or_else(|| Error::invalid_value(Unexpected::Signed(v), &self))
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                S::from_u64(v).ok_or_else(|| Error::custom("failed to deserialize float from u64"))
+                S::from_u64(v).ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))
             }
 
             fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                S::from_f64(v).ok_or_else(|| Error::custom("failed to deserialize float from f64"))
+                S::from_f64(v).ok_or_else(|| Error::invalid_value(Unexpected::Float(v), &self))
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                v.replacen(",", ".", 1).parse().map_err(Error::custom)
+                v.replacen(",", ".", 1)
+                    .parse()
+                    .map_err(|_| Error::invalid_value(Unexpected::Str(v), &self))
             }
         }
 
@@ -478,7 +485,7 @@ where
             type Value = Option<S>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a float")
+                formatter.write_fmt(format_args!("a '{}'", type_name::<S>()))
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
@@ -487,7 +494,7 @@ where
             {
                 S::from_i64(v)
                     .map(Some)
-                    .ok_or_else(|| Error::custom("failed to deserialize float from i64"))
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Signed(v), &self))
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
@@ -496,7 +503,7 @@ where
             {
                 S::from_u64(v)
                     .map(Some)
-                    .ok_or_else(|| Error::custom("failed to deserialize float from u64"))
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Unsigned(v), &self))
             }
 
             fn visit_f64<E>(self, v: f64) -> Result<Self::Value, E>
@@ -505,7 +512,7 @@ where
             {
                 S::from_f64(v)
                     .map(Some)
-                    .ok_or_else(|| Error::custom("failed to deserialize float from f64"))
+                    .ok_or_else(|| Error::invalid_value(Unexpected::Float(v), &self))
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -518,7 +525,7 @@ where
                     v.replacen(",", ".", 1)
                         .parse()
                         .map(Some)
-                        .map_err(Error::custom)
+                        .map_err(|_| Error::invalid_value(Unexpected::Str(v), &self))
                 }
             }
 
@@ -555,28 +562,33 @@ where
             type Value = S;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a stringable value")
+                formatter.write_fmt(format_args!("a '{}'", type_name::<S>()))
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                v.to_string().parse().map_err(Error::custom)
+                v.to_string()
+                    .parse()
+                    .map_err(|_| Error::invalid_value(Unexpected::Signed(v), &self))
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                v.to_string().parse().map_err(Error::custom)
+                v.to_string()
+                    .parse()
+                    .map_err(|_| Error::invalid_value(Unexpected::Unsigned(v), &self))
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                v.parse().map_err(Error::custom)
+                v.parse()
+                    .map_err(|_| Error::invalid_value(Unexpected::Str(v), &self))
             }
         }
 
@@ -605,21 +617,27 @@ where
             type Value = Option<S>;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str("a stringable value")
+                formatter.write_fmt(format_args!("a '{}'", type_name::<S>()))
             }
 
             fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                v.to_string().parse().map(Some).map_err(Error::custom)
+                v.to_string()
+                    .parse()
+                    .map(Some)
+                    .map_err(|_| Error::invalid_value(Unexpected::Signed(v), &self))
             }
 
             fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
             where
                 E: Error,
             {
-                v.to_string().parse().map(Some).map_err(Error::custom)
+                v.to_string()
+                    .parse()
+                    .map(Some)
+                    .map_err(|_| Error::invalid_value(Unexpected::Unsigned(v), &self))
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -629,7 +647,9 @@ where
                 if v.is_empty() {
                     Ok(None)
                 } else {
-                    v.parse().map(Some).map_err(Error::custom)
+                    v.parse()
+                        .map(Some)
+                        .map_err(|_| Error::invalid_value(Unexpected::Str(v), &self))
                 }
             }
 
