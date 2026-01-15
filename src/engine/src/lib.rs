@@ -73,11 +73,9 @@ pub struct AisVms {}
 #[machine(shared_state = SharedState, order_chain)]
 pub enum Fishery {
     Scrape(ScrapeState),
-    DailyWeather(DailyWeatherState),
     Trips(TripsState),
     Benchmark(BenchmarkState),
     HaulDistribution(HaulDistributionState),
-    HaulWeather(HaulWeatherState),
     VerifyDatabase(VerifyDatabaseState),
 }
 
