@@ -258,45 +258,59 @@ impl FuelEstimator {
         estimate_fuel_for_positions(&mut fuel_impl, &ais_vms, &vessel).fuel_liter
     }
 
-    pub async fn run_continuous(self) -> Result<()> {
+    pub async fn run_continuous(self) -> ! {
         if let Some(vessels) = &self.local_processing_vessels {
             let mut lines = BufReader::new(stdin()).lines();
             loop {
                 info!("deleting existing fuel estimates...");
-                self.adapter.delete_fuel_estimates(vessels).await?;
+                self.adapter.delete_fuel_estimates(vessels).await.unwrap();
 
                 info!("invalidating trip positions...");
                 self.adapter
                     .reset_trip_positions_fuel_status(vessels)
-                    .await?;
+                    .await
+                    .unwrap();
 
                 info!("please run trips state for vessels before continuing...");
                 lines.next_line().await.unwrap();
 
                 info!("running fuel estimation...");
-                self.run_local_fuel_estimation(vessels).await?;
+                self.run_local_fuel_estimation(vessels).await.unwrap();
 
                 info!("fuel processing done, press enter to run again...");
                 lines.next_line().await.unwrap();
             }
         } else {
             loop {
-                if let Some(last_run) = self.adapter.last_run().await? {
-                    let diff = Utc::now() - last_run;
-                    if diff >= RUN_INTERVAL {
-                        self.run_single(None).await?;
-                    } else {
-                        tokio::time::sleep((RUN_INTERVAL - diff).to_std().unwrap()).await;
-                        self.run_single(None).await?;
-                    }
-                } else {
-                    self.run_single(None).await?;
-                }
+                self.run_cycle(None).await;
             }
         }
     }
 
+    async fn wait_for_next_run(&self) -> Result<()> {
+        if let Some(last_run) = self.adapter.last_run().await? {
+            let diff = Utc::now() - last_run;
+            if diff < RUN_INTERVAL {
+                tokio::time::sleep((RUN_INTERVAL - diff).to_std().unwrap()).await;
+            }
+        }
+        Ok(())
+    }
+
     #[instrument(skip_all)]
+    async fn run_cycle(&self, vessels: Option<Vec<Vessel>>) {
+        match self.wait_for_next_run().await {
+            Ok(_) => {
+                if let Err(e) = self.run_single(vessels).await {
+                    error!("failed to run fuel estimation processor: {e:?}");
+                }
+            }
+            Err(e) => {
+                error!("failed to wait for next fuel estimation processor run: {e:?}");
+            }
+        }
+    }
+
     pub async fn run_single(&self, vessels: Option<Vec<Vessel>>) -> Result<()> {
         // We dont want to estimate all days in test as it adds some test execution time
         #[cfg(feature = "test")]

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    t.fiskeridir_vessel_id AS \"vessel_id!: FiskeridirVesselId\",\n    trip_id AS \"trip_id!: TripId\",\n    period AS \"period: DateRange\",\n    period_precision AS \"period_precision?: DateRange\",\n    CASE\n        WHEN trip_assembler_id = 1 THEN landing_total_living_weight\n        WHEN trip_assembler_id = 2 THEN haul_total_weight::DOUBLE PRECISION\n        ELSE NULL\n    END AS \"total_catch_weight!\",\n    landing_total_price_for_fisher AS total_catch_value,\n    distance,\n    f.fiskeridir_length_group_id AS \"vessel_length_group: VesselLengthGroup\",\n    f.engine_power_final AS engine_power,\n    f.engine_building_year_final AS engine_building_year,\n    f.auxiliary_engine_power,\n    f.auxiliary_engine_building_year,\n    f.boiler_engine_power,\n    f.boiler_engine_building_year,\n    f.engine_type_manual AS \"engine_type: EngineType\",\n    f.engine_rpm_manual AS engine_rpm,\n    f.service_speed,\n    f.degree_of_electrification,\n    w.call_sign AS \"call_sign: CallSign\",\n    w.mmsi AS \"mmsi: Mmsi\"\nFROM\n    trips_detailed t\n    INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    INNER JOIN all_vessels w ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    benchmark_status = $1\n            ",
+  "query": "\nSELECT\n    td.fiskeridir_vessel_id AS \"vessel_id!: FiskeridirVesselId\",\n    td.trip_id AS \"trip_id!: TripId\",\n    td.period AS \"period: DateRange\",\n    td.period_precision AS \"period_precision?: DateRange\",\n    CASE\n        WHEN td.trip_assembler_id = 1 THEN td.landing_total_living_weight\n        WHEN td.trip_assembler_id = 2 THEN td.haul_total_weight::DOUBLE PRECISION\n        ELSE NULL\n    END AS \"total_catch_weight!\",\n    td.landing_total_price_for_fisher AS total_catch_value,\n    td.distance,\n    td.benchmark_state_counter,\n    f.fiskeridir_length_group_id AS \"vessel_length_group: VesselLengthGroup\",\n    f.engine_power_final AS engine_power,\n    f.engine_building_year_final AS engine_building_year,\n    f.auxiliary_engine_power,\n    f.auxiliary_engine_building_year,\n    f.boiler_engine_power,\n    f.boiler_engine_building_year,\n    f.engine_type_manual AS \"engine_type: EngineType\",\n    f.engine_rpm_manual AS engine_rpm,\n    f.service_speed,\n    f.degree_of_electrification,\n    w.call_sign AS \"call_sign: CallSign\",\n    w.mmsi AS \"mmsi: Mmsi\"\nFROM\n    trips_detailed td\n    INNER JOIN fiskeridir_vessels f ON td.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    INNER JOIN all_vessels w ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    td.benchmark_status = $1\n            ",
   "describe": {
     "columns": [
       {
@@ -40,66 +40,71 @@
       },
       {
         "ordinal": 7,
-        "name": "vessel_length_group: VesselLengthGroup",
+        "name": "benchmark_state_counter",
         "type_info": "Int4"
       },
       {
         "ordinal": 8,
-        "name": "engine_power",
+        "name": "vessel_length_group: VesselLengthGroup",
         "type_info": "Int4"
       },
       {
         "ordinal": 9,
-        "name": "engine_building_year",
+        "name": "engine_power",
         "type_info": "Int4"
       },
       {
         "ordinal": 10,
-        "name": "auxiliary_engine_power",
+        "name": "engine_building_year",
         "type_info": "Int4"
       },
       {
         "ordinal": 11,
-        "name": "auxiliary_engine_building_year",
+        "name": "auxiliary_engine_power",
         "type_info": "Int4"
       },
       {
         "ordinal": 12,
-        "name": "boiler_engine_power",
+        "name": "auxiliary_engine_building_year",
         "type_info": "Int4"
       },
       {
         "ordinal": 13,
-        "name": "boiler_engine_building_year",
+        "name": "boiler_engine_power",
         "type_info": "Int4"
       },
       {
         "ordinal": 14,
-        "name": "engine_type: EngineType",
+        "name": "boiler_engine_building_year",
         "type_info": "Int4"
       },
       {
         "ordinal": 15,
-        "name": "engine_rpm",
+        "name": "engine_type: EngineType",
         "type_info": "Int4"
       },
       {
         "ordinal": 16,
+        "name": "engine_rpm",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 17,
         "name": "service_speed",
         "type_info": "Float8"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "degree_of_electrification",
         "type_info": "Float8"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "call_sign: CallSign",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "mmsi: Mmsi",
         "type_info": "Int4"
       }
@@ -118,6 +123,7 @@
       false,
       true,
       false,
+      false,
       true,
       true,
       true,
@@ -132,5 +138,5 @@
       true
     ]
   },
-  "hash": "0dfb3869ea3cab8fef28369f1f5d22aea1fd7a7e726a8250d8aa10234b179aff"
+  "hash": "7d7ec7af664b836d92a34cbfdca1e235c272dbd77e0876f4fe00e7843c28bc5d"
 }

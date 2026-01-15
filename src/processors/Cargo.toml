@@ -28,3 +28,4 @@ tracing = { workspace = true }
 chrono = { workspace = true }
 geoutils = { workspace = true }
 strum = { workspace = true }
+async-trait = { workspace = true }

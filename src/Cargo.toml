@@ -8,7 +8,6 @@ members = [
     "web-api",
     "engine",
     "scraper",
-    "trip-benchmark",
     "duckdb-rs",
     "fiskeridir-rs",
     "http-client",

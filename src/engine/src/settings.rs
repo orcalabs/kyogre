@@ -4,7 +4,6 @@ use kyogre_core::*;
 use orca_core::{Environment, PsqlSettings};
 use processors::{AisVmsConflict, FuelImplDiscriminants, UnrealisticSpeed};
 use serde::Deserialize;
-use trip_benchmark::*;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -40,21 +39,6 @@ impl Settings {
         vec
     }
 
-    pub fn benchmarks(&self) -> Vec<Box<dyn TripBenchmark>> {
-        // Order is significant as some benchmarks depends on the output of others.
-        // Currently most benchmarks depends on 'FuelConsumption'.
-        vec![
-            Box::<FuelConsumption>::default(),
-            Box::<WeightPerHour>::default(),
-            Box::<WeightPerDistance>::default(),
-            Box::<WeightPerFuel>::default(),
-            Box::<CatchValuePerFuel>::default(),
-            Box::<Eeoi>::default(),
-            // `Sustainability` needs to be last because it depends on benchmarks above.
-            // TODO
-            // Box::<Sustainability>::default(),
-        ]
-    }
     pub fn trip_distancer(&self) -> Box<dyn TripDistancer> {
         Box::<AisVms>::default()
     }

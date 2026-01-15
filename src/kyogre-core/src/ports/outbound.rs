@@ -180,6 +180,7 @@ pub trait TripPrecisionOutboundPort: Send + Sync {
 #[async_trait]
 pub trait TripBenchmarkOutbound: Send + Sync {
     async fn vessels(&self) -> CoreResult<Vec<Vessel>>;
+    async fn add_output(&self, value: TripBenchmarkOutput) -> CoreResult<()>;
     async fn trip_positions_with_manual(
         &self,
         trip_id: TripId,

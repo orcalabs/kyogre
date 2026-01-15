@@ -1,5 +1,6 @@
 use crate::{
-    FuelEstimator, LiveFuel, Result, Settings, current_position::CurrentPositionProcessor,
+    FuelEstimator, LiveFuel, Result, Settings, TripBenchmarkRunner,
+    current_position::CurrentPositionProcessor,
 };
 use orca_core::Environment;
 use postgres::PostgresAdapter;
@@ -9,6 +10,7 @@ use tokio::task::JoinSet;
 #[derive(Clone)]
 pub struct App {
     pub estimator: FuelEstimator,
+    trip_benchmark_runner: TripBenchmarkRunner,
     live_fuel: LiveFuel,
     current_position: CurrentPositionProcessor,
     environment: Environment,
@@ -30,6 +32,10 @@ impl App {
                 settings.fuel_estimation_mode,
             ),
             live_fuel: LiveFuel::new(postgres.clone(), settings.fuel_estimation_mode),
+            trip_benchmark_runner: TripBenchmarkRunner::new(
+                postgres.clone(),
+                settings.fuel_estimation_vessels.clone(),
+            ),
             current_position: CurrentPositionProcessor::new(
                 postgres,
                 settings.current_positions_batch_size,
@@ -51,16 +57,15 @@ impl App {
                     live_fuel,
                     current_position,
                     environment: _,
+                    trip_benchmark_runner,
                 } = self;
 
                 set.spawn(estimator.run_continuous());
                 set.spawn(live_fuel.run_continuous());
                 set.spawn(current_position.run_continuous());
+                set.spawn(trip_benchmark_runner.run_continuous());
 
-                // Unwrap only panics on empty set
-                let out = set.join_next().await.unwrap()?;
-
-                panic!("one task unexpectedly exited with output: {out:?}");
+                set.join_next().await.unwrap().unwrap();
             }
             Environment::Test => {
                 let Self {
@@ -68,11 +73,13 @@ impl App {
                     live_fuel,
                     current_position,
                     environment: _,
+                    mut trip_benchmark_runner,
                 } = self;
 
                 estimator.run_single(None).await?;
                 live_fuel.run_single().await?;
                 current_position.run_single().await?;
+                trip_benchmark_runner.run_single().await?;
 
                 Ok(())
             }

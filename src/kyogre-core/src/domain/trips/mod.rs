@@ -147,6 +147,7 @@ pub struct BenchmarkTrip {
     pub distance: Option<f64>,
     pub period: DateRange,
     pub period_precision: Option<DateRange>,
+    pub benchmark_state_counter: i32,
 }
 
 #[derive(Debug, Clone)]

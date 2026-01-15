@@ -49,7 +49,6 @@ base64 = "0.22.1"
 
 [dev-dependencies]
 engine = { path = "../engine", features = ["test"] }
-trip-benchmark = { path = "../trip-benchmark" }
 http-client = { path = "../http-client", default-features = false }
 
 fiskeridir-rs = { workspace = true, features = ["test"] }

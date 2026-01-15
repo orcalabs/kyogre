@@ -1148,6 +1148,10 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl TripBenchmarkOutbound for PostgresAdapter {
+    async fn add_output(&self, value: TripBenchmarkOutput) -> CoreResult<()> {
+        Ok(retry(|| self.add_benchmark_output(&value)).await?)
+    }
+
     async fn trips_to_benchmark(&self) -> CoreResult<Vec<BenchmarkTrip>> {
         Ok(retry(|| self.trips_to_benchmark_impl()).await?)
     }
@@ -1172,13 +1176,6 @@ impl TripBenchmarkOutbound for PostgresAdapter {
         trip_id: TripId,
     ) -> CoreResult<Vec<TripPositionWithManual>> {
         Ok(retry(|| self.trip_positions_with_manual_impl(trip_id)).await?)
-    }
-}
-
-#[async_trait]
-impl TripBenchmarkInbound for PostgresAdapter {
-    async fn add_output(&self, values: &[TripBenchmarkOutput]) -> CoreResult<()> {
-        Ok(retry(|| self.add_benchmark_outputs(values)).await?)
     }
 }
 

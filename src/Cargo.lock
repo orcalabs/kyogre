@@ -1619,7 +1619,6 @@ dependencies = [
  "strum 0.27.2",
  "tokio",
  "tracing",
- "trip-benchmark",
 ]
 
 [[package]]
@@ -4017,6 +4016,7 @@ name = "processors"
 version = "0.1.0"
 dependencies = [
  "async-channel",
+ "async-trait",
  "chrono",
  "config",
  "fiskeridir-rs",
@@ -4060,7 +4060,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be769465445e8c1474e9c5dac2018218498557af32d9ed057325ec9a41ae81bf"
 dependencies = [
  "heck",
- "itertools 0.14.0",
+ "itertools 0.11.0",
  "log",
  "multimap",
  "once_cell",
@@ -4080,7 +4080,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a56d757972c98b346a9b766e3f02746cde6dd1cd1d1d563472929fdd74bec4d"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote 1.0.42",
  "syn 2.0.111",
@@ -4093,7 +4093,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9120690fafc389a67ba3803df527d0ec9cbbc9cc45e4cc20b332996dfb672425"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote 1.0.42",
  "syn 2.0.111",
@@ -6292,17 +6292,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "trip-benchmark"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "fiskeridir-rs",
- "kyogre-core",
- "processors",
-]
-
-[[package]]
 name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6367,9 +6356,9 @@ checksum = "7264e107f553ccae879d21fbea1d6724ac785e8c3bfc762137959b5802826ef3"
 
 [[package]]
 name = "unnest_insert"
-version = "0.14.0"
+version = "0.15.0"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "904d338947d33018f16b0595f14f20ffd792b4c756bdee9dffaca4f4f3024274"
+checksum = "7b37723921c07faf630e0522aa15df87260bd9b58cd0e9e2f354ee8caf105c56"
 dependencies = [
  "async-trait",
  "futures",
@@ -6379,9 +6368,9 @@ dependencies = [
 
 [[package]]
 name = "unnest_insert_derive"
-version = "0.13.0"
+version = "0.14.0"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "66de05f95cef2cc56aaa3f6d4e2cc279423dec6267e19c585fb6c8147f1cf180"
+checksum = "2ab4b025712ca8a569320bf7fa6b0c96e92e6e9e26be93dbf7b76b35694b09aa"
 dependencies = [
  "futures",
  "proc-macro2",
@@ -6639,7 +6628,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
- "trip-benchmark",
  "uuid",
  "wiremock",
  "wkt 0.14.0",

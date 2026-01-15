@@ -10,12 +10,15 @@ use kyogre_core::{
 use crate::{PostgresAdapter, error::Result, models::TripBenchmarkOutput};
 
 impl PostgresAdapter {
-    pub(crate) async fn add_benchmark_outputs(
+    pub(crate) async fn add_benchmark_output(
         &self,
-        values: &[kyogre_core::TripBenchmarkOutput],
+        value: &kyogre_core::TripBenchmarkOutput,
     ) -> Result<()> {
-        self.unnest_update_from::<_, _, TripBenchmarkOutput>(values, &self.pool)
-            .await
+        self.unnest_update_from::<_, _, TripBenchmarkOutput>(
+            std::slice::from_ref(value),
+            &self.pool,
+        )
+        .await
     }
 
     pub(crate) async fn average_trip_benchmarks_impl(
@@ -65,17 +68,18 @@ WHERE
             kyogre_core::BenchmarkTrip,
             r#"
 SELECT
-    t.fiskeridir_vessel_id AS "vessel_id!: FiskeridirVesselId",
-    trip_id AS "trip_id!: TripId",
-    period AS "period: DateRange",
-    period_precision AS "period_precision?: DateRange",
+    td.fiskeridir_vessel_id AS "vessel_id!: FiskeridirVesselId",
+    td.trip_id AS "trip_id!: TripId",
+    td.period AS "period: DateRange",
+    td.period_precision AS "period_precision?: DateRange",
     CASE
-        WHEN trip_assembler_id = 1 THEN landing_total_living_weight
-        WHEN trip_assembler_id = 2 THEN haul_total_weight::DOUBLE PRECISION
+        WHEN td.trip_assembler_id = 1 THEN td.landing_total_living_weight
+        WHEN td.trip_assembler_id = 2 THEN td.haul_total_weight::DOUBLE PRECISION
         ELSE NULL
     END AS "total_catch_weight!",
-    landing_total_price_for_fisher AS total_catch_value,
-    distance,
+    td.landing_total_price_for_fisher AS total_catch_value,
+    td.distance,
+    td.benchmark_state_counter,
     f.fiskeridir_length_group_id AS "vessel_length_group: VesselLengthGroup",
     f.engine_power_final AS engine_power,
     f.engine_building_year_final AS engine_building_year,
@@ -90,11 +94,11 @@ SELECT
     w.call_sign AS "call_sign: CallSign",
     w.mmsi AS "mmsi: Mmsi"
 FROM
-    trips_detailed t
-    INNER JOIN fiskeridir_vessels f ON t.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    trips_detailed td
+    INNER JOIN fiskeridir_vessels f ON td.fiskeridir_vessel_id = f.fiskeridir_vessel_id
     INNER JOIN all_vessels w ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
-    benchmark_status = $1
+    td.benchmark_status = $1
             "#,
             ProcessingStatus::Unprocessed as i32
         )

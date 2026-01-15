@@ -12,7 +12,6 @@ test = ["kyogre-core/test", "postgres/test", "processors/test"]
 kyogre-core = { path = "../kyogre-core" }
 postgres = { path = "../postgres" }
 scraper = { path = "../scraper" }
-trip-benchmark = { path = "../trip-benchmark" }
 http-client = { path = "../http-client" }
 processors = { path = "../processors" }
 

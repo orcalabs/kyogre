@@ -21,7 +21,6 @@ impl LiveFuel {
         Self { adapter, mode }
     }
 
-    #[instrument(skip_all)]
     pub async fn run_single(&self) -> Result<()> {
         let vessels = self.adapter.live_fuel_vessels().await?;
 
@@ -34,10 +33,17 @@ impl LiveFuel {
         Ok(())
     }
 
-    pub async fn run_continuous(self) -> Result<()> {
+    pub async fn run_continuous(self) -> ! {
         loop {
-            self.run_single().await?;
+            self.run_cycle().await;
             tokio::time::sleep(RUN_INTERVAL).await;
+        }
+    }
+
+    #[instrument(skip_all)]
+    async fn run_cycle(&self) {
+        if let Err(e) = self.run_single().await {
+            error!("live fuel processor failed: {e:?}");
         }
     }
 

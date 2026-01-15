@@ -31,7 +31,7 @@ geozero = { workspace = true }
 async-channel = { workspace = true }
 itertools = { workspace = true }
 
-unnest_insert = { version = "0.14.0", registry = "orcalabs-orcastrator", features = [
+unnest_insert = { version = "0.15.0", registry = "orcalabs-orcastrator", features = [
     "derive",
 ] }
 

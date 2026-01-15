@@ -43,7 +43,6 @@ impl App {
             .await
             .unwrap();
 
-        let benchmarks = settings.benchmarks();
         let trip_distancer = settings.trip_distancer();
         let trip_position_layers = settings.trip_position_layers();
 
@@ -64,12 +63,9 @@ impl App {
             postgres.clone(),
             postgres.clone(),
             postgres.clone(),
-            postgres.clone(),
-            postgres.clone(),
             postgres_arc,
             Some(Box::new(scraper)),
             trip_assemblers,
-            benchmarks,
             trip_distancer,
             trip_position_layers,
             settings.fuel_estimation_mode,
@@ -114,15 +110,6 @@ impl App {
                         Box::new(self.transition_log),
                     );
                     let engine = FisheryEngine::Trips(step);
-                    engine.run_single().await;
-                }
-                FisheryDiscriminants::Benchmark => {
-                    let step = crate::Step::initial(
-                        crate::BenchmarkState,
-                        self.shared_state,
-                        Box::new(self.transition_log),
-                    );
-                    let engine = FisheryEngine::Benchmark(step);
                     engine.run_single().await;
                 }
                 FisheryDiscriminants::HaulDistribution => {
