@@ -5,10 +5,10 @@ use super::*;
 
 /// Computes fuel consumption for a trip in tonnes.
 #[derive(Default)]
-pub struct FuelConsumption;
+pub struct TripFuelConsumption;
 
 #[async_trait]
-impl TripComputationStep for FuelConsumption {
+impl TripComputationStep for TripFuelConsumption {
     async fn run(
         &self,
         shared: &SharedState,

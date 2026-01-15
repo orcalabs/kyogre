@@ -59,6 +59,7 @@ pub struct TripBenchmarkOutput {
     pub catch_value_per_fuel_liter: Option<f64>,
     pub eeoi: Option<f64>,
     pub status: ProcessingStatus,
+    pub benchmark_state_counter: i32,
 }
 
 #[async_trait]

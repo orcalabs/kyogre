@@ -22,7 +22,7 @@ pub static TRIP_COMPUTATION_STEPS: LazyLock<Vec<Box<dyn TripComputationStep>>> =
             Box::<TripPositionLayers>::default(),
             Box::<AisVms>::default(),
             Box::<TripCargoWeight>::default(),
-            Box::<FuelConsumption>::default(),
+            Box::<TripFuelConsumption>::default(),
         ]
     });
 

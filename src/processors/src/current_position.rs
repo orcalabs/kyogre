@@ -36,14 +36,20 @@ impl CurrentPositionProcessor {
         }
     }
 
-    pub async fn run_continuous(self) -> Result<()> {
+    pub async fn run_continuous(self) -> ! {
         loop {
-            self.run_single().await?;
+            self.run_cycle().await;
             tokio::time::sleep(RUN_INTERVAL).await;
         }
     }
 
     #[instrument(skip_all)]
+    async fn run_cycle(&self) {
+        if let Err(e) = self.run_single().await {
+            error!("current position processor failed: {e:?}");
+        }
+    }
+
     pub async fn run_single(&self) -> Result<()> {
         let vessels = self.adapter.vessels().await?;
 

@@ -16,7 +16,7 @@ use kyogre_core::{
 use machine::StateMachine;
 use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
-use processors::{AisVmsConflict, FuelImplDiscriminants, UnrealisticSpeed};
+use processors::*;
 use std::{
     collections::{HashMap, HashSet},
     sync::{
@@ -24,7 +24,6 @@ use std::{
         atomic::{self, AtomicU64},
     },
 };
-use trip_benchmark::*;
 
 mod ais;
 mod ais_vms;
@@ -172,16 +171,6 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         Box::<LandingTripAssembler>::default() as Box<dyn TripAssembler>,
         Box::<ErsTripAssembler>::default() as Box<dyn TripAssembler>,
     ];
-    let benchmarks = vec![
-        Box::<FuelConsumption>::default() as _,
-        Box::<WeightPerHour>::default() as _,
-        Box::<WeightPerDistance>::default() as _,
-        Box::<WeightPerFuel>::default() as _,
-        Box::<CatchValuePerFuel>::default() as _,
-        Box::<Eeoi>::default() as _,
-        // TODO
-        // Box::<Sustainability>::default() as _,
-    ];
     let trip_distancer = Box::<AisVms>::default() as Box<dyn TripDistancer>;
     let trip_layers = vec![
         Box::<AisVmsConflict>::default() as Box<dyn TripPositionLayer>,
@@ -203,12 +192,9 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         db.clone(),
         db.clone(),
         db.clone(),
-        db.clone(),
-        db.clone(),
         db_arc,
         None,
         trip_assemblers,
-        benchmarks,
         trip_distancer,
         trip_layers,
         FuelImplDiscriminants::Maru,

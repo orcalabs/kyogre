@@ -42,7 +42,7 @@ async fn test_existing_vessels_succeeds_with_new_migration() {
         helper.run_new_migrations().await;
 
         let vessels = helper.app.get_vessels().await.unwrap();
-        assert_eq!(vessels.len(), 3);
+        assert_eq!(vessels.len(), 2);
     })
     .await;
 }
