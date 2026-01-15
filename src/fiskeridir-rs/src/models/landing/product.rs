@@ -77,6 +77,7 @@ pub enum LandingMethod {
     Container = 13,
     Oppsamlingsfartoy = 14,
     FraMerdUtenForing = 15,
+    LeveringFraAnnetEnnFartoy = 16,
     HalvBlokkKartong25Kg = 71,
     HelBlokkKartong50Kg = 72,
     HalvBlokkSekk25Kg = 73,
@@ -129,6 +130,7 @@ impl LandingMethod {
             EmbKartong2Kg => "2 kg emb kartong",
             EmbKartong12Kg => "12 kg emb kartong",
             Uspesifisert => "Uspesifisert",
+            LeveringFraAnnetEnnFartoy => "Levering fra annet enn fartøy",
         }
     }
 }
