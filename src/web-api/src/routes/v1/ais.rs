@@ -8,7 +8,7 @@ use crate::{
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
 use futures::TryStreamExt;
-use kyogre_core::{DateTimeRange, Mmsi, NavigationStatus};
+use kyogre_core::{DateTimeRangeWithDefaultTimeSpan, Mmsi, NavigationStatus};
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -18,7 +18,7 @@ use serde_with::{DisplayFromStr, serde_as};
 #[serde(rename_all = "camelCase")]
 pub struct AisTrackParameters {
     #[serde(flatten)]
-    pub range: DateTimeRange<1>,
+    pub range: DateTimeRangeWithDefaultTimeSpan<1>,
 }
 
 #[derive(Debug, Deserialize, OaSchema)]

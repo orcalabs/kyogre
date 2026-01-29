@@ -302,8 +302,8 @@ WHERE
 GROUP BY
     weather_location_id
             "#,
-            query.start_date,
-            query.end_date,
+            query.start,
+            query.end,
             query.weather_location_ids.as_deref() as Option<&[WeatherLocationId]>,
         )
         .fetch(&self.pool)
@@ -334,8 +334,8 @@ WHERE
         OR weather_location_id = ANY ($3)
     )
             "#,
-            query.start_date,
-            query.end_date,
+            query.start,
+            query.end,
             query.weather_location_ids.as_deref() as Option<&[WeatherLocationId]>,
         )
         .fetch_optional(&self.pool)

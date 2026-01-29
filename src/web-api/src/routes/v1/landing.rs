@@ -6,7 +6,7 @@ use fiskeridir_rs::{
 use futures::TryStreamExt;
 use kyogre_core::{
     ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, Landings,
-    LandingsQuery, LandingsSorting, Ordering, Pagination, TripId,
+    LandingsQuery, LandingsSorting, OptionalDateTimeRange, Ordering, Pagination, TripId,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -41,8 +41,8 @@ pub struct LandingsParams {
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     #[oasgen(rename = "fiskeridirVesselIds[]")]
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
-    pub start_timestamp: Option<DateTime<Utc>>,
-    pub end_timestamp: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: OptionalDateTimeRange,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,
     pub limit: Option<u64>,
@@ -270,8 +270,7 @@ impl From<LandingsParams> for LandingsQuery {
             ordering,
             limit,
             offset,
-            start_timestamp,
-            end_timestamp,
+            range,
         } = v;
 
         Self {
@@ -284,8 +283,7 @@ impl From<LandingsParams> for LandingsQuery {
             vessel_ids: fiskeridir_vessel_ids.unwrap_or_default(),
             sorting: Some(sorting.unwrap_or_default()),
             ordering: Some(ordering.unwrap_or_default()),
-            start_timestamp,
-            end_timestamp,
+            range,
         }
     }
 }

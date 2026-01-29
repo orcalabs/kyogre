@@ -1,6 +1,6 @@
 use super::fishing_facility::FishingFacility;
 use crate::{
-    error::{Result, error::StartAfterEndSnafu},
+    error::Result,
     extractors::OptionBwProfile,
     response::{Response, ResponseOrStream, StreamResponse, ais_unfold},
     routes::v1::ais_vms::AisVmsPosition,
@@ -12,8 +12,8 @@ use extractors::UserAuth;
 use fiskeridir_rs::{Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, HasTrack, Ordering, Pagination, Tra, TripAssemblerId, TripId, TripSorting,
-    Trips, TripsQuery, VesselEventType,
+    FiskeridirVesselId, HasTrack, OptionalDateTimeRange, Ordering, Pagination, Tra,
+    TripAssemblerId, TripId, TripSorting, Trips, TripsQuery, VesselEventType,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -32,8 +32,8 @@ pub struct TripsParameters {
     pub ordering: Option<Ordering>,
     #[oasgen(rename = "deliveryPoints[]")]
     pub delivery_points: Option<Vec<String>>,
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: OptionalDateTimeRange,
     pub min_weight: Option<f64>,
     pub max_weight: Option<f64>,
     pub sorting: Option<TripSorting>,
@@ -79,19 +79,7 @@ pub async fn trips<T: Database + Send + Sync + 'static>(
 ) -> Result<ResponseOrStream<Trip>> {
     let read_fishing_facility = profile.read_fishing_facilities();
 
-    let params = params.into_inner();
-    match (params.start_date, params.end_date) {
-        (Some(start), Some(end)) => {
-            if start > end {
-                StartAfterEndSnafu { start, end }.fail()
-            } else {
-                Ok(())
-            }
-        }
-        _ => Ok(()),
-    }?;
-
-    let query = TripsQuery::from(params);
+    let query = TripsQuery::from(params.into_inner());
 
     let response = stream_response! {
         db.detailed_trips(query, read_fishing_facility)
@@ -222,8 +210,7 @@ impl From<TripsParameters> for TripsQuery {
             offset,
             ordering,
             delivery_points,
-            start_date,
-            end_date,
+            range,
             min_weight,
             max_weight,
             sorting,
@@ -239,8 +226,7 @@ impl From<TripsParameters> for TripsQuery {
             ordering: ordering.unwrap_or_default(),
             sorting: sorting.unwrap_or_default(),
             delivery_points,
-            start_date,
-            end_date,
+            range,
             min_weight,
             max_weight,
             gear_group_ids,

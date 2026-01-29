@@ -1,7 +1,9 @@
 use crate::v1::helper::test_with_master_db;
 use chrono::{TimeZone, Utc};
 use fiskeridir_rs::CallSign;
-use kyogre_core::{ActiveHaulsFilter, ActiveLandingFilter, DateTimeRange, Mmsi, TripId};
+use kyogre_core::{
+    ActiveHaulsFilter, ActiveLandingFilter, DateTimeRangeWithDefaultTimeSpan, Mmsi, TripId,
+};
 use web_api::routes::v1::{
     ais::AisTrackParameters,
     ais_vms::AisVmsParameters,
@@ -66,7 +68,7 @@ async fn test_existing_ais_succeeds_with_new_migration() {
             .get_ais_track(
                 Mmsi::test_new(1),
                 AisTrackParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
                         Utc.with_ymd_and_hms(2011, 2, 5, 10, 0, 0).unwrap(),
                     ),
@@ -90,7 +92,7 @@ async fn test_existing_ais_vms_succeeds_with_new_migration() {
                 mmsi: Some(Mmsi::test_new(1)),
                 call_sign: Some(CallSign::try_from("CS1").unwrap()),
                 trip_id: None,
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
                     Utc.with_ymd_and_hms(2011, 2, 5, 10, 0, 0).unwrap(),
                 ),

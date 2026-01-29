@@ -7,8 +7,8 @@ use fiskeridir_rs::{
 use float_cmp::approx_eq;
 use http_client::StatusCode;
 use kyogre_core::{
-    CreateFuelMeasurement, DateTimeRange, NaiveDateRange, TEST_SIGNED_IN_VESSEL_CALLSIGN,
-    TestHelperOutbound,
+    CreateFuelMeasurement, DateTimeRangeWithDefaultTimeSpan, NaiveDateRange,
+    TEST_SIGNED_IN_VESSEL_CALLSIGN, TestHelperOutbound,
 };
 use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
 use std::str::FromStr;
@@ -112,7 +112,7 @@ async fn test_vessel_org_benchmarks_works_with_trips_with_different_amount_of_la
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         state.trips.iter().map(|t| t.period.start()).min().unwrap(),
                         state.trips.iter().map(|t| t.period.end()).max().unwrap(),
                     ),
@@ -149,7 +149,7 @@ async fn test_vessel_org_benchmarks_works_with_trips_without_landings() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         state.trips.iter().map(|t| t.period.start()).min().unwrap(),
                         state.trips.iter().map(|t| t.period.end()).max().unwrap(),
                     ),
@@ -192,7 +192,7 @@ async fn test_vessel_org_benchmarks_returns_not_found_on_org_not_associated_with
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         state.trips.iter().map(|t| t.period.start()).min().unwrap(),
                         state.trips.iter().map(|t| t.period.end()).max().unwrap(),
                     ),
@@ -242,7 +242,7 @@ async fn test_vessel_org_benchmarks_sums_species_per_vessel() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         state.trips.iter().map(|t| t.period.start()).min().unwrap(),
                         state.trips.iter().map(|t| t.period.end()).max().unwrap(),
                     ),
@@ -286,7 +286,7 @@ async fn test_vessel_org_benchmarks_works() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         state.trips.iter().map(|t| t.period.start()).min().unwrap(),
                         state.trips.iter().map(|t| t.period.end()).max().unwrap(),
                     ),
@@ -332,7 +332,7 @@ async fn test_vessel_org_benchmarks_filters_by_org() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         state.trips.iter().map(|t| t.period.start()).min().unwrap(),
                         state.trips.iter().map(|t| t.period.end()).max().unwrap(),
                     ),
@@ -376,7 +376,7 @@ async fn test_vessel_org_benchmarks_filters_by_dates() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         state.trips[1].period.start(),
                         state.trips.iter().map(|t| t.period.end()).max().unwrap(),
                     ),
@@ -828,7 +828,7 @@ async fn test_org_benchmarks_excludes_non_active_vessels() {
             .get_org_benchmarks(
                 org_id,
                 OrgBenchmarkParameters {
-                    range: DateTimeRange::test_new(start, end),
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(start, end),
                 },
             )
             .await

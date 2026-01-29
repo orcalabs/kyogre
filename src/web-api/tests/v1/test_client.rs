@@ -392,7 +392,7 @@ fn handle_request_failure(error: http_client::Error) -> Error {
                     description: e.description,
                 },
                 Err(e) => {
-                    if status != StatusCode::NOT_FOUND {
+                    if status != StatusCode::NOT_FOUND && status != StatusCode::BAD_REQUEST {
                         panic!("error response failed to deserialize, body: {body}, error: {e}");
                     }
                     Error {

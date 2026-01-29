@@ -7,13 +7,11 @@ use fiskeridir_rs::{
 use float_cmp::approx_eq;
 use http_client::StatusCode;
 use kyogre_core::{
-    CreateFuelMeasurement, FiskeridirVesselId, HasTrack, Ordering, TripSorting, VesselEventType,
+    CreateFuelMeasurement, FiskeridirVesselId, HasTrack, OptionalDateTimeRange, Ordering,
+    TripSorting, VesselEventType,
 };
 use uuid::Uuid;
-use web_api::{
-    error::ErrorDiscriminants,
-    routes::v1::{ais_vms::AisVmsParameters, trip::TripsParameters},
-};
+use web_api::routes::v1::{ais_vms::AisVmsParameters, trip::TripsParameters};
 
 pub mod benchmarks;
 
@@ -641,7 +639,10 @@ async fn test_trips_filter_by_start_date() {
         let trips = helper
             .app
             .get_trips(TripsParameters {
-                start_date: Some(state.trips[0].period.start() + Duration::seconds(1)),
+                range: OptionalDateTimeRange::test_new(
+                    Some(state.trips[0].period.start() + Duration::seconds(1)),
+                    None,
+                ),
                 ..Default::default()
             })
             .await
@@ -660,7 +661,10 @@ async fn test_trips_filter_by_end_date() {
         let trips = helper
             .app
             .get_trips(TripsParameters {
-                end_date: Some(state.trips[0].period.end() + Duration::seconds(1)),
+                range: OptionalDateTimeRange::test_new(
+                    None,
+                    Some(state.trips[0].period.end() + Duration::seconds(1)),
+                ),
                 ..Default::default()
             })
             .await
@@ -680,14 +684,12 @@ async fn test_trips_returns_bad_request_if_start_date_is_after_end_date() {
         let error = helper
             .app
             .get_trips(TripsParameters {
-                start_date: Some(start),
-                end_date: Some(end),
+                range: OptionalDateTimeRange::test_new(Some(start), Some(end)),
                 ..Default::default()
             })
             .await
             .unwrap_err();
         assert_eq!(error.status, StatusCode::BAD_REQUEST);
-        assert_eq!(error.error, ErrorDiscriminants::StartAfterEnd);
     })
     .await;
 }

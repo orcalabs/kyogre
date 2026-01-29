@@ -3,7 +3,7 @@ use crate::error::error::OrgNotFoundSnafu;
 use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web::{self, Path};
 use fiskeridir_rs::{CallSign, OrgId};
-use kyogre_core::{DateTimeRange, FuelEntry, OrgBenchmarkQuery, OrgBenchmarks};
+use kyogre_core::{DateTimeRangeWithDefaultTimeSpan, FuelEntry, OrgBenchmarkQuery, OrgBenchmarks};
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -12,7 +12,7 @@ use serde_qs::actix::QsQuery as Query;
 #[serde(rename_all = "camelCase")]
 pub struct OrgBenchmarkParameters {
     #[serde(flatten)]
-    pub range: DateTimeRange<30>,
+    pub range: DateTimeRangeWithDefaultTimeSpan<30>,
 }
 #[derive(Debug, Clone, OaSchema, Deserialize)]
 pub struct OrgBenchmarkPath {

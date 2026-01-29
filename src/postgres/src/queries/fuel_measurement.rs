@@ -69,8 +69,8 @@ ORDER BY
     timestamp DESC
             "#,
             query.call_sign.into_inner(),
-            query.start_date,
-            query.end_date,
+            query.range.start(),
+            query.range.end(),
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())

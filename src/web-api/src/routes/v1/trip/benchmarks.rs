@@ -5,8 +5,8 @@ use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageFuiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
-    EeoiQuery, FiskeridirVesselId, FuiQuery, Mean, Ordering, TripBenchmarksQuery, TripId,
-    TripWithBenchmark,
+    DateTimeRange, EeoiQuery, FiskeridirVesselId, FuiQuery, Mean, OptionalDateTimeRange, Ordering,
+    TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -17,31 +17,31 @@ use serde_with::serde_as;
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TripBenchmarksParams {
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: OptionalDateTimeRange,
     pub ordering: Option<Ordering>,
 }
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct EeoiParams {
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: OptionalDateTimeRange,
 }
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuiParams {
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: OptionalDateTimeRange,
 }
 
 #[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AverageTripBenchmarksParams {
-    pub start_date: DateTime<Utc>,
-    pub end_date: DateTime<Utc>,
+    #[serde(flatten)]
+    pub range: DateTimeRange,
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     #[oasgen(rename = "gearGroups[]")]
     pub gear_groups: Option<Vec<GearGroup>>,
@@ -55,8 +55,8 @@ pub struct AverageTripBenchmarksParams {
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AverageFuiParams {
-    pub start_date: DateTime<Utc>,
-    pub end_date: DateTime<Utc>,
+    #[serde(flatten)]
+    pub range: DateTimeRange,
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     #[oasgen(rename = "gearGroups[]")]
     pub gear_groups: Option<Vec<GearGroup>>,
@@ -72,8 +72,8 @@ pub struct AverageFuiParams {
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AverageEeoiParams {
-    pub start_date: DateTime<Utc>,
-    pub end_date: DateTime<Utc>,
+    #[serde(flatten)]
+    pub range: DateTimeRange,
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     #[oasgen(rename = "gearGroups[]")]
     pub gear_groups: Option<Vec<GearGroup>>,
@@ -245,16 +245,11 @@ impl From<TripWithBenchmark> for TripBenchmark {
 
 impl TripBenchmarksParams {
     fn into_query(self, call_sign: CallSign) -> TripBenchmarksQuery {
-        let Self {
-            start_date,
-            end_date,
-            ordering,
-        } = self;
+        let Self { ordering, range } = self;
 
         TripBenchmarksQuery {
             call_sign,
-            start_date,
-            end_date,
+            range,
             ordering: ordering.unwrap_or_default(),
         }
     }
@@ -262,47 +257,31 @@ impl TripBenchmarksParams {
 
 impl FuiParams {
     fn into_query(self, call_sign: CallSign) -> FuiQuery {
-        let Self {
-            start_date,
-            end_date,
-        } = self;
+        let Self { range } = self;
 
-        FuiQuery {
-            call_sign,
-            start_date,
-            end_date,
-        }
+        FuiQuery { call_sign, range }
     }
 }
 
 impl EeoiParams {
     fn into_query(self, call_sign: CallSign) -> EeoiQuery {
-        let Self {
-            start_date,
-            end_date,
-        } = self;
+        let Self { range } = self;
 
-        EeoiQuery {
-            call_sign,
-            start_date,
-            end_date,
-        }
+        EeoiQuery { call_sign, range }
     }
 }
 
 impl From<AverageTripBenchmarksParams> for AverageTripBenchmarksQuery {
     fn from(v: AverageTripBenchmarksParams) -> Self {
         let AverageTripBenchmarksParams {
-            start_date,
-            end_date,
+            range,
             gear_groups,
             length_group,
             vessel_ids,
         } = v;
 
         Self {
-            start_date,
-            end_date,
+            range,
             gear_groups: gear_groups.unwrap_or_default(),
             length_group,
             vessel_ids: vessel_ids.unwrap_or_default(),
@@ -313,8 +292,7 @@ impl From<AverageTripBenchmarksParams> for AverageTripBenchmarksQuery {
 impl From<AverageEeoiParams> for AverageEeoiQuery {
     fn from(v: AverageEeoiParams) -> Self {
         let AverageEeoiParams {
-            start_date,
-            end_date,
+            range,
             gear_groups,
             length_group,
             vessel_ids,
@@ -322,8 +300,7 @@ impl From<AverageEeoiParams> for AverageEeoiQuery {
         } = v;
 
         Self {
-            start_date,
-            end_date,
+            range,
             gear_groups: gear_groups.unwrap_or_default(),
             length_group,
             vessel_ids: vessel_ids.unwrap_or_default(),
@@ -335,8 +312,7 @@ impl From<AverageEeoiParams> for AverageEeoiQuery {
 impl From<AverageFuiParams> for AverageFuiQuery {
     fn from(v: AverageFuiParams) -> Self {
         let AverageFuiParams {
-            start_date,
-            end_date,
+            range,
             gear_groups,
             length_group,
             vessel_ids,
@@ -344,8 +320,7 @@ impl From<AverageFuiParams> for AverageFuiQuery {
         } = v;
 
         Self {
-            start_date,
-            end_date,
+            range,
             gear_groups: gear_groups.unwrap_or_default(),
             length_group,
             vessel_ids: vessel_ids.unwrap_or_default(),

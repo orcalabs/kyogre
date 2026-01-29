@@ -2,6 +2,7 @@ use crate::v1::helper::test;
 use engine::*;
 use fiskeridir_rs::SpeciesGroup;
 use float_cmp::approx_eq;
+use kyogre_core::DateTimeRange;
 use web_api::routes::v1::trip::benchmarks::AverageEeoiParams;
 
 #[tokio::test]
@@ -148,8 +149,7 @@ async fn test_average_eeoi_works() {
         let eeoi = helper
             .app
             .get_average_eeoi(AverageEeoiParams {
-                start_date: start,
-                end_date: end,
+                range: DateTimeRange::test_new(start, end),
                 ..Default::default()
             })
             .await
@@ -181,8 +181,7 @@ async fn test_average_eeoi_works_on_single_trip() {
         let eeoi = helper
             .app
             .get_average_eeoi(AverageEeoiParams {
-                start_date: start,
-                end_date: end,
+                range: DateTimeRange::test_new(start, end),
                 ..Default::default()
             })
             .await
@@ -214,8 +213,7 @@ async fn test_average_eeoi_works_on_two_trips() {
         let eeoi = helper
             .app
             .get_average_eeoi(AverageEeoiParams {
-                start_date: start,
-                end_date: end,
+                range: DateTimeRange::test_new(start, end),
                 ..Default::default()
             })
             .await
@@ -256,8 +254,7 @@ async fn test_average_eeoi_filters_on_species_group_id_includes_all_quantum_from
         let eeoi_all_species = helper
             .app
             .get_average_eeoi(AverageEeoiParams {
-                start_date: start,
-                end_date: end,
+                range: DateTimeRange::test_new(start, end),
                 ..Default::default()
             })
             .await
@@ -267,8 +264,7 @@ async fn test_average_eeoi_filters_on_species_group_id_includes_all_quantum_from
         let eeoi_single_species = helper
             .app
             .get_average_eeoi(AverageEeoiParams {
-                start_date: start,
-                end_date: end,
+                range: DateTimeRange::test_new(start, end),
                 species_group_id: Some(SpeciesGroup::Mackerel),
                 ..Default::default()
             })
@@ -314,8 +310,7 @@ async fn test_average_eeoi_filters_on_species_group_id_returns_none_if_trip_cont
         let eeoi = helper
             .app
             .get_average_eeoi(AverageEeoiParams {
-                start_date: start,
-                end_date: end,
+                range: DateTimeRange::test_new(start, end),
                 species_group_id: Some(SpeciesGroup::Saithe),
                 ..Default::default()
             })

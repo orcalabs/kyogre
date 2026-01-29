@@ -174,8 +174,8 @@ async fn process(
 
         let weather = outbound
             .haul_weather(WeatherQuery {
-                start_date: h.start_timestamp,
-                end_date: h.stop_timestamp,
+                start: h.start_timestamp,
+                end: h.stop_timestamp,
                 weather_location_ids: Some(locations.clone()),
             })
             .await?;

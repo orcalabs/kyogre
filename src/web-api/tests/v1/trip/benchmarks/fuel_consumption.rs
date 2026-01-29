@@ -1,5 +1,6 @@
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use engine::{Modifiable, TripLevel};
+use kyogre_core::OptionalDateTimeRange;
 use web_api::routes::v1::trip::benchmarks::TripBenchmarksParams;
 
 use crate::v1::helper::test;
@@ -188,8 +189,7 @@ async fn test_fuel_consumption_handles_positions_with_equal_timestamp() {
         let bench = helper
             .app
             .get_trip_benchmarks(TripBenchmarksParams {
-                start_date: Some(start),
-                end_date: Some(end),
+                range: OptionalDateTimeRange::test_new(Some(start), Some(end)),
                 ordering: None,
             })
             .await
