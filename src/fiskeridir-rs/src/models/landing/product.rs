@@ -92,6 +92,7 @@ pub enum LandingMethod {
     EmbKartong5Kg = 82,
     EmbKartong2Kg = 83,
     EmbKartong12Kg = 84,
+    EmbKartong15Kg = 86,
     Uspesifisert = 99,
 }
 
@@ -131,6 +132,7 @@ impl LandingMethod {
             EmbKartong12Kg => "12 kg emb kartong",
             Uspesifisert => "Uspesifisert",
             LeveringFraAnnetEnnFartoy => "Levering fra annet enn fartøy",
+            EmbKartong15Kg => "15 kg emb kartong",
         }
     }
 }
