@@ -148,11 +148,52 @@ pub struct NaiveDateRange<const DAYS: u8> {
     end: NaiveDate,
 }
 
-#[derive(Debug, Serialize)]
-pub struct DateTimeRange<const DAYS: u8> {
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[derive(Debug, Serialize, Default, Clone)]
+pub struct OptionalDateTimeRange {
+    start: Option<DateTime<Utc>>,
+    end: Option<DateTime<Utc>>,
+}
+
+impl OptionalDateTimeRange {
+    #[cfg(feature = "test")]
+    pub fn test_new(start: Option<DateTime<Utc>>, end: Option<DateTime<Utc>>) -> Self {
+        Self { start, end }
+    }
+    pub fn start(&self) -> Option<DateTime<Utc>> {
+        self.start
+    }
+    pub fn end(&self) -> Option<DateTime<Utc>> {
+        self.end
+    }
+}
+
+impl DateTimeRange {
+    #[cfg(feature = "test")]
+    pub fn test_new(start: DateTime<Utc>, end: DateTime<Utc>) -> Self {
+        Self { start, end }
+    }
+    pub fn start(&self) -> DateTime<Utc> {
+        self.start
+    }
+    pub fn end(&self) -> DateTime<Utc> {
+        self.end
+    }
+}
+
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[derive(Debug, Serialize, Clone, Default)]
+pub struct DateTimeRange {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
 }
+
+#[derive(Debug, Serialize)]
+pub struct DateTimeRangeWithDefaultTimeSpan<const DAYS: u8> {
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+}
+
 impl<const T: u8> NaiveDateRange<T> {
     #[cfg(feature = "test")]
     pub fn test_new(start: NaiveDate, end: NaiveDate) -> Self {
@@ -176,7 +217,7 @@ impl<const T: u8> NaiveDateRange<T> {
     }
 }
 
-impl<const T: u8> DateTimeRange<T> {
+impl<const T: u8> DateTimeRangeWithDefaultTimeSpan<T> {
     #[cfg(feature = "test")]
     pub fn test_new(start: DateTime<Utc>, end: DateTime<Utc>) -> Self {
         Self { start, end }
@@ -195,7 +236,7 @@ impl<const T: u8> DateTimeRange<T> {
     }
 }
 
-impl<const T: u8> Default for DateTimeRange<T> {
+impl<const T: u8> Default for DateTimeRangeWithDefaultTimeSpan<T> {
     fn default() -> Self {
         let end = chrono::Utc::now();
         Self {
@@ -220,6 +261,32 @@ impl<const T: u8> Default for NaiveDateRange<T> {
 struct NaiveDateRangeInner {
     start: Option<NaiveDate>,
     end: Option<NaiveDate>,
+}
+
+impl<'de> Deserialize<'de> for OptionalDateTimeRange {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let inner = DateTimeRangeInner::deserialize(deserializer)?;
+
+        match (inner.start, inner.end) {
+            (Some(start), Some(end)) => {
+                if start > end {
+                    OrderingSnafu { start, end }.fail()
+                } else {
+                    Ok(())
+                }
+            }
+            _ => Ok(()),
+        }
+        .map_err(|e| de::Error::custom(format!("{e}")))?;
+
+        Ok(OptionalDateTimeRange {
+            start: inner.start,
+            end: inner.end,
+        })
+    }
 }
 
 impl<'de, const DAYS: u8> Deserialize<'de> for NaiveDateRange<DAYS> {
@@ -252,12 +319,37 @@ impl<'de, const DAYS: u8> Deserialize<'de> for NaiveDateRange<DAYS> {
 
 #[derive(Debug, Deserialize)]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+struct DateTimeRangeInnerRequired {
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
+}
+
+#[derive(Debug, Deserialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 struct DateTimeRangeInner {
     start: Option<DateTime<Utc>>,
     end: Option<DateTime<Utc>>,
 }
 
-impl<'de, const DAYS: u8> Deserialize<'de> for DateTimeRange<DAYS> {
+impl<'de> Deserialize<'de> for DateTimeRange {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let DateTimeRangeInnerRequired { start, end } =
+            DateTimeRangeInnerRequired::deserialize(deserializer)?;
+
+        if start > end {
+            return OrderingSnafu { start, end }
+                .fail()
+                .map_err(|e| de::Error::custom(format!("{e}")));
+        }
+
+        Ok(DateTimeRange { start, end })
+    }
+}
+
+impl<'de, const DAYS: u8> Deserialize<'de> for DateTimeRangeWithDefaultTimeSpan<DAYS> {
     fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -281,12 +373,12 @@ impl<'de, const DAYS: u8> Deserialize<'de> for DateTimeRange<DAYS> {
         }
         .map_err(|e| de::Error::custom(format!("{e}")))?;
 
-        Ok(DateTimeRange { start, end })
+        Ok(DateTimeRangeWithDefaultTimeSpan { start, end })
     }
 }
 
-impl<const DAYS: u8> From<DateTimeRange<DAYS>> for DateRange {
-    fn from(value: DateTimeRange<DAYS>) -> Self {
+impl<const DAYS: u8> From<DateTimeRangeWithDefaultTimeSpan<DAYS>> for DateRange {
+    fn from(value: DateTimeRangeWithDefaultTimeSpan<DAYS>) -> Self {
         // 'DateTimeRange' validation is a superset of 'DateRange' validation so the unwrap is
         // safe
         DateRange::new(value.start, value.end).unwrap()
@@ -375,7 +467,7 @@ mod _oasgen {
         }
     }
 
-    impl<const T: u8> OaSchema for super::DateTimeRange<T> {
+    impl<const T: u8> OaSchema for super::DateTimeRangeWithDefaultTimeSpan<T> {
         fn schema_ref() -> oasgen::ReferenceOr<Schema> {
             DateTimeRangeInner::schema_ref()
         }

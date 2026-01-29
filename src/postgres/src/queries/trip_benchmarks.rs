@@ -49,8 +49,8 @@ WHERE
         OR t.fiskeridir_vessel_id = ANY ($5)
     )
             "#,
-            query.start_date,
-            query.end_date,
+            query.range.start(),
+            query.range.end(),
             query.length_group as Option<VesselLengthGroup>,
             query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
             query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
@@ -151,8 +151,8 @@ ORDER BY
     END DESC
             "#,
             query.call_sign.as_ref(),
-            query.start_date,
-            query.end_date,
+            query.range.start(),
+            query.range.end(),
             query.ordering as i32,
         )
         .fetch_all(&self.pool)
@@ -197,8 +197,8 @@ WHERE
             query.call_sign.as_ref(),
             MIN_EEOI_DISTANCE,
             DIESEL_LITER_CARBON_FACTOR,
-            query.start_date,
-            query.end_date,
+            query.range.start(),
+            query.range.end(),
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -243,8 +243,8 @@ WHERE
             MIN_EEOI_DISTANCE,
             DIESEL_LITER_CARBON_FACTOR,
             METERS_TO_NAUTICAL_MILES,
-            query.start_date,
-            query.end_date,
+            query.range.start(),
+            query.range.end(),
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -316,8 +316,8 @@ WHERE
             "#,
             MIN_EEOI_DISTANCE,
             DIESEL_LITER_CARBON_FACTOR,
-            query.start_date,
-            query.end_date,
+            query.range.start(),
+            query.range.end(),
             query.length_group as Option<VesselLengthGroup>,
             query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
             query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
@@ -395,8 +395,8 @@ WHERE
             MIN_EEOI_DISTANCE,
             DIESEL_LITER_CARBON_FACTOR,
             METERS_TO_NAUTICAL_MILES,
-            query.start_date,
-            query.end_date,
+            query.range.start(),
+            query.range.end(),
             query.length_group as Option<VesselLengthGroup>,
             query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
             query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,

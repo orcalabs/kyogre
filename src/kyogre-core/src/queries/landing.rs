@@ -1,6 +1,7 @@
 use crate::{
     CatchLocationId, FiskeridirVesselId, LANDING_OLDEST_DATA_MONTHS, Landings, MatrixIndexError,
-    NUM_CATCH_LOCATIONS, Ordering, Pagination, Range, matrix_index_error::ValueSnafu,
+    NUM_CATCH_LOCATIONS, OptionalDateTimeRange, Ordering, Pagination, Range,
+    matrix_index_error::ValueSnafu,
 };
 use chrono::{DateTime, Datelike, Months, Utc};
 use enum_index::EnumIndex;
@@ -64,8 +65,7 @@ pub struct LandingsQuery {
     pub species_group_ids: Vec<SpeciesGroup>,
     pub vessel_length_groups: Vec<VesselLengthGroup>,
     pub vessel_ids: Vec<FiskeridirVesselId>,
-    pub start_timestamp: Option<DateTime<Utc>>,
-    pub end_timestamp: Option<DateTime<Utc>>,
+    pub range: OptionalDateTimeRange,
     pub sorting: Option<LandingsSorting>,
     pub ordering: Option<Ordering>,
 }

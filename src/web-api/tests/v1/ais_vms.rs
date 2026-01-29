@@ -19,7 +19,7 @@ async fn test_ais_vms_positions_fails_without_mmsi_or_call_sign() {
             .get_ais_vms_positions(AisVmsParameters {
                 mmsi: None,
                 call_sign: None,
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     Utc.timestamp_opt(100, 0).unwrap(),
                     Utc.timestamp_opt(200, 0).unwrap(),
                 ),
@@ -51,7 +51,7 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions() {
             .get_ais_vms_positions(AisVmsParameters {
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos.timestamp - Duration::seconds(1),
                     pos5.timestamp + Duration::seconds(1),
                 ),
@@ -84,7 +84,7 @@ async fn test_ais_vms_positions_returns_only_ais_without_call_sign() {
                 mmsi: state.vessels[0].mmsi(),
                 trip_id: None,
                 call_sign: None,
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos.timestamp - Duration::seconds(1),
                     pos5.timestamp + Duration::seconds(1),
                 ),
@@ -115,7 +115,7 @@ async fn test_ais_vms_positions_returns_only_vms_without_mmsi() {
                 mmsi: None,
                 trip_id: None,
                 call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos.timestamp - Duration::seconds(1),
                     pos5.timestamp + Duration::seconds(1),
                 ),
@@ -146,7 +146,7 @@ async fn test_ais_vms_positions_returns_ais_and_vms_positions_with_missing_data(
                 mmsi: state.vessels[0].mmsi(),
                 call_sign: state.vessels[0].fiskeridir.call_sign.clone(),
                 trip_id: None,
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     state.ais_vms_positions[0].timestamp - Duration::seconds(1),
                     state.ais_vms_positions[state.ais_vms_positions.len() - 1].timestamp
                         + Duration::seconds(1),
@@ -194,7 +194,7 @@ async fn test_ais_vms_returns_positions_of_leisure_vessels_under_45_meters_with_
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -208,7 +208,7 @@ async fn test_ais_vms_returns_positions_of_leisure_vessels_under_45_meters_with_
         let positions2 = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -246,7 +246,7 @@ async fn test_ais_vms_does_not_return_ais_positions_of_vessels_with_unknown_ship
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -284,7 +284,7 @@ async fn test_ais_vms_returns_ais_positions_of_vessels_with_unknown_ship_type_un
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -321,7 +321,7 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -335,7 +335,7 @@ async fn test_ais_vms_does_not_return_positions_of_leisure_vessels_under_45_mete
         let positions2 = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -369,7 +369,7 @@ async fn test_ais_vms_does_not_return_positions_of_vessel_with_unknown_ship_type
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -406,7 +406,7 @@ async fn test_ais_vms_prioritizes_fiskeridir_length_over_ais_length_in_leisure_v
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -439,7 +439,7 @@ async fn test_ais_vms_does_not_return_ais_positions_for_vessels_under_15m_withou
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -474,7 +474,7 @@ async fn test_ais_vms_return_positions_for_vessels_under_15m_with_full_ais_permi
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -513,7 +513,7 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),
@@ -551,7 +551,7 @@ async fn test_ais_vms_does_not_return_positions_for_vessels_under_15m_with_corre
         let positions = helper
             .app
             .get_ais_vms_positions(AisVmsParameters {
-                range: DateTimeRange::test_new(
+                range: DateTimeRangeWithDefaultTimeSpan::test_new(
                     pos_timestamp - Duration::seconds(1),
                     pos_timestamp + Duration::seconds(1),
                 ),

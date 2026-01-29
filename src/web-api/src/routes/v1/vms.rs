@@ -8,7 +8,7 @@ use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
-use kyogre_core::DateTimeRange;
+use kyogre_core::DateTimeRangeWithDefaultTimeSpan;
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -17,7 +17,7 @@ use serde_qs::actix::QsQuery as Query;
 #[serde(rename_all = "camelCase")]
 pub struct VmsParameters {
     #[serde(flatten)]
-    pub range: DateTimeRange<1>,
+    pub range: DateTimeRangeWithDefaultTimeSpan<1>,
 }
 
 #[derive(Debug, Deserialize, Serialize, OaSchema)]

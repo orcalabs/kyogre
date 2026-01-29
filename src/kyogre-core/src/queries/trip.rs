@@ -1,9 +1,8 @@
-use chrono::{DateTime, Utc};
 use fiskeridir_rs::{GearGroup, SpeciesGroup, VesselLengthGroup};
 use serde::{Deserialize, Serialize};
 use strum::{AsRefStr, EnumString};
 
-use crate::{FiskeridirVesselId, Ordering, Pagination, TripId, Trips};
+use crate::{FiskeridirVesselId, OptionalDateTimeRange, Ordering, Pagination, TripId, Trips};
 
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -34,8 +33,7 @@ pub struct TripsQuery {
     pub ordering: Ordering,
     pub sorting: TripSorting,
     pub delivery_points: Option<Vec<String>>,
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
+    pub range: OptionalDateTimeRange,
     pub min_weight: Option<f64>,
     pub max_weight: Option<f64>,
     pub gear_group_ids: Option<Vec<GearGroup>>,

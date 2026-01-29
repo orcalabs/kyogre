@@ -2,7 +2,7 @@ use crate::v1::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::{Modifiable, TripLevel};
 use float_cmp::approx_eq;
-use kyogre_core::Mean;
+use kyogre_core::{DateTimeRange, Mean};
 use web_api::routes::v1::trip::benchmarks::AverageTripBenchmarksParams;
 
 #[tokio::test]
@@ -57,8 +57,7 @@ async fn test_average_benchmarks_works() {
         let average = helper
             .app
             .get_average_trip_benchmarks(AverageTripBenchmarksParams {
-                start_date: start,
-                end_date: end,
+                range: DateTimeRange::test_new(start, end),
                 ..Default::default()
             })
             .await

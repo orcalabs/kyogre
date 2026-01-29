@@ -1,13 +1,14 @@
 use chrono::{DateTime, Duration, NaiveDate, Utc};
 use fiskeridir_rs::CallSign;
 
+use crate::OptionalDateTimeRange;
+
 pub static DEFAULT_LIVE_FUEL_THRESHOLD: Duration = Duration::days(1);
 
 #[derive(Debug, Clone)]
 pub struct FuelMeasurementsQuery {
     pub call_sign: CallSign,
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
+    pub range: OptionalDateTimeRange,
 }
 
 #[derive(Debug, Clone)]

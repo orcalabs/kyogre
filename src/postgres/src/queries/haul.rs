@@ -276,8 +276,8 @@ ORDER BY
             query.species_group_ids.empty_to_none() as Option<Vec<SpeciesGroup>>,
             query.vessel_length_groups.empty_to_none() as Option<Vec<VesselLengthGroup>>,
             query.vessel_ids.empty_to_none() as Option<Vec<FiskeridirVesselId>>,
-            query.start_timestamp,
-            query.end_timestamp,
+            query.range.start(),
+            query.range.end(),
             query.ordering.map(|o| o as i32),
             query.sorting.map(|s| s as i32),
         )

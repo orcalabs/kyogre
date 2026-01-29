@@ -1,7 +1,7 @@
 use crate::v1::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
-use kyogre_core::DateTimeRange;
+use kyogre_core::DateTimeRangeWithDefaultTimeSpan;
 use web_api::routes::v1::vms::VmsParameters;
 
 #[tokio::test]
@@ -12,7 +12,7 @@ async fn test_vms_return_no_positions_for_non_existing_call_sign() {
             .get_vms_positions(
                 &"TEST".parse().unwrap(),
                 VmsParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         Utc.timestamp_opt(100, 0).unwrap(),
                         Utc.timestamp_opt(101, 0).unwrap(),
                     ),
@@ -60,7 +60,7 @@ async fn test_vms_filters_by_start_and_end() {
             .get_vms_positions(
                 &state.vessels[0].fiskeridir.call_sign.clone().unwrap(),
                 VmsParameters {
-                    range: DateTimeRange::test_new(
+                    range: DateTimeRangeWithDefaultTimeSpan::test_new(
                         state.vms_positions[0].timestamp + Duration::seconds(1),
                         state.vms_positions[2].timestamp - Duration::seconds(1),
                     ),

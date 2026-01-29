@@ -10,8 +10,8 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::TryStreamExt;
 use kyogre_core::{
-    AisPosition, AisVmsParams, DateTimeRange, FiskeridirVesselId, Mmsi, NavigationStatus, TripId,
-    TripPositionLayerId, VmsPosition,
+    AisPosition, AisVmsParams, DateTimeRangeWithDefaultTimeSpan, FiskeridirVesselId, Mmsi,
+    NavigationStatus, TripId, TripPositionLayerId, VmsPosition,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ pub struct AisVmsParameters {
     /// Trip to retrive the track for, all other filter parameters are ignored if provided
     pub trip_id: Option<TripId>,
     #[serde(flatten)]
-    pub range: DateTimeRange<1>,
+    pub range: DateTimeRangeWithDefaultTimeSpan<1>,
 }
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]

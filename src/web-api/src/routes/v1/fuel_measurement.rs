@@ -4,6 +4,7 @@ use chrono_tz::Europe::Oslo;
 use fiskeridir_rs::CallSign;
 use kyogre_core::{
     CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementsQuery,
+    OptionalDateTimeRange,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Deserializer, Serialize, de::Unexpected};
@@ -21,8 +22,8 @@ use crate::{
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FuelMeasurementsParams {
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
+    #[serde(flatten)]
+    pub range: OptionalDateTimeRange,
 }
 
 #[derive(Debug, Deserialize, Serialize, OaSchema)]
@@ -155,16 +156,9 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
 
 impl FuelMeasurementsParams {
     pub fn to_query(self, call_sign: CallSign) -> FuelMeasurementsQuery {
-        let Self {
-            start_date,
-            end_date,
-        } = self;
+        let Self { range } = self;
 
-        FuelMeasurementsQuery {
-            call_sign,
-            start_date,
-            end_date,
-        }
+        FuelMeasurementsQuery { call_sign, range }
     }
 }
 

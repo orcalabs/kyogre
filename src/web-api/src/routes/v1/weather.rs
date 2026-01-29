@@ -13,8 +13,8 @@ use crate::{response::StreamResponse, stream_response, *};
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WeatherParams {
-    pub start_date: Option<DateTime<Utc>>,
-    pub end_date: Option<DateTime<Utc>>,
+    pub start: Option<DateTime<Utc>>,
+    pub end: Option<DateTime<Utc>>,
     #[oasgen(rename = "weatherLocationIds[]")]
     pub weather_location_ids: Option<Vec<WeatherLocationId>>,
 }
@@ -64,14 +64,14 @@ impl From<kyogre_core::WeatherLocation> for WeatherLocation {
 impl From<WeatherParams> for WeatherQuery {
     fn from(v: WeatherParams) -> Self {
         let WeatherParams {
-            start_date,
-            end_date,
+            start,
+            end,
             weather_location_ids,
         } = v;
 
         Self {
-            start_date: start_date.unwrap_or_else(|| Utc::now() - Duration::days(1)),
-            end_date: end_date.unwrap_or_else(Utc::now),
+            start: start.unwrap_or_else(|| Utc::now() - Duration::days(1)),
+            end: end.unwrap_or_else(Utc::now),
             weather_location_ids,
         }
     }

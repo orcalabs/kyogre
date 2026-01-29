@@ -4,7 +4,7 @@ use engine::*;
 use http_client::StatusCode;
 use kyogre_core::{
     CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementId,
-    FuelMeasurementRange, ProcessingStatus, TestHelperOutbound,
+    FuelMeasurementRange, OptionalDateTimeRange, ProcessingStatus, TestHelperOutbound,
 };
 use web_api::{
     error::ErrorDiscriminants,
@@ -222,8 +222,10 @@ async fn test_get_fuel_measurement_filters_by_dates() {
         helper.app.create_fuel_measurements(&body).await.unwrap();
 
         let params = FuelMeasurementsParams {
-            start_date: Some(start + Duration::days(1)),
-            end_date: Some(start + Duration::days(3)),
+            range: OptionalDateTimeRange::test_new(
+                Some(start + Duration::days(1)),
+                Some(start + Duration::days(3)),
+            ),
         };
 
         let measurements = helper.app.get_fuel_measurements(params).await.unwrap();
