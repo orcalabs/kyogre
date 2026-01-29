@@ -213,11 +213,13 @@ fn parse_naive_date_time_from_str(
                 [
                     format!("%d.%m.%Y %H{time_delimiter}%M{time_delimiter}%S%.f"),
                     format!("%d-%b-%y %H{time_delimiter}%M{time_delimiter}%S%.f"),
+                    format!("%d-%b-%y %I{time_delimiter}%M{time_delimiter}%S%.f %p"),
                 ]
             } else {
                 [
                     format!("%d.%m.%Y %H{time_delimiter}%M{time_delimiter}%S"),
                     format!("%d-%b-%y %H{time_delimiter}%M{time_delimiter}%S"),
+                    format!("%d-%b-%y %I{time_delimiter}%M{time_delimiter}%S %p"),
                 ]
             };
 
@@ -225,7 +227,11 @@ fn parse_naive_date_time_from_str(
                 return Ok(first);
             }
 
-            NaiveDateTime::parse_from_str(s, &formatted[1])
+            if let Ok(second) = NaiveDateTime::parse_from_str(s, &formatted[1]) {
+                return Ok(second);
+            }
+
+            NaiveDateTime::parse_from_str(s, &formatted[2])
         }
     }
 }
