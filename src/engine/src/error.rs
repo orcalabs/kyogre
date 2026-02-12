@@ -48,7 +48,7 @@ pub enum Error {
         to: geoutils::Location,
     },
     #[snafu(display("Data conversion error"))]
-    #[stack_error(opaque_stack = [DateRangeError])]
+    #[stack_error(opaque_stack_from = [DateRangeError])]
     Conversion {
         #[snafu(implicit)]
         location: Location,

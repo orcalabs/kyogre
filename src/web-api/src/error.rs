@@ -140,7 +140,7 @@ pub enum Error {
         error: base64::DecodeError,
     },
     #[snafu(display("An invalid Excel document was provided"))]
-    #[stack_error(opaque_std = [calamine::DeError, calamine::XlsxError])]
+    #[stack_error(opaque_std_from = [calamine::DeError, calamine::XlsxError])]
     InvalidExcel {
         #[snafu(implicit)]
         location: Location,
@@ -173,8 +173,8 @@ pub enum Error {
     },
     #[snafu(display("An unexpected error occured"))]
     #[stack_error(
-        opaque_stack = [kyogre_core::Error, http_client::Error, ParseStringError],
-        opaque_std = [serde_json::Error])]
+        opaque_stack_from = [kyogre_core::Error, http_client::Error, ParseStringError],
+        opaque_std_from = [serde_json::Error])]
     Unexpected {
         #[snafu(implicit)]
         location: Location,

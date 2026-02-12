@@ -32,7 +32,7 @@ pub enum Error {
         error: std::io::Error,
     },
     #[snafu(display("Duckdb timeout error"))]
-    #[stack_error(opaque_std = [r2d2::Error])]
+    #[stack_error(opaque_std_from = [r2d2::Error])]
     Timeout {
         #[snafu(implicit)]
         location: Location,
