@@ -61,7 +61,7 @@ pub enum WebApiError {
         opaque: OpaqueError,
     },
     #[snafu(display("Unexpected error"))]
-    #[stack_error(opaque_std = [tokio::task::JoinError])]
+    #[stack_error(opaque_std_from = [tokio::task::JoinError])]
     Unexpected {
         #[snafu(implicit)]
         location: Location,
@@ -79,7 +79,7 @@ pub enum Error {
         opaque: OpaqueError,
     },
     #[snafu(display("Unexpected error"))]
-    #[stack_error(opaque_std = [tokio::task::JoinError])]
+    #[stack_error(opaque_std_from = [tokio::task::JoinError])]
     Unexpected {
         #[snafu(implicit)]
         location: Location,

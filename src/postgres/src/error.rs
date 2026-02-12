@@ -80,7 +80,7 @@ pub enum Error {
     },
     #[snafu(display("Data conversion error"))]
     #[stack_error(
-        opaque_stack = [
+        opaque_stack_from = [
             ParseStringError,
             CatchLocationIdError,
             DateRangeError,
@@ -89,7 +89,7 @@ pub enum Error {
             WktConversionError,
             MatrixIndexError
         ],
-        opaque_std = [strum::ParseError])]
+        opaque_std_from = [strum::ParseError])]
     Conversion {
         #[snafu(implicit)]
         location: Location,
@@ -103,7 +103,7 @@ pub enum Error {
         week: i32,
     },
     #[snafu(display("An unexpected error occured"))]
-    #[stack_error(opaque_std = [tokio::task::JoinError])]
+    #[stack_error(opaque_std_from = [tokio::task::JoinError])]
     Unexpected {
         #[snafu(implicit)]
         location: Location,

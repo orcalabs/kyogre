@@ -63,11 +63,11 @@ pub enum Error {
     },
     #[snafu(display("Data conversion error"))]
     #[stack_error(
-        opaque_stack = [
+        opaque_stack_from = [
             ParseStringError,
             TimestampError,
         ],
-        opaque_std = [ParseIntError, GeozeroError])]
+        opaque_std_from = [ParseIntError, GeozeroError])]
     Conversion {
         #[snafu(implicit)]
         location: Location,

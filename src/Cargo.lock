@@ -4040,7 +4040,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "343d3bd7056eda839b03204e68deff7d1b13aba7af2b2fd16890697274262ee7"
 dependencies = [
  "heck",
- "itertools 0.14.0",
+ "itertools 0.11.0",
  "log",
  "multimap",
  "petgraph",
@@ -4061,7 +4061,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "27c6023962132f4b30eb4c172c91ce92d933da334c59c23cddee82358ddafb0b"
 dependencies = [
  "anyhow",
- "itertools 0.14.0",
+ "itertools 0.11.0",
  "proc-macro2",
  "quote 1.0.44",
  "syn 2.0.114",
@@ -5594,22 +5594,22 @@ checksum = "6ce2be8dc25455e1f91df71bfa12ad37d7af1092ae736f3a6cd0e37bc7810596"
 
 [[package]]
 name = "stack-error"
-version = "0.4.0"
+version = "0.4.1"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "fe79d57cfd4a79340a147d2262890f61bdf0c75cf494ded874ae10113d9e6204"
+checksum = "b473e6740722bd9a080f3f76fe10f5a713334adb2284d2749488f578f6927846"
 dependencies = [
  "stack-error-derive",
 ]
 
 [[package]]
 name = "stack-error-derive"
-version = "0.2.0"
+version = "0.2.1"
 source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
-checksum = "6d92a907a61dbd74a9a107ef90764a7d20762fcb767d144595e7e566bf4c1466"
+checksum = "a5dc5822d627a051e3e4eb4d71414b6c9c46e594d8aef398ceef2a9cf88bcebd"
 dependencies = [
  "proc-macro2",
  "quote 1.0.44",
- "strum 0.26.3",
+ "strum 0.27.2",
  "syn 2.0.114",
 ]
 

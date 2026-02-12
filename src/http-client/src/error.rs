@@ -8,7 +8,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[snafu(visibility(pub))]
 pub enum Error {
     #[snafu(display("HTTP reqwest error"))]
-    #[stack_error(opaque_std = [reqwest::Error, reqwest_middleware::Error])]
+    #[stack_error(opaque_std_from = [reqwest::Error, reqwest_middleware::Error])]
     Other {
         #[snafu(implicit)]
         location: Location,
