@@ -71,3 +71,5 @@ WHERE
 DELETE FROM fiskeridir_vessels;
 
 DELETE FROM ais_vessels;
+
+CREATE DATABASE "testing" TEMPLATE postgres;

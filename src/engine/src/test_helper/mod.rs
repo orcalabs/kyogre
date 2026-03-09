@@ -17,6 +17,7 @@ use machine::StateMachine;
 use orca_core::PsqlSettings;
 use postgres::PostgresAdapter;
 use processors::*;
+use rand::random;
 use std::{
     collections::{HashMap, HashSet},
     sync::{
@@ -199,7 +200,7 @@ pub async fn engine(adapter: PostgresAdapter, db_settings: &PsqlSettings) -> Fis
         trip_layers,
         FuelImplDiscriminants::Maru,
     );
-    let step = Step::initial(ScrapeState, shared_state, transition_log);
+    let step = Step::initial(ScrapeState, shared_state, transition_log, random());
     FisheryEngine::Scrape(step)
 }
 

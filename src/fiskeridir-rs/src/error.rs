@@ -94,7 +94,6 @@ impl From<csv::Error> for Error {
     #[track_caller]
     fn from(e: csv::Error) -> Self {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match e.kind() {
             csv::ErrorKind::Deserialize { pos: _, err } => match err.kind() {
                 csv::DeserializeErrorKind::UnexpectedEndOfRow => Error::IncompleteData {

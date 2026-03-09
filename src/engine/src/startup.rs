@@ -79,12 +79,13 @@ impl App {
         }
     }
 
-    pub async fn run(self) {
+    pub async fn run(self, machine_id: u32) {
         if self.local_processing_vessels.is_some() {
             FisheryEngine::Trips(crate::Step::initial(
                 crate::TripsState,
                 self.shared_state,
                 Box::new(self.transition_log),
+                machine_id,
             ))
             // Run Trips
             .run_single()
@@ -99,6 +100,7 @@ impl App {
                         crate::ScrapeState,
                         self.shared_state,
                         Box::new(self.transition_log),
+                        machine_id,
                     );
                     let engine = FisheryEngine::Scrape(step);
                     engine.run_single().await;
@@ -108,6 +110,7 @@ impl App {
                         crate::TripsState,
                         self.shared_state,
                         Box::new(self.transition_log),
+                        machine_id,
                     );
                     let engine = FisheryEngine::Trips(step);
                     engine.run_single().await;
@@ -117,6 +120,7 @@ impl App {
                         crate::HaulDistributionState,
                         self.shared_state,
                         Box::new(self.transition_log),
+                        machine_id,
                     );
                     let engine = FisheryEngine::HaulDistribution(step);
                     engine.run_single().await;
@@ -126,6 +130,7 @@ impl App {
                         crate::VerifyDatabaseState,
                         self.shared_state,
                         Box::new(self.transition_log),
+                        machine_id,
                     );
                     let engine = FisheryEngine::VerifyDatabase(step);
                     engine.run_single().await;
@@ -136,6 +141,7 @@ impl App {
                 crate::Pending::default(),
                 self.shared_state,
                 Box::new(self.transition_log),
+                machine_id,
             );
             let engine = FisheryEngine::Pending(step);
 

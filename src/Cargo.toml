@@ -18,8 +18,8 @@ members = [
 [workspace.dependencies]
 fiskeridir-rs = { path = "./fiskeridir-rs/", features = ["oasgen", "sqlx"] }
 
-machine = { version = "0.20.0", registry = "orcalabs-orcastrator" }
-orca-core = { version = "0.38.0", registry = "orcalabs-orcastrator" }
+machine = { version = "0.22.0", registry = "orcalabs-orcastrator" }
+orca-core = { version = "0.39.0", registry = "orcalabs-orcastrator" }
 
 sqlx = { version = "0.8.3", features = [
     "runtime-tokio-rustls",
@@ -35,9 +35,9 @@ serde_repr = "0.1"
 serde_json = "1.0"
 humantime-serde = "1.1"
 reqwest = { version = "0.13", default-features = false }
-stack-error = { version = "0.4.1", registry = "orcalabs-orcastrator" }
-snafu = "0.8.5"
-strum = { version = "0.27.1", features = ["derive"] }
+stack-error = { version = "0.5.0", registry = "orcalabs-orcastrator" }
+snafu = "0.9.0"
+strum = { version = "0.28.0", features = ["derive"] }
 config = { version = "0.15", default-features = false, features = ["yaml"] }
 tokio = "1.43"
 tokio-stream = "0.1"
@@ -56,7 +56,7 @@ enum_index_derive = "0.2"
 uuid = { version = "1.12", features = ["serde"] }
 wkt = { version = "0.14", features = ["serde"] }
 geo = "0.32"
-rand = "0.9"
+rand = "0.10"
 num-traits = "0.2"
 num-derive = "0.4"
 pyo3 = { version = "0.28", features = ["chrono", "auto-initialize"] }

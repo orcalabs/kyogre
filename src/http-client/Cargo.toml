@@ -18,5 +18,5 @@ reqwest = { workspace = true, default-features = false, features = [
 ] }
 reqwest-middleware = { version = "0.5", features = ["query", "json"] }
 reqwest-retry = "0.9"
-reqwest-tracing = "0.6"
+reqwest-tracing = "0.7"
 bytes = "1.9"

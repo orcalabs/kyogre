@@ -391,7 +391,7 @@ impl From<AisMessageType> for kyogre_core::AisMessageType {
 
 #[cfg(feature = "test")]
 mod test {
-    use rand::{Rng, random};
+    use rand::{RngExt, random};
 
     use super::*;
 

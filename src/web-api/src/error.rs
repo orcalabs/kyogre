@@ -225,7 +225,6 @@ impl From<WebApiError> for Error {
     #[track_caller]
     fn from(val: WebApiError) -> Error {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match val {
             WebApiError::CallSignDoesNotExist {
                 call_sign, opaque, ..
