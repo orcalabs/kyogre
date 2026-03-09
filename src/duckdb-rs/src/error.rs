@@ -83,7 +83,6 @@ impl From<std::io::Error> for Error {
     #[track_caller]
     fn from(value: std::io::Error) -> Self {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match value.kind() {
             std::io::ErrorKind::ConnectionRefused
             | std::io::ErrorKind::ConnectionReset
@@ -115,7 +114,6 @@ impl From<tonic::Status> for Error {
     #[track_caller]
     fn from(value: tonic::Status) -> Self {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match value.code() {
             tonic::Code::Ok
             | tonic::Code::Unknown
@@ -148,7 +146,6 @@ impl From<duckdb::Error> for Error {
     #[track_caller]
     fn from(value: duckdb::Error) -> Self {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match &value {
             duckdb::Error::DuckDBFailure(ffi_error, extended_error_message) => {
                 match ffi_error.code {
@@ -202,7 +199,6 @@ impl From<Error> for kyogre_core::Error {
     #[track_caller]
     fn from(value: Error) -> Self {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match value {
             Error::Timeout { location, .. } => kyogre_core::Error::Timeout {
                 location,

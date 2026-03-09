@@ -182,7 +182,6 @@ impl From<sqlx::Error> for Error {
     #[track_caller]
     fn from(error: sqlx::Error) -> Self {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match error {
             sqlx::Error::Database(ref e) => {
                 // Postgres error codes documentation:
@@ -204,7 +203,6 @@ impl From<Error> for kyogre_core::Error {
     #[track_caller]
     fn from(value: Error) -> Self {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match value {
             Error::Timeout { .. } => kyogre_core::Error::Timeout {
                 location,
@@ -232,7 +230,6 @@ impl From<Error> for kyogre_core::WebApiError {
     #[track_caller]
     fn from(value: Error) -> Self {
         let location = std::panic::Location::caller();
-        let location = Location::new(location.file(), location.line(), location.column());
         match value {
             Error::Timeout { .. } => kyogre_core::WebApiError::Timeout {
                 location,

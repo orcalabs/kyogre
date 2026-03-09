@@ -12,5 +12,5 @@ async fn main() {
 
     let app = App::build(&settings).await;
 
-    app.run().await;
+    app.run(1).await;
 }

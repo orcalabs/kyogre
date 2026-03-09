@@ -68,7 +68,7 @@ impl From<&NewOceanClimate> for OceanClimate {
 
 #[cfg(feature = "test")]
 mod test {
-    use rand::Rng;
+    use rand::RngExt;
 
     use crate::WEATHER_LOCATION_LATS_LONS;
 
