@@ -1,5 +1,5 @@
 use crate::{
-    error::{Result, error::StreamClosedSnafu},
+    error::{ParseMessageError, Result, error::StreamClosedSnafu},
     models::{AisMessage, AisMessageType, AisPosition, AisStatic, MessageType},
 };
 use async_channel::Sender;
@@ -17,6 +17,7 @@ impl Consumer {
     pub fn new(commit_interval: std::time::Duration) -> Consumer {
         Consumer { commit_interval }
     }
+
     pub async fn run(
         &self,
         source: impl AsyncRead + Unpin,
@@ -50,7 +51,7 @@ impl Consumer {
     }
 }
 
-// Only returns an error if the receiver half of the sender closes
+// Only returns an error if the receiver half of the sender closes, or if we get an io::Error
 #[instrument(skip(messages, sender), fields(app.num_messages))]
 async fn process_messages<T>(messages: T, sender: &Sender<DataMessage>) -> Result<()>
 where
@@ -61,7 +62,12 @@ where
     for message in messages {
         num_messages += 1;
         match message {
-            Err(e) => error!("failed to consume ais message: {e:?}"),
+            Err(e) => match e {
+                LinesCodecError::MaxLineLengthExceeded => {
+                    error!("failed to consume ais message: {e:?}")
+                }
+                LinesCodecError::Io(error) => return Err(error.into()),
+            },
             Ok(original) => match parse_message(&original) {
                 Err(e) => error!("failed to parse message: {e:?}, message: '{original}'"),
                 Ok(message) => match message {
@@ -93,7 +99,7 @@ where
     Ok(())
 }
 
-fn parse_message(message: &str) -> Result<AisMessage> {
+fn parse_message(message: &str) -> std::result::Result<AisMessage, ParseMessageError> {
     let message_type: MessageType = serde_json::from_str(message)?;
 
     match message_type.message_type {
