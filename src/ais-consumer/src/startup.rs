@@ -5,12 +5,12 @@ use crate::{
     barentswatch::BarentswatchAisClient, consumer::Consumer, error::Result, settings::Settings,
 };
 use async_channel::{Receiver, Sender};
-use kyogre_core::DataMessage;
+use kyogre_core::{DataMessage, IsTimeout};
 use orca_core::Environment;
 use postgres::PostgresAdapter;
 use reqwest::Url;
 use tokio::{io::AsyncRead, task::JoinSet};
-use tracing::{error, instrument};
+use tracing::{info, info_span};
 
 pub struct App {
     consumer: Consumer,
@@ -57,7 +57,16 @@ impl App {
         set.spawn(async move { postgres.consume_loop(receiver, None).await });
         set.spawn(async move {
             loop {
-                self.run_impl().await;
+                if let Err(e) = self.run_impl().await {
+                    let span = info_span!("ais_consumer_run");
+                    let _guard = span.enter();
+                    if e.is_timeout() {
+                        info!("retryable error encountered: '{e:?}', retrying");
+                    } else {
+                        // We assume the error is unrecoverable and requires a restart
+                        panic!("consume error: {e:?}");
+                    }
+                }
                 // If the ais api is unresponsive we dont want to relentlessly spam it
                 tokio::time::sleep(Duration::from_millis(100)).await;
             }
@@ -70,30 +79,9 @@ impl App {
         );
     }
 
-    #[instrument(skip_all)]
-    async fn run_impl(&self) {
-        if let Err(e) = self.run_inner().await {
-            error!("consumer failed: {e:?}");
-        }
-    }
-
-    #[instrument(skip_all)]
-    async fn run_inner(&self) -> Result<()> {
+    async fn run_impl(&self) -> Result<()> {
         let ais_source = self.ais_source.as_ref().unwrap().streamer().await?;
-        match self.consumer.run(ais_source, self.sender.clone()).await {
-            Ok(_) => Ok(()),
-            Err(e) => match e {
-                // This indicates that the postgres consume loop has exited unexpectedly
-                // and we have no way of recovering so we panic.
-                crate::error::Error::SendError {
-                    location: _,
-                    error: _,
-                } => {
-                    panic!("{e:?}");
-                }
-                _ => Err(e),
-            },
-        }
+        self.consumer.run(ais_source, self.sender.clone()).await
     }
 
     pub async fn run_test(

@@ -1,5 +1,5 @@
 use async_channel::{RecvError, SendError};
-use kyogre_core::{DataMessage, OauthError};
+use kyogre_core::{DataMessage, IsTimeout, OauthError};
 use reqwest::StatusCode;
 use snafu::{Location, Snafu};
 use stack_error::StackError;
@@ -7,15 +7,55 @@ use std::num::ParseIntError;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+impl IsTimeout for Error {
+    fn is_timeout(&self) -> bool {
+        match self {
+            Error::Http { location: _, error } => error.is_timeout(),
+            Error::Oauth {
+                location: _,
+                source: _,
+            } => false,
+            Error::FailedRequest {
+                location: _,
+                url: _,
+                status: _,
+                body: _,
+            } => false,
+            Error::StreamClosed { location: _ } => true,
+            Error::InternalChannelClosed {
+                location: _,
+                error: _,
+            } => false,
+            Error::SendError {
+                location: _,
+                error: _,
+            } => false,
+            Error::Io { location: _, error } => error.is_timeout(),
+        }
+    }
+}
+
 #[derive(Snafu, StackError)]
 #[snafu(module, visibility(pub))]
-pub enum Error {
+pub enum ParseMessageError {
     #[snafu(display("Json error"))]
     Json {
         #[snafu(implicit)]
         location: Location,
         #[snafu(source)]
         error: serde_json::Error,
+    },
+}
+
+#[derive(Snafu, StackError)]
+#[snafu(module, visibility(pub))]
+pub enum Error {
+    #[snafu(display("Io error"))]
+    Io {
+        #[snafu(implicit)]
+        location: Location,
+        #[snafu(source)]
+        error: std::io::Error,
     },
     #[snafu(display("Http error"))]
     Http {
