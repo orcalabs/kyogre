@@ -6,6 +6,7 @@ use futures::Future;
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{HAULS_VERIFY_CHUNK_SIZE, LANDINGS_VERIFY_CHUNK_SIZE, PostgresAdapter, TestDb};
+use std::collections::HashMap;
 use std::f64;
 use std::ops::AddAssign;
 use std::path::PathBuf;
@@ -13,9 +14,11 @@ use std::str::FromStr;
 use std::{ops::SubAssign, panic};
 use strum::IntoEnumIterator;
 use tokio::sync::OnceCell;
+use web_api::extractors::AcceptedIssuer;
+use web_api::settings::BwEnvironmentSettings;
 use web_api::{
     routes::v1::{haul, landing},
-    settings::{ApiSettings, BW_PROFILES_URL, BwSettings, Duckdb, Settings},
+    settings::{ApiSettings, BwSettings, Duckdb, Settings},
     startup::App,
 };
 
@@ -234,15 +237,18 @@ where
                 postgres: db_settings.clone(),
                 environment: Environment::Test,
                 bw_settings: Some(BwSettings {
-                    jwks_url: format!("{bw_address}/jwks"),
                     audience: bw_helper.audience.clone(),
-                    profiles_url: bw_profiles_url.clone(),
+                    issuers: HashMap::from_iter([(
+                        AcceptedIssuer::Barentswatch,
+                        BwEnvironmentSettings {
+                            jwks_url: format!("{bw_address}/jwks"),
+                            profiles_url: bw_profiles_url.clone(),
+                        },
+                    )]),
                 }),
                 duck_db_api,
                 auth0: None,
             };
-
-            let _ = BW_PROFILES_URL.set(bw_profiles_url);
 
             let app = TestHelper::spawn_app(
                 adapter.clone(),

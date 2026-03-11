@@ -37,6 +37,10 @@ impl App {
 
         let postgres = PostgresAdapter::new(&settings.postgres).await.unwrap();
 
+        if settings.environment == Environment::Local {
+            postgres.do_migrations().await;
+        }
+
         let duck_db = match &settings.duck_db_api {
             Some(duckdb) => {
                 let adapter = Client::new(&duckdb.ip, duckdb.port).await.unwrap();

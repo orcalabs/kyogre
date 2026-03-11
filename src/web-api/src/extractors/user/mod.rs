@@ -82,7 +82,7 @@ impl FromRequest for UserAuth {
                                         warn!("failed to extract auth0 profile: {e:?}")
                                     }),
                             )),
-                            AcceptedIssuer::Barentswatch => {
+                            AcceptedIssuer::Barentswatch | AcceptedIssuer::BarentswatchPilot => {
                                 // `HttpClient` should be provided on startup, so `unwrap` is safe
                                 let client = req.app_data::<Data<HttpClient>>().unwrap().clone();
                                 // `BwState` should be provided on startup, so `unwrap` is safe

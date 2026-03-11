@@ -16,7 +16,7 @@ use crate::{
         JWTDecodeError,
         jwt_decode_error::{DisabledSnafu, MissingValueSnafu},
     },
-    extractors::{BearerToken, BwProfile},
+    extractors::{AcceptedIssuer, BearerToken, BwProfile},
     guards::BwGuard,
     settings::BwSettings,
 };
@@ -33,6 +33,7 @@ pub enum BwState {
 pub struct Inner {
     jwks: std::sync::RwLock<HashMap<String, Jwk>>,
     audience: String,
+    profiles_urls: HashMap<AcceptedIssuer, String>,
     cache: RwLock<HashMap<BarentswatchUserId, CacheItem>>,
 }
 
@@ -45,13 +46,10 @@ struct CacheItem {
 #[derive(Debug)]
 pub struct BwJwksRefresher {
     state: Arc<Inner>,
-    jwks_url: String,
+    jwks_urls: Vec<String>,
 }
 
 impl BwJwksRefresher {
-    pub fn new(state: Arc<Inner>, jwks_url: String) -> Self {
-        Self { state, jwks_url }
-    }
     pub async fn refresh_loop(&self) -> ! {
         loop {
             tokio::time::sleep(std::time::Duration::from_mins(30)).await;
@@ -72,7 +70,7 @@ impl BwJwksRefresher {
     }
 
     async fn refresh_impl(&self) -> Result<(), http_client::Error> {
-        let new_jwks = get_jwks(&self.jwks_url).await?;
+        let new_jwks = get_jwks(&self.jwks_urls).await?;
 
         // SAFETY: Panics if the lock is poisoned which requires us to restart the server anyway.
         let mut jwks = self.state.jwks.write().unwrap();
@@ -83,27 +81,44 @@ impl BwJwksRefresher {
     }
 }
 
-async fn get_jwks(url: &str) -> Result<HashMap<String, Jwk>, http_client::Error> {
-    let jwks: JwkSet = HttpClient::new().get(url).send().await?.json().await?;
+async fn get_jwks(urls: &[String]) -> Result<HashMap<String, Jwk>, http_client::Error> {
+    let mut jwks = HashMap::new();
 
-    Ok(jwks
-        .keys
-        .into_iter()
-        .filter_map(|k| k.common.key_id.clone().map(|kid| (kid, k)))
-        .collect())
+    for url in urls {
+        let set: JwkSet = HttpClient::new().get(url).send().await?.json().await?;
+        jwks.extend(
+            set.keys
+                .into_iter()
+                .filter_map(|k| k.common.key_id.clone().map(|kid| (kid, k))),
+        );
+    }
+
+    Ok(jwks)
 }
+
 impl BwState {
     pub async fn new(settings: Option<&BwSettings>) -> Self {
         if let Some(settings) = settings {
+            let jwks_urls = settings
+                .issuers
+                .values()
+                .map(|v| v.jwks_url.clone())
+                .collect::<Vec<_>>();
+
             let inner = Arc::new(Inner {
-                jwks: std::sync::RwLock::new(get_jwks(&settings.jwks_url).await.unwrap()),
+                jwks: std::sync::RwLock::new(get_jwks(&jwks_urls).await.unwrap()),
                 audience: settings.audience.clone(),
+                profiles_urls: settings
+                    .issuers
+                    .iter()
+                    .map(|(k, v)| (*k, v.profiles_url.clone()))
+                    .collect(),
                 cache: Default::default(),
             });
 
             let updater = BwJwksRefresher {
                 state: inner.clone(),
-                jwks_url: settings.jwks_url.clone(),
+                jwks_urls,
             };
 
             tokio::spawn(async move { updater.refresh_loop().await });
@@ -128,6 +143,13 @@ impl BwState {
         match self {
             Self::Enabled(v) => v.decode(token),
             Self::Disabled => DisabledSnafu.fail(),
+        }
+    }
+
+    pub fn get_profiles_url(&self, iss: AcceptedIssuer) -> Option<&str> {
+        match self {
+            Self::Enabled(v) => v.profiles_urls.get(&iss).map(|v| v.as_str()),
+            Self::Disabled => None,
         }
     }
 

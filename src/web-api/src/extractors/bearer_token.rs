@@ -5,7 +5,7 @@ use crate::error::{
 use actix_web::http::header::{AUTHORIZATION, HeaderMap};
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde::{
-    Deserialize,
+    Deserialize, Serialize,
     de::{self, Visitor},
 };
 use snafu::ResultExt;
@@ -15,12 +15,16 @@ use std::str::FromStr;
 #[derive(Debug)]
 pub struct BearerToken<'a>(Cow<'a, str>);
 
-#[derive(Debug, Clone, Copy, strum::EnumString, strum::Display)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumString, strum::AsRefStr, strum::Display,
+)]
 pub enum AcceptedIssuer {
     #[strum(to_string = "https://dev-orcalabs.eu.auth0.com/")]
     OrcaDev,
     #[strum(to_string = "https://id.barentswatch.no")]
     Barentswatch,
+    #[strum(to_string = "https://id.pilot.bwlab.no")]
+    BarentswatchPilot,
 }
 
 impl<'a> BearerToken<'a> {
@@ -92,5 +96,14 @@ impl<'de> Deserialize<'de> for AcceptedIssuer {
         }
 
         deserializer.deserialize_str(IssuerVisitor)
+    }
+}
+
+impl Serialize for AcceptedIssuer {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(self.as_ref())
     }
 }
