@@ -100,3 +100,4 @@ jobs:
           build-args: |
             MIGRATIONS_DIR_PATH=src/master_migrations
             TEST_MIGRATIONS_DIR_PATH=src/master_migrations
+            TEMPLATE_DB_PATH=src/postgres/create_template_db.sql
