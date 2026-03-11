@@ -36,7 +36,8 @@ static ERLEND_STAV: Uuid = parse_uuid("6c1d8388-82c2-43d6-bb06-6b55f5b65fd7");
 static TORE_SYVERSEN: Uuid = parse_uuid("0b3dce7f-233a-4450-a882-a69e06ea47e4");
 static DORTHEA_VATN: Uuid = parse_uuid("85e96543-ff2f-483a-a86b-89c5554e0216");
 
-static PROJECT_USERS_EMAIL: [&str; 4] = [
+static PROJECT_USERS_EMAIL: &[&str] = &[
+    "post@orcalabs.no",
     "kim@orcalabs.no",
     "stale.walderhaug@fhf.no",
     "eskild.johansen@fhf.no",
