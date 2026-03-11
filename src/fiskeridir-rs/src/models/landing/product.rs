@@ -97,6 +97,8 @@ pub enum LandingMethod {
     KasterKartong16Kg = 88,
     EmbalertISekk = 89,
     EmbKartong14Kg = 90,
+    PackagedForIndustry = 92,
+    EmbKartong10Kg = 95,
     Uspesifisert = 99,
 }
 
@@ -141,6 +143,8 @@ impl LandingMethod {
             KasterKartong16Kg => "16 kg kasterkartong",
             EmbalertISekk => "embalert i sekk",
             EmbKartong14Kg => "14 kg emb. kartong",
+            EmbKartong10Kg => "10 kg emb. kartong",
+            PackagedForIndustry => "Pakket for industri",
         }
     }
 }
@@ -359,7 +363,7 @@ pub enum Condition {
     RyggUtenSkinn = 362,
     Ryggbein = 363,
     // There is no name specified in the dataset
-    Ukjent = 364,
+    Ukjent1 = 364,
     Rotskjaer = 410,
     Splitt = 411,
     Flekt = 412,
@@ -393,6 +397,8 @@ pub enum Condition {
     KinnOgNakker = 634,
     HodeMedOrebein = 635,
     NakkerUtenKinn = 636,
+    // There is no name specified in the dataset
+    Ukjent2 = 640,
     Rogn = 641,
     Lever = 642,
     IselMelke = 643,
@@ -532,7 +538,7 @@ impl Condition {
             Olje => "Olje",
             Slo => "Slo",
             Uspesifisert => "Uspesifisert",
-            Ukjent => "Ukjent",
+            Ukjent1 | Ukjent2 => "Ukjent",
         }
     }
 }
