@@ -13,9 +13,14 @@ telemetry:
   ip: api.honeycomb.io
   port: 443
 bw_settings:
-  jwks_url: https://id.barentswatch.no/.well-known/openid-configuration/jwks
   audience: api
-  profiles_url: https://www.barentswatch.no/bwapi/v2/user/profiles
+  issuers:
+    https://id.pilot.bwlab.no:
+      jwks_url: https://id.pilot.bwlab.no/.well-known/openid-configuration/jwks
+      profiles_url: https://www.pilot.bwlab.no/bwapi/v2/user/profiles
+    https://id.barentswatch.no:
+      jwks_url: https://id.barentswatch.no/.well-known/openid-configuration/jwks
+      profiles_url: https://www.barentswatch.no/bwapi/v2/user/profiles
 duck_db_api:
   ip: dev-kyogre-duck-db
   port: 80

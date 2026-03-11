@@ -1,10 +1,10 @@
-use std::sync::OnceLock;
+use std::collections::HashMap;
 
 use config::ConfigError;
 use orca_core::{Environment, PsqlSettings};
 use serde::Deserialize;
 
-pub static BW_PROFILES_URL: OnceLock<String> = OnceLock::new();
+use crate::extractors::AcceptedIssuer;
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -24,8 +24,13 @@ pub struct Duckdb {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct BwSettings {
-    pub jwks_url: String,
     pub audience: String,
+    pub issuers: HashMap<AcceptedIssuer, BwEnvironmentSettings>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BwEnvironmentSettings {
+    pub jwks_url: String,
     pub profiles_url: String,
 }
 
@@ -45,13 +50,7 @@ pub struct Auth0Settings {
 
 impl Settings {
     pub fn new(settings: orca_core::Settings) -> Result<Self, ConfigError> {
-        let settings: Settings = settings.config("KYOGRE_API")?;
-
-        if let Some(ref bw) = settings.bw_settings {
-            BW_PROFILES_URL.set(bw.profiles_url.clone()).unwrap();
-        }
-
-        Ok(settings)
+        settings.config("KYOGRE_API")
     }
 }
 

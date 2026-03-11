@@ -24,7 +24,7 @@ use crate::{
         Error, Result,
         error::{MissingBwFiskInfoProfileSnafu, MissingJWTSnafu},
     },
-    settings::BW_PROFILES_URL,
+    extractors::AcceptedIssuer,
     states::BwState,
 };
 
@@ -103,6 +103,7 @@ pub struct BwProfile {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BwJwtClaims {
+    pub iss: AcceptedIssuer,
     #[serde(alias = "sub")]
     pub id: BarentswatchUserId,
 }
@@ -246,7 +247,7 @@ impl BwProfile {
             profile
         } else {
             // This should always be set on application startup
-            let url = BW_PROFILES_URL.get().unwrap();
+            let url = state.get_profiles_url(claims.iss).unwrap();
 
             let profile: BwProfile = client
                 .get(url)
