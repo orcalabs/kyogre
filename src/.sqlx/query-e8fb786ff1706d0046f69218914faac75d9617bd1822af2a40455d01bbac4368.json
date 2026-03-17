@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    mmsi AS \"mmsi!: Mmsi\",\n    call_sign AS \"call_sign: CallSign\",\n    \"name\",\n    draught as \"current_draught: Draught\",\n    ship_length as length,\n    ship_width as breadth\nFROM\n    ais_vessels\n            ",
+  "query": "\nSELECT\n    mmsi AS \"mmsi!: Mmsi\",\n    call_sign AS \"call_sign: CallSign\",\n    \"name\",\n    draught AS \"current_draught: Draught\",\n    ship_length AS length,\n    ship_width AS breadth\nFROM\n    ais_vessels\n            ",
   "describe": {
     "columns": [
       {
@@ -46,5 +46,5 @@
       true
     ]
   },
-  "hash": "a435bec6dfdb4576e340a525984199fc686007bea670af332ba2a4c0778cc6a7"
+  "hash": "e8fb786ff1706d0046f69218914faac75d9617bd1822af2a40455d01bbac4368"
 }
