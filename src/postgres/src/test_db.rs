@@ -223,9 +223,9 @@ SELECT
     mmsi AS "mmsi!: Mmsi",
     call_sign AS "call_sign: CallSign",
     "name",
-    draught as "current_draught: Draught",
-    ship_length as length,
-    ship_width as breadth
+    draught AS "current_draught: Draught",
+    ship_length AS length,
+    ship_width AS breadth
 FROM
     ais_vessels
             "#
@@ -241,9 +241,9 @@ SELECT
     mmsi AS "mmsi!: Mmsi",
     call_sign AS "call_sign: CallSign",
     "name",
-    draught as "draught: Draught",
-    ship_length as length,
-    ship_width as width,
+    draught AS "draught: Draught",
+    ship_length AS length,
+    ship_width AS width,
     eta
 FROM
     ais_vessels

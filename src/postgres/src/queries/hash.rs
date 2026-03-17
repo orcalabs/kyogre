@@ -10,8 +10,7 @@ INSERT INTO
     file_hashes (hash, file_hash_id)
 VALUES
     ($1, $2)
-ON CONFLICT (file_hash_id) DO
-UPDATE
+ON CONFLICT (file_hash_id) DO UPDATE
 SET
     hash = excluded.hash,
     updated_at = NOW()

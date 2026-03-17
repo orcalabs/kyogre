@@ -137,8 +137,8 @@ SELECT
     u.api_source
 FROM
     UNNEST(
-        $1::UUID [],
-        $2::UUID [],
+        $1::UUID[],
+        $2::UUID[],
         $3::TEXT[],
         $4::TEXT[],
         $5::INT[],
@@ -196,8 +196,7 @@ FROM
         HAVING
             COUNT(fiskeridir_vessel_id) = 1
     ) v ON v.call_sign = u.call_sign
-ON CONFLICT (tool_id) DO
-UPDATE
+ON CONFLICT (tool_id) DO UPDATE
 SET
     barentswatch_vessel_id = COALESCE(
         EXCLUDED.barentswatch_vessel_id,
