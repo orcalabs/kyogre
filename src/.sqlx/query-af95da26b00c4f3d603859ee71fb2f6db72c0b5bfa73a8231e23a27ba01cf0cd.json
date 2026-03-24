@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    user_settings (barentswatch_user_id, fuel_consent)\nVALUES\n    ($1, $2)\nON CONFLICT (barentswatch_user_id) DO UPDATE\nSET\n    fuel_consent = EXCLUDED.fuel_consent\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "af95da26b00c4f3d603859ee71fb2f6db72c0b5bfa73a8231e23a27ba01cf0cd"
+}

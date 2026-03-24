@@ -18,6 +18,7 @@ pub struct BarentswatchUserId(Uuid);
 pub struct User {
     pub barentswatch_user_id: BarentswatchUserId,
     pub following: Vec<FiskeridirVesselId>,
+    pub fuel_consent: Option<bool>,
 }
 
 impl AsRef<Uuid> for BarentswatchUserId {
