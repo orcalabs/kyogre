@@ -116,7 +116,13 @@ impl ApiClient {
         url_parameters: Option<&impl Serialize>,
     ) -> Result<T, Error> {
         match self.do_request(path, method, &body, url_parameters).await {
-            Ok(v) => Ok(v.json().await.unwrap()),
+            Ok(v) => {
+                let text = v.text().await.unwrap();
+                match serde_json::from_str::<T>(&text) {
+                    Ok(v) => Ok(v),
+                    Err(e) => panic!("error: {e:?}, json: {}", text),
+                }
+            }
             Err(e) => Err(handle_request_failure(e)),
         }
     }

@@ -10,10 +10,8 @@ use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 pub async fn get_user<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-) -> Result<Response<Option<User>>> {
-    Ok(Response::new(
-        db.get_user(profile.user.id).await?.map(User::from),
-    ))
+) -> Result<Response<User>> {
+    Ok(Response::new(db.get_user(profile.user.id).await?.into()))
 }
 
 #[oasgen(skip(db), tags("User"))]
@@ -32,6 +30,8 @@ pub async fn update_user<T: Database + 'static>(
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub following: Vec<FiskeridirVesselId>,
+    #[serde(default)]
+    pub fuel_consent: Option<bool>,
 }
 
 impl From<kyogre_core::User> for User {
@@ -39,19 +39,27 @@ impl From<kyogre_core::User> for User {
         let kyogre_core::User {
             barentswatch_user_id: _,
             following,
+            fuel_consent,
         } = v;
 
-        Self { following }
+        Self {
+            following,
+            fuel_consent,
+        }
     }
 }
 
 impl User {
     pub fn to_domain_user(self, barentswatch_user_id: BarentswatchUserId) -> kyogre_core::User {
-        let Self { following } = self;
+        let Self {
+            following,
+            fuel_consent,
+        } = self;
 
         kyogre_core::User {
             barentswatch_user_id,
             following,
+            fuel_consent,
         }
     }
 }

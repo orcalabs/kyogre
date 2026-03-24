@@ -3,23 +3,37 @@ use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, User};
 use crate::{PostgresAdapter, error::Result};
 
 impl PostgresAdapter {
-    pub(crate) async fn get_user_impl(&self, user_id: BarentswatchUserId) -> Result<Option<User>> {
+    pub(crate) async fn get_user_impl(&self, user_id: BarentswatchUserId) -> Result<User> {
         let user = sqlx::query_as!(
             User,
             r#"
 SELECT
-    barentswatch_user_id AS "barentswatch_user_id!: BarentswatchUserId",
-    ARRAY_AGG(fiskeridir_vessel_id) AS "following!: Vec<FiskeridirVesselId>"
-FROM
-    user_follows
-WHERE
-    barentswatch_user_id = $1
-GROUP BY
-    barentswatch_user_id
+    $1::UUID AS "barentswatch_user_id!: BarentswatchUserId",
+    COALESCE(
+        (
+            SELECT
+                ARRAY_AGG(fiskeridir_vessel_id)
+            FROM
+                user_follows
+            WHERE
+                barentswatch_user_id = $1
+            GROUP BY
+                barentswatch_user_id
+        ),
+        '{}'
+    ) AS "following!: Vec<FiskeridirVesselId>",
+    (
+        SELECT
+            fuel_consent
+        FROM
+            user_settings
+        WHERE
+            barentswatch_user_id = $1
+    ) AS fuel_consent;
             "#,
             user_id.as_ref(),
         )
-        .fetch_optional(&self.pool)
+        .fetch_one(&self.pool)
         .await?;
 
         Ok(user)
@@ -30,6 +44,24 @@ GROUP BY
 
         self.update_user_follows(user.barentswatch_user_id, &user.following, &mut tx)
             .await?;
+
+        if let Some(consent) = user.fuel_consent {
+            sqlx::query!(
+                r#"
+INSERT INTO
+    user_settings (barentswatch_user_id, fuel_consent)
+VALUES
+    ($1, $2)
+ON CONFLICT (barentswatch_user_id) DO UPDATE
+SET
+    fuel_consent = EXCLUDED.fuel_consent
+            "#,
+                user.barentswatch_user_id as BarentswatchUserId,
+                consent,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
 
         tx.commit().await?;
 

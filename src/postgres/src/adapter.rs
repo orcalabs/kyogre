@@ -846,7 +846,7 @@ impl WebApiOutboundPort for PostgresAdapter {
             .boxed()
     }
 
-    async fn get_user(&self, user_id: BarentswatchUserId) -> WebApiResult<Option<User>> {
+    async fn get_user(&self, user_id: BarentswatchUserId) -> WebApiResult<User> {
         Ok(retry(|| self.get_user_impl(user_id)).await?)
     }
 

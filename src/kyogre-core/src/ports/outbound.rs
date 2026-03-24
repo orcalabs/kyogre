@@ -104,7 +104,7 @@ pub trait WebApiOutboundPort {
         &self,
         query: FishingFacilitiesQuery,
     ) -> PinBoxStream<'_, FishingFacility>;
-    async fn get_user(&self, user_id: BarentswatchUserId) -> WebApiResult<Option<User>>;
+    async fn get_user(&self, user_id: BarentswatchUserId) -> WebApiResult<User>;
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint>;
     fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation>;

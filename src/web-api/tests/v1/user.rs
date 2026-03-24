@@ -11,7 +11,10 @@ async fn test_cant_use_user_endpoints_without_bw_token() {
 
         let error = helper
             .app
-            .update_user(User { following: vec![] })
+            .update_user(User {
+                following: vec![],
+                fuel_consent: None,
+            })
             .await
             .unwrap_err();
         assert_eq!(error.status, StatusCode::NOT_FOUND);
@@ -28,11 +31,62 @@ async fn test_update_and_get_user() {
 
         let update_user = User {
             following: state.vessels.iter().map(|v| v.fiskeridir.id).collect(),
+            fuel_consent: None,
         };
 
         helper.app.update_user(update_user.clone()).await.unwrap();
         let user = helper.app.get_user().await.unwrap();
         assert_eq!(user, update_user);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_toggle_fuel_consent() {
+    test(|mut helper, builder| async move {
+        helper.app.login_user();
+        builder.vessels(1).build().await;
+
+        let user = helper.app.get_user().await.unwrap();
+        assert!(user.fuel_consent.is_none());
+
+        let update_user = User {
+            following: vec![],
+            fuel_consent: Some(true),
+        };
+        helper.app.update_user(update_user.clone()).await.unwrap();
+        let user = helper.app.get_user().await.unwrap();
+        assert!(user.fuel_consent.unwrap());
+
+        let update_user = User {
+            following: vec![],
+            fuel_consent: Some(false),
+        };
+        helper.app.update_user(update_user.clone()).await.unwrap();
+        let user = helper.app.get_user().await.unwrap();
+        assert!(!user.fuel_consent.unwrap());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_not_sending_fuel_consent_does_not_clear() {
+    test(|mut helper, builder| async move {
+        helper.app.login_user();
+        builder.vessels(1).build().await;
+
+        let update_user = User {
+            following: vec![],
+            fuel_consent: Some(true),
+        };
+        helper.app.update_user(update_user.clone()).await.unwrap();
+        let update_user = User {
+            following: vec![],
+            fuel_consent: None,
+        };
+        helper.app.update_user(update_user.clone()).await.unwrap();
+        let user = helper.app.get_user().await.unwrap();
+        assert!(user.fuel_consent.unwrap());
     })
     .await;
 }
