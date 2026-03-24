@@ -9,6 +9,8 @@ pub static DEFAULT_LIVE_FUEL_THRESHOLD: Duration = Duration::days(1);
 pub struct FuelMeasurementsQuery {
     pub call_sign: CallSign,
     pub range: OptionalDateTimeRange,
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
