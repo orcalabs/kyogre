@@ -24,6 +24,8 @@ use crate::{
 pub struct FuelMeasurementsParams {
     #[serde(flatten)]
     pub range: OptionalDateTimeRange,
+    pub limit: Option<u64>,
+    pub offset: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, OaSchema)]
@@ -156,9 +158,18 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
 
 impl FuelMeasurementsParams {
     pub fn to_query(self, call_sign: CallSign) -> FuelMeasurementsQuery {
-        let Self { range } = self;
+        let Self {
+            range,
+            limit,
+            offset,
+        } = self;
 
-        FuelMeasurementsQuery { call_sign, range }
+        FuelMeasurementsQuery {
+            call_sign,
+            range,
+            limit,
+            offset,
+        }
     }
 }
 

@@ -44,6 +44,13 @@ WHERE
         &self,
         query: FuelMeasurementsQuery,
     ) -> impl Stream<Item = Result<FuelMeasurement>> + '_ {
+        let FuelMeasurementsQuery {
+            call_sign,
+            range,
+            limit,
+            offset,
+        } = query;
+
         sqlx::query_as!(
             FuelMeasurement,
             r#"
@@ -67,10 +74,16 @@ WHERE
     )
 ORDER BY
     timestamp DESC
+LIMIT
+    $4
+OFFSET
+    $5
             "#,
-            query.call_sign.into_inner(),
-            query.range.start(),
-            query.range.end(),
+            call_sign.into_inner(),
+            range.start(),
+            range.end(),
+            limit.map(|v| v as i64),
+            offset.map(|v| v as i64),
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())

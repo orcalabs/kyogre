@@ -237,6 +237,7 @@ async fn test_get_fuel_measurement_filters_by_dates() {
                 Some(start + Duration::days(1)),
                 Some(start + Duration::days(3)),
             ),
+            ..Default::default()
         };
 
         let measurements = helper.app.get_fuel_measurements(params).await.unwrap();
