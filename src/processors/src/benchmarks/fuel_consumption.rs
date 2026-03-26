@@ -64,6 +64,11 @@ impl TripBenchmark for FuelConsumption {
             .await?;
 
         output.fuel_consumption_liter = Some(estimated_fuel + overlapping_measurement_fuel);
+        // SAFETY: unwrap safe due to len check at the top
+        output.fuel_consumption_liter_estimated_only = Some(
+            track.last().unwrap().cumulative_fuel_consumption_liter
+                - track.first().unwrap().cumulative_fuel_consumption_liter,
+        );
 
         Ok(())
     }

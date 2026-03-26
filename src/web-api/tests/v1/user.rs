@@ -1,7 +1,7 @@
 use crate::v1::helper::test;
 use engine::*;
 use http_client::StatusCode;
-use web_api::routes::v1::user::User;
+use kyogre_core::UpdateUser;
 
 #[tokio::test]
 async fn test_cant_use_user_endpoints_without_bw_token() {
@@ -11,8 +11,8 @@ async fn test_cant_use_user_endpoints_without_bw_token() {
 
         let error = helper
             .app
-            .update_user(User {
-                following: vec![],
+            .update_user(UpdateUser {
+                following: None,
                 fuel_consent: None,
             })
             .await
@@ -29,8 +29,8 @@ async fn test_update_and_get_user() {
 
         let state = builder.vessels(2).build().await;
 
-        let update_user = User {
-            following: state.vessels.iter().map(|v| v.fiskeridir.id).collect(),
+        let update_user = UpdateUser {
+            following: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
             fuel_consent: None,
         };
 
@@ -50,16 +50,16 @@ async fn test_toggle_fuel_consent() {
         let user = helper.app.get_user().await.unwrap();
         assert!(user.fuel_consent.is_none());
 
-        let update_user = User {
-            following: vec![],
+        let update_user = UpdateUser {
+            following: None,
             fuel_consent: Some(true),
         };
         helper.app.update_user(update_user.clone()).await.unwrap();
         let user = helper.app.get_user().await.unwrap();
         assert!(user.fuel_consent.unwrap());
 
-        let update_user = User {
-            following: vec![],
+        let update_user = UpdateUser {
+            following: None,
             fuel_consent: Some(false),
         };
         helper.app.update_user(update_user.clone()).await.unwrap();
@@ -70,23 +70,24 @@ async fn test_toggle_fuel_consent() {
 }
 
 #[tokio::test]
-async fn test_not_sending_fuel_consent_does_not_clear() {
+async fn test_not_sending_fields_does_not_clear() {
     test(|mut helper, builder| async move {
         helper.app.login_user();
-        builder.vessels(1).build().await;
+        let state = builder.vessels(2).build().await;
 
-        let update_user = User {
-            following: vec![],
+        let update_user = UpdateUser {
+            following: Some(state.vessels.iter().map(|v| v.fiskeridir.id).collect()),
             fuel_consent: Some(true),
         };
         helper.app.update_user(update_user.clone()).await.unwrap();
-        let update_user = User {
-            following: vec![],
+        let update_user = UpdateUser {
+            following: None,
             fuel_consent: None,
         };
         helper.app.update_user(update_user.clone()).await.unwrap();
         let user = helper.app.get_user().await.unwrap();
         assert!(user.fuel_consent.unwrap());
+        assert!(!user.following.is_empty());
     })
     .await;
 }

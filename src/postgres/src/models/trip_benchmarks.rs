@@ -13,6 +13,7 @@ pub struct TripBenchmarkOutput {
     pub benchmark_weight_per_hour: Option<f64>,
     pub benchmark_weight_per_distance: Option<f64>,
     pub benchmark_fuel_consumption_liter: Option<f64>,
+    pub benchmark_fuel_consumption_liter_estimated_only: Option<f64>,
     pub benchmark_weight_per_fuel_liter: Option<f64>,
     pub benchmark_catch_value_per_fuel_liter: Option<f64>,
     pub benchmark_eeoi: Option<f64>,
@@ -35,6 +36,7 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
             eeoi,
             status,
             benchmark_state_counter,
+            fuel_consumption_liter_estimated_only,
         } = v;
 
         Self {
@@ -47,6 +49,7 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
             benchmark_eeoi: *eeoi,
             benchmark_status: *status,
             benchmark_state_counter: *benchmark_state_counter,
+            benchmark_fuel_consumption_liter_estimated_only: *fuel_consumption_liter_estimated_only,
         }
     }
 }

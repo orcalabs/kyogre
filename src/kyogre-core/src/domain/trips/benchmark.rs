@@ -55,6 +55,7 @@ pub struct TripBenchmarkOutput {
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,
     pub fuel_consumption_liter: Option<f64>,
+    pub fuel_consumption_liter_estimated_only: Option<f64>,
     pub weight_per_fuel_liter: Option<f64>,
     pub catch_value_per_fuel_liter: Option<f64>,
     pub eeoi: Option<f64>,

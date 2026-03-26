@@ -56,7 +56,7 @@ pub trait AisMigratorDestination {
 
 #[async_trait]
 pub trait WebApiInboundPort {
-    async fn update_user(&self, user: &User) -> WebApiResult<()>;
+    async fn update_user(&self, user: &UpdateUser, id: BarentswatchUserId) -> WebApiResult<()>;
     async fn add_fuel_measurements(
         &self,
         measurements: &[CreateFuelMeasurement],

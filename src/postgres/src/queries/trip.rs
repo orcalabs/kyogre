@@ -8,7 +8,9 @@ use crate::{
     },
 };
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
+};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
     AisVmsPosition, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack, Ordering,
@@ -1123,6 +1125,7 @@ WHERE
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
+        logged_in_user_call_sign: Option<&CallSign>,
     ) -> impl Stream<Item = Result<TripDetailed>> + '_ {
         let order_by = match (query.ordering, query.sorting) {
             (Ordering::Asc, TripSorting::StopDate) => 1,
@@ -1168,72 +1171,79 @@ SELECT
     t.distance,
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
-    t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
+    CASE
+        WHEN v.fiskeridir_vessel_id IS NOT NULL THEN t.benchmark_fuel_consumption_liter
+        ELSE NULL
+    END AS fuel_consumption_liter,
+    t.benchmark_fuel_consumption_liter_estimated_only AS fuel_consumption_liter_estimated_only,
     t.track_coverage,
     t.has_track AS "has_track: HasTrack",
     t.first_arrival
 FROM
     trips_detailed AS t
+    LEFT JOIN all_vessels v ON t.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+    AND v.call_sign = $2
 WHERE
     (
-        $2::BIGINT[] IS NULL
-        OR t.fiskeridir_vessel_id = ANY ($2)
+        $3::BIGINT[] IS NULL
+        OR t.fiskeridir_vessel_id = ANY ($3)
     )
     AND (
-        $3::VARCHAR[] IS NULL
-        OR t.delivery_point_ids && $3::VARCHAR[]
-    )
-    AND (
-        $4::timestamptz IS NULL
-        OR t.start_timestamp >= $4
+        $4::VARCHAR[] IS NULL
+        OR t.delivery_point_ids && $4::VARCHAR[]
     )
     AND (
         $5::timestamptz IS NULL
-        OR t.stop_timestamp <= $5
+        OR t.start_timestamp >= $5
     )
     AND (
-        $6::DOUBLE PRECISION IS NULL
-        OR t.landing_total_living_weight >= $6
+        $6::timestamptz IS NULL
+        OR t.stop_timestamp <= $6
     )
     AND (
         $7::DOUBLE PRECISION IS NULL
-        OR t.landing_total_living_weight <= $7
+        OR t.landing_total_living_weight >= $7
     )
     AND (
-        $8::INT[] IS NULL
-        OR t.landing_gear_group_ids && $8
+        $8::DOUBLE PRECISION IS NULL
+        OR t.landing_total_living_weight <= $8
     )
     AND (
         $9::INT[] IS NULL
-        OR t.landing_species_group_ids && $9
+        OR t.landing_gear_group_ids && $9
     )
     AND (
         $10::INT[] IS NULL
-        OR t.fiskeridir_length_group_id = ANY ($10)
+        OR t.landing_species_group_ids && $10
     )
     AND (
         $11::INT[] IS NULL
-        OR t.trip_id = ANY ($11)
+        OR t.fiskeridir_length_group_id = ANY ($11)
+    )
+    AND (
+        $12::INT[] IS NULL
+        OR t.trip_id = ANY ($12)
     )
 ORDER BY
     CASE
-        WHEN $12::INT = 1 THEN t.stop_timestamp
+        WHEN $13::INT = 1 THEN t.stop_timestamp
     END ASC,
     CASE
-        WHEN $12::INT = 2 THEN t.landing_total_living_weight
+        WHEN $13::INT = 2 THEN t.landing_total_living_weight
     END ASC,
     CASE
-        WHEN $12::INT = 3 THEN t.stop_timestamp
+        WHEN $13::INT = 3 THEN t.stop_timestamp
     END DESC,
     CASE
-        WHEN $12::INT = 4 THEN t.landing_total_living_weight
+        WHEN $13::INT = 4 THEN t.landing_total_living_weight
     END DESC
 OFFSET
-    $13
-LIMIT
     $14
+LIMIT
+    $15
             "#,
             read_fishing_facility,
+            logged_in_user_call_sign as Option<&CallSign>,
             query.fiskeridir_vessel_ids.as_deref() as Option<&[FiskeridirVesselId]>,
             query.delivery_points.as_deref(),
             query.range.start(),

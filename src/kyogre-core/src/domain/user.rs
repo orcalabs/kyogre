@@ -21,6 +21,16 @@ pub struct User {
     pub fuel_consent: Option<bool>,
 }
 
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct UpdateUser {
+    #[serde(default)]
+    pub following: Option<Vec<FiskeridirVesselId>>,
+    #[serde(default)]
+    pub fuel_consent: Option<bool>,
+}
+
 impl AsRef<Uuid> for BarentswatchUserId {
     fn as_ref(&self) -> &Uuid {
         &self.0

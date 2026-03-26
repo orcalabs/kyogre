@@ -78,6 +78,7 @@ pub trait WebApiOutboundPort {
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
+        logged_in_user_call_sign: Option<&CallSign>,
     ) -> PinBoxStream<'_, TripDetailed>;
     async fn current_trip(
         &self,

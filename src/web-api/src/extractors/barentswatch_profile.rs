@@ -120,6 +120,12 @@ impl BwProfile {
 }
 
 impl OptionBwProfile {
+    pub fn call_sign(&self) -> Option<&CallSign> {
+        self.0
+            .as_ref()
+            .and_then(|v| v.fisk_info_profile.as_ref().map(|p| p.ircs.as_ref()))
+            .flatten()
+    }
     pub fn tracing_id(&self) -> String {
         self.0
             .as_ref()

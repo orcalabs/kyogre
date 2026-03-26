@@ -1,9 +1,8 @@
+use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web;
-use kyogre_core::{BarentswatchUserId, FiskeridirVesselId};
+use kyogre_core::{FiskeridirVesselId, UpdateUser};
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
-
-use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 
 #[oasgen(skip(db), tags("User"))]
 #[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
@@ -19,10 +18,9 @@ pub async fn get_user<T: Database + 'static>(
 pub async fn update_user<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-    user: web::Json<User>,
+    user: web::Json<UpdateUser>,
 ) -> Result<Response<()>> {
-    let user = user.into_inner().to_domain_user(profile.user.id);
-    db.update_user(&user).await?;
+    db.update_user(&user, profile.user.id).await?;
     Ok(Response::new(()))
 }
 
@@ -30,7 +28,6 @@ pub async fn update_user<T: Database + 'static>(
 #[serde(rename_all = "camelCase")]
 pub struct User {
     pub following: Vec<FiskeridirVesselId>,
-    #[serde(default)]
     pub fuel_consent: Option<bool>,
 }
 
@@ -49,17 +46,19 @@ impl From<kyogre_core::User> for User {
     }
 }
 
-impl User {
-    pub fn to_domain_user(self, barentswatch_user_id: BarentswatchUserId) -> kyogre_core::User {
-        let Self {
+impl PartialEq<UpdateUser> for User {
+    fn eq(&self, other: &UpdateUser) -> bool {
+        let User {
             following,
             fuel_consent,
         } = self;
 
-        kyogre_core::User {
-            barentswatch_user_id,
-            following,
-            fuel_consent,
-        }
+        Some(following) == other.following.as_ref() && *fuel_consent == other.fuel_consent
+    }
+}
+
+impl PartialEq<User> for UpdateUser {
+    fn eq(&self, other: &User) -> bool {
+        other.eq(self)
     }
 }

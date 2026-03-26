@@ -150,6 +150,7 @@ impl Worker {
             fuel_consumption_liter: None,
             weight_per_fuel_liter: None,
             catch_value_per_fuel_liter: None,
+            fuel_consumption_liter_estimated_only: None,
             eeoi: None,
             status: ProcessingStatus::Successful,
             benchmark_state_counter: trip.benchmark_state_counter,
