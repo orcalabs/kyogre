@@ -8,11 +8,11 @@ use float_cmp::approx_eq;
 use http_client::StatusCode;
 use kyogre_core::{
     CreateFuelMeasurement, DateTimeRangeWithDefaultTimeSpan, NaiveDateRange,
-    TEST_SIGNED_IN_VESSEL_CALLSIGN, TestHelperOutbound,
+    TEST_SIGNED_IN_VESSEL_CALLSIGN, TestHelperOutbound, UpdateUser,
 };
 use kyogre_core::{Haul, OrgBenchmarks, TripDetailed};
 use std::str::FromStr;
-use web_api::routes::v1::{org::OrgBenchmarkParameters, user::User, vessel::FuelParams};
+use web_api::routes::v1::{org::OrgBenchmarkParameters, vessel::FuelParams};
 
 #[tokio::test]
 async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
@@ -30,11 +30,11 @@ async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
         helper.app.login_user();
         helper
             .app
-            .update_user(User {
-                following: vec![
+            .update_user(UpdateUser {
+                following: Some(vec![
                     state.vessels[1].fiskeridir.id,
                     state.vessels[2].fiskeridir.id,
-                ],
+                ]),
                 fuel_consent: None,
             })
             .await

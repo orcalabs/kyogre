@@ -811,8 +811,9 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         query: TripsQuery,
         read_fishing_facility: bool,
+        logged_in_user_call_sign: Option<&CallSign>,
     ) -> PinBoxStream<'_, TripDetailed> {
-        self.detailed_trips_impl(query, read_fishing_facility)
+        self.detailed_trips_impl(query, read_fishing_facility, logged_in_user_call_sign)
             .try_convert()
             .boxed()
     }
@@ -871,8 +872,12 @@ impl WebApiOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl WebApiInboundPort for PostgresAdapter {
-    async fn update_user(&self, user: &User) -> WebApiResult<()> {
-        retry(|| self.update_user_impl(user)).await?;
+    async fn update_user(
+        &self,
+        user: &kyogre_core::UpdateUser,
+        id: BarentswatchUserId,
+    ) -> WebApiResult<()> {
+        retry(|| self.update_user_impl(user, id)).await?;
         Ok(())
     }
     async fn add_fuel_measurements(

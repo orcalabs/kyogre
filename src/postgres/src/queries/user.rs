@@ -39,11 +39,16 @@ SELECT
         Ok(user)
     }
 
-    pub(crate) async fn update_user_impl(&self, user: &kyogre_core::User) -> Result<()> {
+    pub(crate) async fn update_user_impl(
+        &self,
+        user: &kyogre_core::UpdateUser,
+        id: BarentswatchUserId,
+    ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        self.update_user_follows(user.barentswatch_user_id, &user.following, &mut tx)
-            .await?;
+        if let Some(following) = &user.following {
+            self.update_user_follows(id, following, &mut tx).await?;
+        }
 
         if let Some(consent) = user.fuel_consent {
             sqlx::query!(
@@ -56,7 +61,7 @@ ON CONFLICT (barentswatch_user_id) DO UPDATE
 SET
     fuel_consent = EXCLUDED.fuel_consent
             "#,
-                user.barentswatch_user_id as BarentswatchUserId,
+                id as BarentswatchUserId,
                 consent,
             )
             .execute(&mut *tx)

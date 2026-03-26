@@ -1006,6 +1006,7 @@ impl TestStateBuilder {
                     ..Default::default()
                 },
                 true,
+                None,
             )
             .try_collect::<Vec<TripDetailed>>()
             .await

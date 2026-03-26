@@ -989,7 +989,9 @@ async fn test_ais_vms_by_trip_returns_cumulative_fuel_consumption() {
         assert!(approx_eq!(
             f64,
             positions.last().unwrap().trip_cumulative_fuel_consumption,
-            state.trips[0].fuel_consumption_liter.unwrap()
+            state.trips[0]
+                .fuel_consumption_liter_estimated_only
+                .unwrap()
         ));
     })
     .await;

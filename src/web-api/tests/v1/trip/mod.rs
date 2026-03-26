@@ -1585,3 +1585,81 @@ async fn test_trips_fuel_equals_fuel_measurment_exactly_matching_trip_start_and_
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_trips_only_returns_estimation_when_not_logged_in() {
+    test(|helper, builder| async move {
+        builder
+            .vessels(1)
+            .set_engine_building_year()
+            .trips(1)
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        helper.builder().await.build().await;
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        assert_eq!(trips.len(), 1);
+        let trip = &trips[0];
+
+        assert!(trip.fuel_consumption.is_none());
+        assert!(trip.fuel_consumption_estimated_only.is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_only_returns_estimation_if_logged_in_but_not_associated_with_vessel() {
+    test(|mut helper, builder| async move {
+        builder
+            .vessels(1)
+            .set_logged_in()
+            .modify(|v| {
+                let cs = CallSign::new_unchecked("testing");
+                v.fiskeridir.radio_call_sign = Some(cs.clone());
+                v.ais.call_sign = Some(cs.clone());
+            })
+            .set_engine_building_year()
+            .trips(1)
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        helper.builder().await.build().await;
+        helper.app.login_user();
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        assert_eq!(trips.len(), 1);
+        let trip = &trips[0];
+
+        assert!(trip.fuel_consumption.is_none());
+        assert!(trip.fuel_consumption_estimated_only.is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_returns_both_estimation_and_combined_fuel_consumption() {
+    test(|mut helper, builder| async move {
+        builder
+            .vessels(1)
+            .set_logged_in()
+            .set_engine_building_year()
+            .trips(1)
+            .ais_vms_positions(10)
+            .build()
+            .await;
+
+        helper.builder().await.build().await;
+        helper.app.login_user();
+
+        let trips = helper.app.get_trips(Default::default()).await.unwrap();
+        assert_eq!(trips.len(), 1);
+        let trip = &trips[0];
+
+        assert!(trip.fuel_consumption.is_some());
+        assert!(trip.fuel_consumption_estimated_only.is_some());
+    })
+    .await;
+}

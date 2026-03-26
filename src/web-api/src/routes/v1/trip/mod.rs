@@ -76,7 +76,7 @@ pub async fn trips<T: Database + Send + Sync + 'static>(
     let query = TripsQuery::from(params.into_inner());
 
     let response = stream_response! {
-        db.detailed_trips(query, read_fishing_facility)
+        db.detailed_trips(query, read_fishing_facility, profile.call_sign())
             .map_ok(Trip::from)
     };
 
@@ -146,6 +146,7 @@ pub struct Trip {
     pub target_species_fiskeridir_id: Option<u32>,
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
+    pub fuel_consumption_estimated_only: Option<f64>,
     pub track_coverage: f64,
     pub distance: Option<f64>,
     pub has_track: HasTrack,
@@ -264,6 +265,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             track_coverage,
             has_track,
             first_arrival: _,
+            fuel_consumption_liter_estimated_only,
         } = value;
 
         let period = period_precision.unwrap_or(period);
@@ -297,6 +299,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             distance,
             tra,
             has_track,
+            fuel_consumption_estimated_only: fuel_consumption_liter_estimated_only,
         }
     }
 }

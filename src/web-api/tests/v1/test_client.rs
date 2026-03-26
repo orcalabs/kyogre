@@ -4,7 +4,7 @@ use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, CreateFuelMeasurement,
     DeleteFuelMeasurement, FiskeridirVesselId, FuelEntry, FuelMeasurement, LiveFuel, Mmsi,
-    OrgBenchmarks, UpdateVessel, VesselBenchmarks,
+    OrgBenchmarks, UpdateUser, UpdateVessel, VesselBenchmarks,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use web_api::{
@@ -328,7 +328,7 @@ impl ApiClient {
     pub async fn get_user(&self) -> Result<User, Error> {
         self.send("user", Method::GET, &(), None::<&()>).await
     }
-    pub async fn update_user(&self, user: User) -> Result<(), Error> {
+    pub async fn update_user(&self, user: UpdateUser) -> Result<(), Error> {
         self.send("user", Method::PUT, &user, None::<&()>).await
     }
     pub async fn update_vessel(&self, update: &UpdateVessel) -> Result<Vessel, Error> {

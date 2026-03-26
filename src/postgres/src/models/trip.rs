@@ -406,6 +406,7 @@ pub struct TripDetailed {
     pub target_species_fiskeridir_id: Option<i32>,
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption_liter: Option<f64>,
+    pub fuel_consumption_liter_estimated_only: Option<f64>,
     pub track_coverage: f64,
     pub has_track: HasTrack,
 }
@@ -548,6 +549,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             track_coverage,
             has_track,
             first_arrival,
+            fuel_consumption_liter_estimated_only,
         } = value;
 
         Ok(kyogre_core::TripDetailed {
@@ -593,6 +595,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
                 .collect(),
             has_track,
             first_arrival,
+            fuel_consumption_liter_estimated_only,
         })
     }
 }
