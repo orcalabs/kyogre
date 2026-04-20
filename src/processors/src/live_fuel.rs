@@ -103,8 +103,8 @@ impl LiveFuel {
         let vessel = VesselFuelInfo::from_live(vessel, None, self.mode);
         let mut fuel_impl = FuelImpl::new(&vessel);
         Ok(hour_split
-            .into_iter()
-            .filter_map(|(_, positions)| {
+            .into_values()
+            .filter_map(|positions| {
                 if positions.len() <= 1 {
                     None
                 } else {
