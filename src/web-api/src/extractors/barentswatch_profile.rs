@@ -35,6 +35,7 @@ static PER_FINN: Uuid = parse_uuid("37999e6c-5e07-492a-b889-0ef3880e7009");
 static ERLEND_STAV: Uuid = parse_uuid("6c1d8388-82c2-43d6-bb06-6b55f5b65fd7");
 static TORE_SYVERSEN: Uuid = parse_uuid("0b3dce7f-233a-4450-a882-a69e06ea47e4");
 static DORTHEA_VATN: Uuid = parse_uuid("85e96543-ff2f-483a-a86b-89c5554e0216");
+static OYSTEIN_HERMANSEN: Uuid = parse_uuid("9c53dd26-b9dd-477e-9e43-439567f8e8ca");
 
 static PROJECT_USERS_EMAIL: &[&str] = &[
     "post@orcalabs.no",
@@ -42,9 +43,10 @@ static PROJECT_USERS_EMAIL: &[&str] = &[
     "stale.walderhaug@fhf.no",
     "eskild.johansen@fhf.no",
     "rita.naustvik@fhf.no",
+    "oystein.hermansen@gmail.com",
 ];
 
-static PROJECT_USERS: [Uuid; 7] = [
+static PROJECT_USERS: [Uuid; 8] = [
     ORCA_ACCOUNT_ID,
     PER_GUNNAR_AURAN,
     BAARD_JOHAN_HANSSEN,
@@ -52,6 +54,7 @@ static PROJECT_USERS: [Uuid; 7] = [
     ERLEND_STAV,
     TORE_SYVERSEN,
     DORTHEA_VATN,
+    OYSTEIN_HERMANSEN,
 ];
 
 const fn parse_uuid(uuid: &'static str) -> Uuid {
