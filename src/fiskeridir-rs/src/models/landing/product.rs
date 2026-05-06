@@ -97,6 +97,7 @@ pub enum LandingMethod {
     KasterKartong16Kg = 88,
     EmbalertISekk = 89,
     EmbKartong14Kg = 90,
+    IndividuellHurtigfrysing = 91,
     PackagedForIndustry = 92,
     EmbKartong10Kg = 95,
     Uspesifisert = 99,
@@ -145,6 +146,7 @@ impl LandingMethod {
             EmbKartong14Kg => "14 kg emb. kartong",
             EmbKartong10Kg => "10 kg emb. kartong",
             PackagedForIndustry => "Pakket for industri",
+            IndividuellHurtigfrysing => "Individuell hurtigfrysing",
         }
     }
 }
