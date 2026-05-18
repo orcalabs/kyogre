@@ -1,6 +1,6 @@
 use fiskeridir_rs::{CallSign, LandingIdError, ParseStringError};
 use kyogre_core::{
-    ActiveVesselConflict, CatchLocationIdError, DateRangeError, IsTimeout, MatrixIndexError,
+    ActiveVesselConflict, CatchLocationIdError, DateRangeError, IsTimeout, MatrixIndexError, Object,
 };
 use snafu::{Location, Snafu};
 use sqlx::migrate::MigrateError;
@@ -17,6 +17,17 @@ impl IsTimeout for Error {
 #[derive(Snafu, StackError)]
 #[snafu(visibility(pub(crate)))]
 pub enum Error {
+    #[snafu(display("{object}"))]
+    ObjectNotFound {
+        #[snafu(implicit)]
+        location: Location,
+        object: Object,
+    },
+    #[snafu(display("No current active UserHaul"))]
+    NoActiveUserHaul {
+        #[snafu(implicit)]
+        location: Location,
+    },
     #[snafu(display("Selected vessel with '{call_sign}' not found"))]
     InvalidVesselSelection {
         #[snafu(implicit)]
@@ -216,6 +227,7 @@ impl From<Error> for kyogre_core::Error {
             },
             Error::Conversion { .. }
             | Error::InvalidVesselSelection { .. }
+            | Error::NoActiveUserHaul { .. }
             | Error::MissingValue { .. }
             | Error::Json { .. }
             | Error::TripPositionMatch { .. }
@@ -225,6 +237,7 @@ impl From<Error> for kyogre_core::Error {
             | Error::Unexpected { .. }
             | Error::InvalidIsoWeek { .. }
             | Error::CallSignDoesNotExist { .. }
+            | Error::ObjectNotFound { .. }
             | Error::Migrate { .. } => kyogre_core::Error::Unexpected {
                 location,
                 opaque: OpaqueError::Stack(Box::new(value)),
@@ -256,6 +269,12 @@ impl From<Error> for kyogre_core::WebApiError {
                 location,
                 call_sign: call_sign.clone(),
             },
+            Error::NoActiveUserHaul { location } => {
+                kyogre_core::WebApiError::NoActiveUserHaul { location }
+            }
+            Error::ObjectNotFound { location, object } => {
+                kyogre_core::WebApiError::ObjectNotFound { location, object }
+            }
             Error::Conversion { .. }
             | Error::MissingValue { .. }
             | Error::Json { .. }

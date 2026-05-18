@@ -243,6 +243,54 @@ where
                         .to(routes::v1::vessel::benchmarks::benchmarks::<T>),
                 )
                 .route(
+                    "/user_hauls",
+                    get()
+                        .guard(guard.clone())
+                        .to(routes::v1::user_haul::user_hauls::<T>),
+                )
+                .route(
+                    "/user_hauls/start",
+                    post()
+                        .guard(guard.clone())
+                        .to(routes::v1::user_haul::start_user_haul::<T>),
+                )
+                .route(
+                    "/user_hauls/stop",
+                    post()
+                        .guard(guard.clone())
+                        .to(routes::v1::user_haul::stop_user_haul::<T>),
+                )
+                .route(
+                    "/user_hauls/abort",
+                    post()
+                        .guard(guard.clone())
+                        .to(routes::v1::user_haul::abort_user_haul::<T>),
+                )
+                .route(
+                    "/user_hauls/current",
+                    get()
+                        .guard(guard.clone())
+                        .to(routes::v1::user_haul::current_user_haul::<T>),
+                )
+                .route(
+                    "/user_hauls/current",
+                    put()
+                        .guard(guard.clone())
+                        .to(routes::v1::user_haul::update_current_user_haul::<T>),
+                )
+                .route(
+                    "/user_hauls/{user_haul_id}",
+                    delete()
+                        .guard(guard.clone())
+                        .to(routes::v1::user_haul::delete_user_haul::<T>),
+                )
+                .route(
+                    "/user_hauls/{user_haul_id}",
+                    put()
+                        .guard(guard.clone())
+                        .to(routes::v1::user_haul::update_user_haul::<T>),
+                )
+                .route(
                     "/org/{org_id}/benchmarks",
                     get()
                         .guard(guard.clone())

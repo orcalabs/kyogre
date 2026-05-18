@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config\nFROM\n    user_hauls\nWHERE\n    call_sign = $1\n    AND end_ts IS NOT NULL\n    AND end_fuel_liter IS NOT NULL\nORDER BY\n    start_ts\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: UserHaulId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "start_ts",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "end_ts!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "start_fuel_liter",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "end_fuel_liter!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "config",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "26964398fbecb916fbe936ebb412f9e8ced00b7de7b53e19b061a916f02b269e"
+}

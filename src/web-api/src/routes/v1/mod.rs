@@ -10,6 +10,7 @@ pub mod org;
 pub mod species;
 pub mod trip;
 pub mod user;
+pub mod user_haul;
 pub mod vessel;
 pub mod vms;
 pub mod weather;

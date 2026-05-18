@@ -29,6 +29,7 @@ pub mod trip_benchmarks;
 pub mod unnest_insert;
 pub mod unnest_update;
 pub mod user;
+pub mod user_hauls;
 pub mod verify_database;
 pub mod vessel;
 pub mod vessel_benchmarks;

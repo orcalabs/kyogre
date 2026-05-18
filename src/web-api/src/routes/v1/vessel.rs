@@ -1,4 +1,4 @@
-use crate::error::error::UpdateVesselNotFoundSnafu;
+use crate::error::error::ObjectNotFoundSnafu;
 use crate::routes::v1::trip::VesselEvent;
 use crate::{
     Database,
@@ -13,8 +13,8 @@ use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, Vess
 use futures::TryStreamExt;
 use kyogre_core::{
     DEFAULT_LIVE_FUEL_THRESHOLD, EngineType, FisheryId, FiskeridirVesselId, FuelQuery,
-    LiveFuelQuery, Mmsi, NaiveDateRange, Ordering, Pagination, VesselCurrentTrip, VesselEventQuery,
-    VesselEventType, VesselEvents,
+    LiveFuelQuery, Mmsi, NaiveDateRange, Object, Ordering, Pagination, VesselCurrentTrip,
+    VesselEventQuery, VesselEventType, VesselEvents,
 };
 use kyogre_core::{LiveFuel, UpdateVessel};
 use oasgen::{OaSchema, oasgen};
@@ -92,8 +92,8 @@ pub async fn update_vessel<T: Database + Send + Sync + 'static>(
         db.update_vessel(&cs, &update)
             .await?
             .ok_or_else(|| {
-                UpdateVesselNotFoundSnafu {
-                    call_sign: cs.clone(),
+                ObjectNotFoundSnafu {
+                    object: Object::Vessel(cs.clone()),
                 }
                 .build()
             })?

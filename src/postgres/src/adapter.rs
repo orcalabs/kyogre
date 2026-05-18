@@ -659,6 +659,17 @@ impl LiveFuelInbound for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn current_user_haul(
+        &self,
+        call_sign: &CallSign,
+    ) -> WebApiResult<Option<StartedUserHaul>> {
+        Ok(retry(|| self.current_user_haul_impl(call_sign)).await?)
+    }
+
+    async fn user_hauls(&self, call_sign: &CallSign) -> WebApiResult<Vec<UserHaul>> {
+        Ok(retry(|| self.user_hauls_impl(call_sign)).await?)
+    }
+
     async fn selected_vessel(&self, id: BarentswatchUserId) -> WebApiResult<Option<CallSign>> {
         Ok(retry(|| self.selected_vessel_impl(id)).await?)
     }
@@ -878,6 +889,53 @@ impl WebApiOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl WebApiInboundPort for PostgresAdapter {
+    async fn update_user_haul(
+        &self,
+        call_sign: &CallSign,
+        id: UserHaulId,
+        update: &UpdateUserHaul,
+    ) -> WebApiResult<UserHaul> {
+        let haul = retry(|| self.update_user_haul_impl(call_sign, id, update)).await?;
+        Ok(haul)
+    }
+    async fn update_current_user_haul(
+        &self,
+        call_sign: &CallSign,
+        update: &HaulStart,
+    ) -> WebApiResult<StartedUserHaul> {
+        let haul = retry(|| self.update_current_user_haul_impl(call_sign, update)).await?;
+        Ok(haul)
+    }
+
+    async fn delete_user_haul(&self, call_sign: &CallSign, id: UserHaulId) -> WebApiResult<()> {
+        retry(|| self.delete_user_haul_impl(call_sign, id)).await?;
+        Ok(())
+    }
+
+    async fn start_user_haul(
+        &self,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+        start: &HaulStart,
+    ) -> WebApiResult<StartedUserHaul> {
+        let haul = retry(|| self.start_user_haul_impl(call_sign, user_id, start)).await?;
+        Ok(haul)
+    }
+    async fn stop_user_haul(
+        &self,
+        call_sign: &CallSign,
+        end: &HaulEnd,
+        barentswatch_user_id: BarentswatchUserId,
+    ) -> WebApiResult<UserHaul> {
+        let user_haul =
+            retry(|| self.stop_user_haul_impl(call_sign, end, barentswatch_user_id)).await?;
+        Ok(user_haul)
+    }
+    async fn abort_user_haul(&self, call_sign: &CallSign) -> WebApiResult<()> {
+        retry(|| self.abort_user_haul_impl(call_sign)).await?;
+        Ok(())
+    }
+
     async fn update_user(
         &self,
         user: &kyogre_core::UpdateUser,
