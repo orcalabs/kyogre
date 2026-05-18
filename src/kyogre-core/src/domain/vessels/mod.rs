@@ -1,6 +1,6 @@
 use super::{Draught, VesselCurrentTrip};
 use crate::mean::Mean;
-use crate::{AisVessel, Mmsi, TripAssemblerId};
+use crate::{AisVessel, FisheryId, Mmsi, TripAssemblerId};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{
     CallSign, FiskeridirVesselId, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup,
@@ -109,6 +109,7 @@ pub struct Vessel {
     pub species_groups: Vec<SpeciesGroup>,
     pub current_trip: Option<VesselCurrentTrip>,
     pub is_active: bool,
+    pub fishery_id: Option<FisheryId>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

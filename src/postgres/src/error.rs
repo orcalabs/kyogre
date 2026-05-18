@@ -17,6 +17,12 @@ impl IsTimeout for Error {
 #[derive(Snafu, StackError)]
 #[snafu(visibility(pub(crate)))]
 pub enum Error {
+    #[snafu(display("Selected vessel with '{call_sign}' not found"))]
+    InvalidVesselSelection {
+        #[snafu(implicit)]
+        location: Location,
+        call_sign: CallSign,
+    },
     #[snafu(display("The callsign '{call_sign}' does not exist"))]
     CallSignDoesNotExist {
         #[snafu(implicit)]
@@ -209,6 +215,7 @@ impl From<Error> for kyogre_core::Error {
                 opaque: OpaqueError::Stack(Box::new(value)),
             },
             Error::Conversion { .. }
+            | Error::InvalidVesselSelection { .. }
             | Error::MissingValue { .. }
             | Error::Json { .. }
             | Error::TripPositionMatch { .. }
@@ -242,6 +249,13 @@ impl From<Error> for kyogre_core::WebApiError {
                     opaque: OpaqueError::Stack(Box::new(value)),
                 }
             }
+            Error::InvalidVesselSelection {
+                location,
+                call_sign,
+            } => kyogre_core::WebApiError::InvalidVesselSelection {
+                location,
+                call_sign: call_sign.clone(),
+            },
             Error::Conversion { .. }
             | Error::MissingValue { .. }
             | Error::Json { .. }

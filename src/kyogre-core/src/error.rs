@@ -47,6 +47,12 @@ impl IsTimeout for std::io::Error {
 #[derive(Snafu, StackError)]
 #[snafu(module)]
 pub enum WebApiError {
+    #[snafu(display("Selected vessel with '{call_sign}' not found"))]
+    InvalidVesselSelection {
+        #[snafu(implicit)]
+        location: Location,
+        call_sign: CallSign,
+    },
     #[snafu(display("The callsign '{call_sign}' does not exist"))]
     CallSignDoesNotExist {
         #[snafu(implicit)]

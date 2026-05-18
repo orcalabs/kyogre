@@ -40,7 +40,7 @@ pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
     profile: BwProfile,
     params: Query<FuelMeasurementsParams>,
 ) -> Result<StreamResponse<FuelMeasurement>> {
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().to_query(call_sign.clone());
 
     let response = stream_response! {
@@ -71,9 +71,9 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     };
 
     let user_id = profile.user.id;
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
 
-    let measurements = db.add_fuel_measurements(&body, call_sign, user_id).await?;
+    let measurements = db.add_fuel_measurements(&body, &call_sign, user_id).await?;
 
     Ok(Response::new(measurements))
 }
@@ -86,7 +86,7 @@ pub async fn upload_fuel_measurements<T: Database + 'static>(
     body: web::Json<UploadFuelMeasurement>,
 ) -> Result<Response<Vec<FuelMeasurement>>> {
     let user_id = profile.user.id;
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
 
     #[derive(Deserialize)]
     struct Record {
@@ -107,7 +107,7 @@ pub async fn upload_fuel_measurements<T: Database + 'static>(
         .collect::<Vec<_>>();
 
     let measurements = db
-        .add_fuel_measurements(&measurements, call_sign, user_id)
+        .add_fuel_measurements(&measurements, &call_sign, user_id)
         .await?;
 
     Ok(Response::new(measurements))
@@ -134,9 +134,9 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     };
 
     let user_id = profile.user.id;
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
 
-    db.update_fuel_measurements(&body, call_sign, user_id)
+    db.update_fuel_measurements(&body, &call_sign, user_id)
         .await?;
 
     Ok(Response::new(()))
@@ -149,9 +149,9 @@ pub async fn delete_fuel_measurements<T: Database + 'static>(
     profile: BwProfile,
     body: web::Json<Vec<DeleteFuelMeasurement>>,
 ) -> Result<Response<()>> {
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
 
-    db.delete_fuel_measurements(&body.into_inner(), call_sign)
+    db.delete_fuel_measurements(&body.into_inner(), &call_sign)
         .await?;
     Ok(Response::new(()))
 }

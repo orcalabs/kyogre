@@ -36,6 +36,7 @@ async fn test_vessel_benchmarks_returns_correct_averages_for_followers() {
                     state.vessels[2].fiskeridir.id,
                 ]),
                 fuel_consent: None,
+                selected_vessel: None,
             })
             .await
             .unwrap();

@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 use super::BearerToken;
 use crate::{
+    Database,
     error::{
         Error, Result,
         error::{MissingBwFiskInfoProfileSnafu, MissingJWTSnafu},
@@ -123,11 +124,20 @@ impl BwProfile {
 }
 
 impl OptionBwProfile {
-    pub fn call_sign(&self) -> Option<&CallSign> {
-        self.0
-            .as_ref()
-            .and_then(|v| v.fisk_info_profile.as_ref().map(|p| p.ircs.as_ref()))
-            .flatten()
+    pub async fn call_sign<T: Database>(&self, adapter: &T) -> Result<Option<CallSign>> {
+        if let Some(user) = &self.0 {
+            if let Some(cs) = adapter.selected_vessel(user.user.id).await? {
+                Ok(Some(cs))
+            } else {
+                Ok(self
+                    .0
+                    .as_ref()
+                    .and_then(|v| v.fisk_info_profile.as_ref().map(|p| p.ircs.clone()))
+                    .flatten())
+            }
+        } else {
+            Ok(None)
+        }
     }
     pub fn tracing_id(&self) -> String {
         self.0
@@ -298,17 +308,15 @@ impl BwProfile {
         Ok(profile)
     }
 
-    pub fn call_sign(&self) -> Result<&CallSign> {
-        self.fisk_info_profile
-            .as_ref()
-            .and_then(|v| v.ircs.as_ref())
-            .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
-    }
-
-    pub fn into_call_sign(self) -> Result<CallSign> {
-        self.fisk_info_profile
-            .and_then(|v| v.ircs)
-            .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
+    pub async fn call_sign<T: Database>(&self, adapter: &T) -> Result<CallSign> {
+        if let Some(cs) = adapter.selected_vessel(self.user.id).await? {
+            Ok(cs)
+        } else {
+            self.fisk_info_profile
+                .as_ref()
+                .and_then(|v| v.ircs.clone())
+                .ok_or_else(|| MissingBwFiskInfoProfileSnafu.build())
+        }
     }
 }
 

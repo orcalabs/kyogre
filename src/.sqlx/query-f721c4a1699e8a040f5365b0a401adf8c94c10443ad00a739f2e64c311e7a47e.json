@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    $1::UUID AS \"barentswatch_user_id!: BarentswatchUserId\",\n    COALESCE(\n        (\n            SELECT\n                ARRAY_AGG(fiskeridir_vessel_id)\n            FROM\n                user_follows\n            WHERE\n                barentswatch_user_id = $1\n            GROUP BY\n                barentswatch_user_id\n        ),\n        '{}'\n    ) AS \"following!: Vec<FiskeridirVesselId>\",\n    (\n        SELECT\n            fuel_consent\n        FROM\n            user_settings\n        WHERE\n            barentswatch_user_id = $1\n    ) AS fuel_consent,\n    (\n        SELECT\n            selected_vessel_call_sign\n        FROM\n            user_settings\n        WHERE\n            barentswatch_user_id = $1\n    ) AS \"selected_vessel: CallSign\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "barentswatch_user_id!: BarentswatchUserId",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "following!: Vec<FiskeridirVesselId>",
+        "type_info": "Int8Array"
+      },
+      {
+        "ordinal": 2,
+        "name": "fuel_consent",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "selected_vessel: CallSign",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f721c4a1699e8a040f5365b0a401adf8c94c10443ad00a739f2e64c311e7a47e"
+}

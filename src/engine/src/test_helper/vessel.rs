@@ -26,6 +26,8 @@ pub struct VesselContructor {
     pub ais: NewAisStatic,
     pub cycle: Cycle,
     pub set_engine_building_year: bool,
+    // Creates a new fishery for each unique fishery_id
+    pub fishery_id: Option<i32>,
     pub(crate) clear_trip_precision: bool,
     pub(crate) clear_trip_distancing: bool,
     pub(crate) active_vessel: Option<bool>,

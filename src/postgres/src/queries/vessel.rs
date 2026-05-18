@@ -10,8 +10,8 @@ use fiskeridir_rs::{CallSign, GearGroup, OrgId, SpeciesGroup, VesselLengthGroup}
 use futures::{Stream, TryStreamExt};
 use kyogre_core::Draught;
 use kyogre_core::{
-    ActiveVesselConflict, EngineType, FiskeridirVesselId, HasTrack, Mmsi, TripAssemblerId, Vessel,
-    VesselSource,
+    ActiveVesselConflict, EngineType, FisheryId, FiskeridirVesselId, HasTrack, Mmsi,
+    TripAssemblerId, Vessel, VesselSource,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -47,6 +47,7 @@ SELECT
     f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
+    f.fishery_id AS "fiskeridir_fishery_id?: FisheryId",
     v.call_sign AS "fiskeridir_call_sign: CallSign",
     f."name" AS fiskeridir_name,
     f.registration_id AS fiskeridir_registration_id,
@@ -484,6 +485,7 @@ SELECT
     f.preferred_trip_assembler AS "preferred_trip_assembler!: TripAssemblerId",
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     f.fiskeridir_length_group_id AS "fiskeridir_length_group_id!: VesselLengthGroup",
+    f.fishery_id AS "fiskeridir_fishery_id?: FisheryId",
     v.call_sign AS "fiskeridir_call_sign: CallSign",
     f."name" AS fiskeridir_name,
     f.registration_id AS fiskeridir_registration_id,

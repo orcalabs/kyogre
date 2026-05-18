@@ -33,7 +33,7 @@ pub async fn benchmarks<T: Database + 'static>(
     params: Query<OrgBenchmarkParameters>,
     path: Path<OrgBenchmarkPath>,
 ) -> Result<Response<OrgBenchmarks>> {
-    let call_sign = profile.into_call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().into_query(call_sign, path.org_id);
 
     match db.org_benchmarks(&query).await? {
@@ -57,7 +57,7 @@ pub async fn fuel<T: Database + Send + Sync + 'static>(
     params: Query<FuelParams>,
     path: Path<OrgFuelPath>,
 ) -> Result<Response<Vec<FuelEntry>>> {
-    let call_sign = profile.into_call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().to_query(call_sign);
 
     let org_id = path.into_inner().org_id;

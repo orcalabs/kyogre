@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use fiskeridir_rs::{CallSign, DeliveryPointId, Gear};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::{
-    AisVmsPosition, Arrival, DateRange, DeliveryPoint, Departure, FiskeridirVesselId,
+    AisVmsPosition, Arrival, DateRange, DeliveryPoint, Departure, FisheryId, FiskeridirVesselId,
     FuelMeasurementRange, Mmsi, NavigationStatus, NewVesselConflict, PortDockPoint, PositionType,
     ProcessingStatus, TripPositionLayerId, VesselEventType,
 };
@@ -19,6 +19,45 @@ use crate::{
 use super::vms::VmsPositionsArg;
 
 impl PostgresAdapter {
+    pub(crate) async fn add_fisheries_impl(
+        &self,
+        fisheries: Vec<(FiskeridirVesselId, FisheryId)>,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+        for f in fisheries {
+            sqlx::query!(
+                r#"
+INSERT INTO
+    fisheries (fishery_id, name)
+VALUES
+    ($1, $2)
+ON CONFLICT (fishery_id) DO NOTHING
+                "#,
+                f.1 as FisheryId,
+                f.1.to_string()
+            )
+            .execute(&mut *tx)
+            .await?;
+
+            sqlx::query!(
+                r#"
+UPDATE fiskeridir_vessels
+SET
+    fishery_id = $1
+WHERE
+    fiskeridir_vessel_id = $2
+                "#,
+                f.1 as FisheryId,
+                f.0 as FiskeridirVesselId
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(())
+    }
     pub(crate) async fn all_fuel_measurement_ranges_impl(
         &self,
     ) -> Result<Vec<FuelMeasurementRange>> {

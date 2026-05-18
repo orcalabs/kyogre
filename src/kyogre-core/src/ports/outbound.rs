@@ -23,6 +23,7 @@ pub type PinBoxStream<'a, T> = Pin<Box<dyn Stream<Item = WebApiResult<T>> + Send
 
 #[async_trait]
 pub trait WebApiOutboundPort {
+    async fn selected_vessel(&self, id: BarentswatchUserId) -> WebApiResult<Option<CallSign>>;
     fn current_positions(
         &self,
         limit: Option<DateTime<Utc>>,

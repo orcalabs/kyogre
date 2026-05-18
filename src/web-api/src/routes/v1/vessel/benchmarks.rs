@@ -10,8 +10,8 @@ pub async fn benchmarks<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
 ) -> Result<Response<VesselBenchmarks>> {
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     Ok(Response::new(
-        db.vessel_benchmarks(&profile.user.id, call_sign).await?,
+        db.vessel_benchmarks(&profile.user.id, &call_sign).await?,
     ))
 }

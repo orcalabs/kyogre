@@ -12,9 +12,9 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, RegisterVesselOwner, SpeciesGroup, VesselLengthGroup};
 use futures::TryStreamExt;
 use kyogre_core::{
-    DEFAULT_LIVE_FUEL_THRESHOLD, EngineType, FiskeridirVesselId, FuelQuery, LiveFuelQuery, Mmsi,
-    NaiveDateRange, Ordering, Pagination, VesselCurrentTrip, VesselEventQuery, VesselEventType,
-    VesselEvents,
+    DEFAULT_LIVE_FUEL_THRESHOLD, EngineType, FisheryId, FiskeridirVesselId, FuelQuery,
+    LiveFuelQuery, Mmsi, NaiveDateRange, Ordering, Pagination, VesselCurrentTrip, VesselEventQuery,
+    VesselEventType, VesselEvents,
 };
 use kyogre_core::{LiveFuel, UpdateVessel};
 use oasgen::{OaSchema, oasgen};
@@ -86,10 +86,10 @@ pub async fn update_vessel<T: Database + Send + Sync + 'static>(
     profile: BwProfile,
     update: web::Json<UpdateVessel>,
 ) -> Result<Response<Vessel>> {
-    let cs = profile.call_sign()?;
+    let cs = profile.call_sign(db.as_ref()).await?;
 
     Ok(Response::new(
-        db.update_vessel(cs, &update)
+        db.update_vessel(&cs, &update)
             .await?
             .ok_or_else(|| {
                 UpdateVesselNotFoundSnafu {
@@ -135,7 +135,7 @@ pub async fn fuel<T: Database + Send + Sync + 'static>(
     profile: BwProfile,
     params: Query<FuelParams>,
 ) -> Result<Response<f64>> {
-    let call_sign = profile.into_call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().to_query(call_sign);
 
     Ok(Response::new(db.fuel_estimation(&query).await?))
@@ -148,7 +148,7 @@ pub async fn live_fuel<T: Database + Send + Sync + 'static>(
     profile: BwProfile,
     params: Query<LiveFuelParams>,
 ) -> Result<Response<LiveFuel>> {
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().to_query(call_sign.clone());
 
     Ok(Response::new(db.live_fuel(&query).await?))
@@ -166,6 +166,7 @@ pub struct Vessel {
     pub species_groups: Vec<SpeciesGroup>,
     pub current_trip: Option<VesselCurrentTrip>,
     pub is_active: bool,
+    pub fishery_id: Option<FisheryId>,
 }
 
 impl Vessel {
@@ -246,6 +247,7 @@ impl From<kyogre_core::Vessel> for Vessel {
             species_groups,
             current_trip,
             is_active,
+            fishery_id,
         } = value;
 
         Vessel {
@@ -255,6 +257,7 @@ impl From<kyogre_core::Vessel> for Vessel {
             species_groups,
             current_trip,
             is_active,
+            fishery_id,
         }
     }
 }
