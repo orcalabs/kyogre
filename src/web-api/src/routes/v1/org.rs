@@ -1,9 +1,11 @@
 use super::vessel::FuelParams;
-use crate::error::error::OrgNotFoundSnafu;
+use crate::error::error::ObjectNotFoundSnafu;
 use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web::{self, Path};
 use fiskeridir_rs::{CallSign, OrgId};
-use kyogre_core::{DateTimeRangeWithDefaultTimeSpan, FuelEntry, OrgBenchmarkQuery, OrgBenchmarks};
+use kyogre_core::{
+    DateTimeRangeWithDefaultTimeSpan, FuelEntry, Object, OrgBenchmarkQuery, OrgBenchmarks,
+};
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
@@ -38,8 +40,8 @@ pub async fn benchmarks<T: Database + 'static>(
 
     match db.org_benchmarks(&query).await? {
         Some(b) => Ok(Response::new(b)),
-        None => OrgNotFoundSnafu {
-            org_id: path.org_id,
+        None => ObjectNotFoundSnafu {
+            object: Object::Org(path.org_id),
         }
         .fail(),
     }
@@ -63,7 +65,10 @@ pub async fn fuel<T: Database + Send + Sync + 'static>(
     let org_id = path.into_inner().org_id;
     match db.fuel_estimation_by_org(&query, org_id).await? {
         Some(b) => Ok(Response::new(b)),
-        None => OrgNotFoundSnafu { org_id }.fail(),
+        None => ObjectNotFoundSnafu {
+            object: Object::Org(org_id),
+        }
+        .fail(),
     }
 }
 

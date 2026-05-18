@@ -1,6 +1,6 @@
-use crate::IsTimeout;
+use crate::{IsTimeout, UserHaulId};
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, OrgId};
 use snafu::{Location, Snafu};
 use stack_error::{OpaqueError, StackError};
 use std::num::ParseIntError;
@@ -44,9 +44,31 @@ impl IsTimeout for std::io::Error {
     }
 }
 
+/// All objects that has a not found scenario.
+#[derive(Debug, Clone, strum::Display)]
+pub enum Object {
+    #[strum(to_string = "UserHaul with id: '{0}' not found")]
+    UserHaul(UserHaulId),
+    #[strum(to_string = "The org '{0}' was not found")]
+    Org(OrgId),
+    #[strum(to_string = "The vessel with call_sign '{0}' was not found")]
+    Vessel(CallSign),
+}
+
 #[derive(Snafu, StackError)]
 #[snafu(module)]
 pub enum WebApiError {
+    #[snafu(display("{object}"))]
+    ObjectNotFound {
+        #[snafu(implicit)]
+        location: Location,
+        object: Object,
+    },
+    #[snafu(display("No current active UserHaul"))]
+    NoActiveUserHaul {
+        #[snafu(implicit)]
+        location: Location,
+    },
     #[snafu(display("Selected vessel with '{call_sign}' not found"))]
     InvalidVesselSelection {
         #[snafu(implicit)]

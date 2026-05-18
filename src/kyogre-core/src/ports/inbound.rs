@@ -56,6 +56,32 @@ pub trait AisMigratorDestination {
 
 #[async_trait]
 pub trait WebApiInboundPort {
+    async fn start_user_haul(
+        &self,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+        start: &HaulStart,
+    ) -> WebApiResult<StartedUserHaul>;
+    async fn stop_user_haul(
+        &self,
+        call_sign: &CallSign,
+        end: &HaulEnd,
+        barentswatch_user_id: BarentswatchUserId,
+    ) -> WebApiResult<UserHaul>;
+    async fn abort_user_haul(&self, call_sign: &CallSign) -> WebApiResult<()>;
+    async fn delete_user_haul(&self, call_sign: &CallSign, id: UserHaulId) -> WebApiResult<()>;
+    async fn update_user_haul(
+        &self,
+        call_sign: &CallSign,
+        id: UserHaulId,
+        update: &UpdateUserHaul,
+    ) -> WebApiResult<UserHaul>;
+    async fn update_current_user_haul(
+        &self,
+        call_sign: &CallSign,
+        update: &HaulStart,
+    ) -> WebApiResult<StartedUserHaul>;
+
     async fn update_user(
         &self,
         user: &UpdateUser,

@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    call_sign\nFROM\n    user_hauls\nWHERE\n    call_sign = $1\n    AND end_ts IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "call_sign",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6d342281b892c77019a9562962f09e90d5ae8570d405f06d229b9d7ae73b58f0"
+}

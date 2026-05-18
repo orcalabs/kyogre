@@ -23,6 +23,11 @@ pub type PinBoxStream<'a, T> = Pin<Box<dyn Stream<Item = WebApiResult<T>> + Send
 
 #[async_trait]
 pub trait WebApiOutboundPort {
+    async fn user_hauls(&self, call_sign: &CallSign) -> WebApiResult<Vec<UserHaul>>;
+    async fn current_user_haul(
+        &self,
+        call_sign: &CallSign,
+    ) -> WebApiResult<Option<StartedUserHaul>>;
     async fn selected_vessel(&self, id: BarentswatchUserId) -> WebApiResult<Option<CallSign>>;
     fn current_positions(
         &self,

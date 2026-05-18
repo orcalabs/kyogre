@@ -1,11 +1,39 @@
 use crate::{
     PostgresAdapter,
-    error::{CallSignDoesNotExistSnafu, InvalidVesselSelectionSnafu, Result},
+    error::{
+        CallSignDoesNotExistSnafu, InvalidVesselSelectionSnafu, NoActiveUserHaulSnafu, Result,
+    },
 };
 use fiskeridir_rs::{CallSign, OrgId};
 use kyogre_core::FiskeridirVesselId;
 
 impl PostgresAdapter {
+    pub async fn assert_user_haul_is_in_progress(
+        &self,
+        call_sign: &CallSign,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        let record = sqlx::query!(
+            r#"
+SELECT
+    call_sign
+FROM
+    user_hauls
+WHERE
+    call_sign = $1
+    AND end_ts IS NULL
+            "#,
+            call_sign
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if record.is_some() {
+            Ok(())
+        } else {
+            NoActiveUserHaulSnafu {}.fail()
+        }
+    }
     pub async fn assert_call_signs_are_connected_to_same_fishery(
         &self,
         update: &kyogre_core::UpdateSelectedVessel,

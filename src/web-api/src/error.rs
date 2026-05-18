@@ -5,8 +5,8 @@ use actix_web::{
     http::{StatusCode, header::ToStrError},
 };
 use chrono::{DateTime, Utc};
-use fiskeridir_rs::{CallSign, OrgId, ParseStringError};
-use kyogre_core::{DateRangeError, WebApiError};
+use fiskeridir_rs::{CallSign, ParseStringError};
+use kyogre_core::{DateRangeError, Object, WebApiError};
 use oasgen::OaSchema;
 use serde::{Deserialize, Serialize};
 use snafu::{Location, Snafu};
@@ -40,6 +40,17 @@ pub enum JWTDecodeError {
 #[strum_discriminants(derive(Deserialize, Serialize, OaSchema))]
 #[snafu(module, visibility(pub))]
 pub enum Error {
+    #[snafu(display("{object}"))]
+    ObjectNotFound {
+        #[snafu(implicit)]
+        location: Location,
+        object: Object,
+    },
+    #[snafu(display("No current active UserHaul"))]
+    NoActiveUserHaul {
+        #[snafu(implicit)]
+        location: Location,
+    },
     #[snafu(display("Selected vessel with '{call_sign}' not found"))]
     InvalidVesselSelection {
         #[snafu(implicit)]
@@ -158,18 +169,6 @@ pub enum Error {
         location: Location,
         error: QueryPayloadError,
     },
-    #[snafu(display("The vessel with call_sign '{call_sign}' was not found"))]
-    UpdateVesselNotFound {
-        #[snafu(implicit)]
-        location: Location,
-        call_sign: CallSign,
-    },
-    #[snafu(display("The org '{org_id}' was not found"))]
-    OrgNotFound {
-        #[snafu(implicit)]
-        location: Location,
-        org_id: OrgId,
-    },
     #[snafu(display("The callsign '{call_sign}' does not exist"))]
     CallSignDoesNotExist {
         #[snafu(implicit)]
@@ -210,10 +209,11 @@ impl ResponseError for Error {
             | CallSignDoesNotExist
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
+            NoActiveUserHaul => StatusCode::CONFLICT,
             MissingJWT | InvalidJWT | ParseJWT | JWTDecode | UnknownIssuer | InvalidJWTParts => {
                 StatusCode::UNAUTHORIZED
             }
-            InvalidVesselSelection | UpdateVesselNotFound | OrgNotFound => StatusCode::NOT_FOUND,
+            InvalidVesselSelection | ObjectNotFound => StatusCode::NOT_FOUND,
             Unexpected => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -249,6 +249,10 @@ impl From<WebApiError> for Error {
                 location,
                 call_sign,
             },
+            WebApiError::NoActiveUserHaul { location } => Error::NoActiveUserHaul { location },
+            WebApiError::ObjectNotFound { location, object } => {
+                Error::ObjectNotFound { location, object }
+            }
         }
     }
 }

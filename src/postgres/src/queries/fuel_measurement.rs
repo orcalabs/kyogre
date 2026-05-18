@@ -277,6 +277,24 @@ RETURNING
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
     ) -> Result<Vec<kyogre_core::FuelMeasurement>> {
+        let mut tx = self.pool.begin().await?;
+
+        let out = self
+            .add_fuel_measurements_tx(measurements, call_sign, user_id, &mut tx)
+            .await?;
+
+        tx.commit().await?;
+
+        Ok(out)
+    }
+
+    pub(crate) async fn add_fuel_measurements_tx(
+        &self,
+        measurements: &[kyogre_core::CreateFuelMeasurement],
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<Vec<kyogre_core::FuelMeasurement>> {
         let mut fuel = Vec::with_capacity(measurements.len());
         let mut call_signs = Vec::with_capacity(measurements.len());
         let mut user_ids = Vec::with_capacity(measurements.len());
@@ -290,9 +308,7 @@ RETURNING
             fuel_after.push(m.fuel_after_liter);
         }
 
-        let mut tx = self.pool.begin().await?;
-
-        self.assert_call_sign_exists(call_sign, &mut *tx).await?;
+        self.assert_call_sign_exists(call_sign, &mut **tx).await?;
 
         #[derive(Debug)]
         struct Intermediate {
@@ -380,7 +396,7 @@ FROM
             &fuel_after as &[Option<f64>],
             ProcessingStatus::Unprocessed as i32
         )
-        .fetch_all(&mut *tx)
+        .fetch_all(&mut **tx)
         .await?;
 
         let mut vessel_ids = Vec::with_capacity(measurements.len());
@@ -409,11 +425,9 @@ FROM
             &ts,
             &fuel,
             &fuel_after,
-            &mut tx,
+            &mut *tx,
         )
         .await?;
-
-        tx.commit().await?;
 
         Ok(out)
     }
