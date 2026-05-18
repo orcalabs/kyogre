@@ -10,7 +10,7 @@ use chrono::{DateTime, Duration, TimeZone, Utc};
 use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
 use futures::TryStreamExt;
 use kyogre_core::{
-    BuyerLocation, FiskeridirVesselId, NewVesselConflict, NewWeather, TestStorage, Tra,
+    BuyerLocation, FisheryId, FiskeridirVesselId, NewVesselConflict, NewWeather, TestStorage, Tra,
     TripAssembler, TripDistancer, TripPositionLayer, UpdateVessel, WeeklySale, WeeklySaleId,
 };
 use machine::StateMachine;
@@ -487,6 +487,7 @@ impl TestStateBuilder {
                 clear_trip_distancing: false,
                 active_vessel: None,
                 set_engine_building_year: false,
+                fishery_id: None,
             });
 
             self.ers_message_number_per_vessel.insert(key, 1);
@@ -625,6 +626,17 @@ impl TestStateBuilder {
             for v in vessel_updates {
                 self.storage.update_vessel(v.0, &v.1).await.unwrap();
             }
+
+            let fisheries: Vec<(FiskeridirVesselId, FisheryId)> = self
+                .vessels
+                .iter()
+                .filter_map(|v| {
+                    v.fishery_id
+                        .map(|fishery_id| (v.fiskeridir.id, FisheryId::test_new(fishery_id)))
+                })
+                .collect();
+
+            self.storage.add_fisheries(fisheries).await;
 
             self.storage
                 .add_ers_dca(Box::new(

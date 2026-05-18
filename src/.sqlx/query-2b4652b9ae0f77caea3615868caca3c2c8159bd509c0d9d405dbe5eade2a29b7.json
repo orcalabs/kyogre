@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    current_vessel_fishery_id AS (\n        SELECT\n            f.fishery_id\n        FROM\n            all_vessels a\n            INNER JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign\n        WHERE\n            a.call_sign = $1\n    )\nSELECT\n    f.fishery_id\nFROM\n    all_vessels a\n    INNER JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign\n    INNER JOIN current_vessel_fishery_id c ON f.fishery_id = c.fishery_id\nWHERE\n    a.call_sign = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fishery_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "2b4652b9ae0f77caea3615868caca3c2c8159bd509c0d9d405dbe5eade2a29b7"
+}

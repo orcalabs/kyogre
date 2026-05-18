@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fisheries (fishery_id, name)\nVALUES\n    ($1, $2)\nON CONFLICT (fishery_id) DO NOTHING\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5a1262985d2558c0314ad12e16914bc0eded379abb57e58fe534bf0ecfd3e117"
+}

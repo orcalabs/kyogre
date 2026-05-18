@@ -40,6 +40,12 @@ pub enum JWTDecodeError {
 #[strum_discriminants(derive(Deserialize, Serialize, OaSchema))]
 #[snafu(module, visibility(pub))]
 pub enum Error {
+    #[snafu(display("Selected vessel with '{call_sign}' not found"))]
+    InvalidVesselSelection {
+        #[snafu(implicit)]
+        location: Location,
+        call_sign: CallSign,
+    },
     #[snafu(display(
         "Fuel after '{fuel_after_liter}' cannot be lower or equal to fuel '{fuel_liter}'"
     ))]
@@ -207,7 +213,7 @@ impl ResponseError for Error {
             MissingJWT | InvalidJWT | ParseJWT | JWTDecode | UnknownIssuer | InvalidJWTParts => {
                 StatusCode::UNAUTHORIZED
             }
-            UpdateVesselNotFound | OrgNotFound => StatusCode::NOT_FOUND,
+            InvalidVesselSelection | UpdateVesselNotFound | OrgNotFound => StatusCode::NOT_FOUND,
             Unexpected => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
@@ -236,6 +242,13 @@ impl From<WebApiError> for Error {
             WebApiError::Timeout { opaque, .. } | WebApiError::Unexpected { opaque, .. } => {
                 Error::Unexpected { location, opaque }
             }
+            WebApiError::InvalidVesselSelection {
+                location,
+                call_sign,
+            } => Error::InvalidVesselSelection {
+                location,
+                call_sign,
+            },
         }
     }
 }

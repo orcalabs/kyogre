@@ -99,7 +99,7 @@ pub async fn benchmarks<T: Database>(
     profile: BwProfile,
     params: Query<TripBenchmarksParams>,
 ) -> Result<Response<TripBenchmarks>> {
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().into_query(call_sign.clone());
 
     let benchmarks = db.trip_benchmarks(query).await?.into();
@@ -114,7 +114,7 @@ pub async fn fui<T: Database>(
     profile: BwProfile,
     params: Query<FuiParams>,
 ) -> Result<Response<Option<f64>>> {
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().into_query(call_sign.clone());
 
     let fui = db.fui(query).await?;
@@ -142,7 +142,7 @@ pub async fn eeoi<T: Database>(
     profile: BwProfile,
     params: Query<EeoiParams>,
 ) -> Result<Response<Option<f64>>> {
-    let call_sign = profile.call_sign()?;
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().into_query(call_sign.clone());
 
     let eeoi = db.eeoi(query).await?;

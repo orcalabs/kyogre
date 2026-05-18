@@ -1,8 +1,28 @@
+use crate::{PostgresAdapter, error::Result};
+use fiskeridir_rs::CallSign;
 use kyogre_core::{BarentswatchUserId, FiskeridirVesselId, User};
 
-use crate::{PostgresAdapter, error::Result};
-
 impl PostgresAdapter {
+    pub(crate) async fn selected_vessel_impl(
+        &self,
+        id: BarentswatchUserId,
+    ) -> Result<Option<CallSign>> {
+        let cs = sqlx::query!(
+            r#"
+SELECT
+    selected_vessel_call_sign AS "selected_vessel_call_sign: CallSign"
+FROM
+    user_settings
+WHERE
+    barentswatch_user_id = $1
+            "#,
+            id.as_ref(),
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(cs.and_then(|c| c.selected_vessel_call_sign))
+    }
     pub(crate) async fn get_user_impl(&self, user_id: BarentswatchUserId) -> Result<User> {
         let user = sqlx::query_as!(
             User,
@@ -29,7 +49,15 @@ SELECT
             user_settings
         WHERE
             barentswatch_user_id = $1
-    ) AS fuel_consent;
+    ) AS fuel_consent,
+    (
+        SELECT
+            selected_vessel_call_sign
+        FROM
+            user_settings
+        WHERE
+            barentswatch_user_id = $1
+    ) AS "selected_vessel: CallSign"
             "#,
             user_id.as_ref(),
         )
@@ -43,14 +71,42 @@ SELECT
         &self,
         user: &kyogre_core::UpdateUser,
         id: BarentswatchUserId,
+        update_selected_vessel: &Option<kyogre_core::UpdateSelectedVessel>,
     ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 
-        if let Some(following) = &user.following {
+        let kyogre_core::UpdateUser {
+            following,
+            fuel_consent,
+            // Provided by 'update_selected_vessel'
+            selected_vessel: _,
+        } = user;
+
+        if let Some(following) = following {
             self.update_user_follows(id, following, &mut tx).await?;
         }
 
-        if let Some(consent) = user.fuel_consent {
+        if let Some(selected_vessel) = update_selected_vessel {
+            self.assert_call_signs_are_connected_to_same_fishery(selected_vessel, &mut tx)
+                .await?;
+            sqlx::query!(
+                r#"
+INSERT INTO
+    user_settings (barentswatch_user_id, selected_vessel_call_sign)
+VALUES
+    ($1, $2)
+ON CONFLICT (barentswatch_user_id) DO UPDATE
+SET
+    selected_vessel_call_sign = EXCLUDED.selected_vessel_call_sign
+            "#,
+                id as BarentswatchUserId,
+                &selected_vessel.selected_vessel,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        if let Some(consent) = fuel_consent {
             sqlx::query!(
                 r#"
 INSERT INTO

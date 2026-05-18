@@ -452,6 +452,9 @@ impl DailyWeatherInbound for PostgresAdapter {
 #[cfg(feature = "test")]
 #[async_trait]
 impl TestHelperInbound for PostgresAdapter {
+    async fn add_fisheries(&self, fisheries: Vec<(FiskeridirVesselId, FisheryId)>) {
+        self.add_fisheries_impl(fisheries).await.unwrap();
+    }
     async fn manual_vessel_conflict_override(&self, overrides: Vec<NewVesselConflict>) {
         self.manual_conflict_override_impl(overrides).await.unwrap();
     }
@@ -656,6 +659,9 @@ impl LiveFuelInbound for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn selected_vessel(&self, id: BarentswatchUserId) -> WebApiResult<Option<CallSign>> {
+        Ok(retry(|| self.selected_vessel_impl(id)).await?)
+    }
     fn vessel_events(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -876,8 +882,9 @@ impl WebApiInboundPort for PostgresAdapter {
         &self,
         user: &kyogre_core::UpdateUser,
         id: BarentswatchUserId,
+        update_selected_vessel: &Option<UpdateSelectedVessel>,
     ) -> WebApiResult<()> {
-        retry(|| self.update_user_impl(user, id)).await?;
+        retry(|| self.update_user_impl(user, id, update_selected_vessel)).await?;
         Ok(())
     }
     async fn add_fuel_measurements(

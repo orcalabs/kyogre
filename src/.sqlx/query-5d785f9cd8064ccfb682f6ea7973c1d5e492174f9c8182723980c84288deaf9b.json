@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    selected_vessel_call_sign AS \"selected_vessel_call_sign: CallSign\"\nFROM\n    user_settings\nWHERE\n    barentswatch_user_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "selected_vessel_call_sign: CallSign",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "5d785f9cd8064ccfb682f6ea7973c1d5e492174f9c8182723980c84288deaf9b"
+}

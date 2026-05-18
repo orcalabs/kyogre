@@ -8,7 +8,7 @@ use fiskeridir_rs::{
     VesselType,
 };
 use kyogre_core::{
-    AisVessel, Draught, EngineType, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month,
+    AisVessel, Draught, EngineType, FisheryId, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month,
     TripAssemblerId, VesselCurrentTrip, VesselSource,
 };
 use serde::Deserialize;
@@ -314,6 +314,7 @@ pub struct FiskeridirAisVesselCombination {
     pub fiskeridir_engine_version: i32,
     pub fiskeridir_degree_of_electrification: Option<f64>,
     pub fiskeridir_service_speed: Option<f64>,
+    pub fiskeridir_fishery_id: Option<FisheryId>,
     pub preferred_trip_assembler: TripAssemblerId,
     pub gear_group_ids: Vec<GearGroup>,
     pub species_group_ids: Vec<SpeciesGroup>,
@@ -359,6 +360,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
             fiskeridir_engine_type,
             fiskeridir_engine_rpm,
             is_active,
+            fiskeridir_fishery_id,
         } = value;
 
         let ais = ais_mmsi.map(|mmsi| AisVessel {
@@ -405,6 +407,7 @@ impl TryFrom<FiskeridirAisVesselCombination> for kyogre_core::Vessel {
                 target_species_fiskeridir_id: current_trip_target_species_fiskeridir_id,
             }),
             is_active,
+            fishery_id: fiskeridir_fishery_id,
         })
     }
 }

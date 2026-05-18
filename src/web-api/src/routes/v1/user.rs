@@ -1,6 +1,7 @@
 use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web;
-use kyogre_core::{FiskeridirVesselId, UpdateUser};
+use fiskeridir_rs::CallSign;
+use kyogre_core::{FiskeridirVesselId, UpdateSelectedVessel, UpdateUser};
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 
@@ -20,7 +21,18 @@ pub async fn update_user<T: Database + 'static>(
     profile: BwProfile,
     user: web::Json<UpdateUser>,
 ) -> Result<Response<()>> {
-    db.update_user(&user, profile.user.id).await?;
+    let user_id = profile.user.id;
+    let selected_vessel = if let Some(selected_vessel) = &user.selected_vessel {
+        let call_sign = profile.call_sign(db.as_ref()).await?;
+        Some(UpdateSelectedVessel {
+            selected_vessel: selected_vessel.clone(),
+            current_associated_vessel: call_sign,
+        })
+    } else {
+        None
+    };
+
+    db.update_user(&user, user_id, &selected_vessel).await?;
     Ok(Response::new(()))
 }
 
@@ -29,6 +41,7 @@ pub async fn update_user<T: Database + 'static>(
 pub struct User {
     pub following: Vec<FiskeridirVesselId>,
     pub fuel_consent: Option<bool>,
+    pub selected_vessel: Option<CallSign>,
 }
 
 impl From<kyogre_core::User> for User {
@@ -37,11 +50,13 @@ impl From<kyogre_core::User> for User {
             barentswatch_user_id: _,
             following,
             fuel_consent,
+            selected_vessel,
         } = v;
 
         Self {
             following,
             fuel_consent,
+            selected_vessel,
         }
     }
 }
@@ -51,9 +66,12 @@ impl PartialEq<UpdateUser> for User {
         let User {
             following,
             fuel_consent,
+            selected_vessel,
         } = self;
 
-        Some(following) == other.following.as_ref() && *fuel_consent == other.fuel_consent
+        Some(following) == other.following.as_ref()
+            && *fuel_consent == other.fuel_consent
+            && *selected_vessel == other.selected_vessel
     }
 }
 

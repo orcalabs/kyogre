@@ -1,11 +1,53 @@
 use crate::{
     PostgresAdapter,
-    error::{CallSignDoesNotExistSnafu, Result},
+    error::{CallSignDoesNotExistSnafu, InvalidVesselSelectionSnafu, Result},
 };
 use fiskeridir_rs::{CallSign, OrgId};
 use kyogre_core::FiskeridirVesselId;
 
 impl PostgresAdapter {
+    pub async fn assert_call_signs_are_connected_to_same_fishery(
+        &self,
+        update: &kyogre_core::UpdateSelectedVessel,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        let record = sqlx::query!(
+            r#"
+WITH
+    current_vessel_fishery_id AS (
+        SELECT
+            f.fishery_id
+        FROM
+            all_vessels a
+            INNER JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign
+        WHERE
+            a.call_sign = $1
+    )
+SELECT
+    f.fishery_id
+FROM
+    all_vessels a
+    INNER JOIN fiskeridir_vessels f ON a.call_sign = f.call_sign
+    INNER JOIN current_vessel_fishery_id c ON f.fishery_id = c.fishery_id
+WHERE
+    a.call_sign = $2
+            "#,
+            &update.current_associated_vessel,
+            &update.selected_vessel,
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if record.is_some() {
+            Ok(())
+        } else {
+            InvalidVesselSelectionSnafu {
+                call_sign: update.selected_vessel.clone(),
+            }
+            .fail()
+        }
+    }
+
     pub async fn assert_call_sign_is_in_org(
         &self,
         call_sign: &CallSign,

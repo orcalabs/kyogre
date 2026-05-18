@@ -74,9 +74,10 @@ pub async fn trips<T: Database + Send + Sync + 'static>(
     let read_fishing_facility = profile.read_fishing_facilities();
 
     let query = TripsQuery::from(params.into_inner());
+    let call_sign = profile.call_sign(db.as_ref()).await?;
 
     let response = stream_response! {
-        db.detailed_trips(query, read_fishing_facility, profile.call_sign())
+        db.detailed_trips(query, read_fishing_facility, call_sign.as_ref())
             .map_ok(Trip::from)
     };
 
