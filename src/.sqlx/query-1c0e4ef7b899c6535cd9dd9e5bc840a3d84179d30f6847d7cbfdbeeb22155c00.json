@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fiskeridir_vessels\nSET\n    deprecated = TRUE\nWHERE\n    fiskeridir_vessel_id = ANY ($1)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1c0e4ef7b899c6535cd9dd9e5bc840a3d84179d30f6847d7cbfdbeeb22155c00"
+}

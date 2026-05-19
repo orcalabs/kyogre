@@ -435,9 +435,15 @@ ON CONFLICT DO NOTHING
         sqlx::query!(
             r#"
 INSERT INTO
-    fiskeridir_vessels (fiskeridir_vessel_id)
+    fiskeridir_vessels (
+        fiskeridir_vessel_id,
+        deprecated,
+        register_landing_reset
+    )
 SELECT
-    *
+    *,
+    FALSE,
+    FALSE
 FROM
     UNNEST($1::BIGINT[])
 ON CONFLICT DO NOTHING

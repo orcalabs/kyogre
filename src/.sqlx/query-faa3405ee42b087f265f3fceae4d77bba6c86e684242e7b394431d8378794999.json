@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id: FiskeridirVesselId\",\n    COALESCE(COUNT(DISTINCT landing_id), 0) AS \"num_landings!\"\nFROM\n    fiskeridir_vessels f\n    LEFT JOIN landings l ON f.fiskeridir_vessel_id = l.fiskeridir_vessel_id\nWHERE\n    f.fiskeridir_vessel_id = ANY ($1::BIGINT[])\nGROUP BY\n    f.fiskeridir_vessel_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "num_landings!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "faa3405ee42b087f265f3fceae4d77bba6c86e684242e7b394431d8378794999"
+}
