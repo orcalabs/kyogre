@@ -199,16 +199,6 @@ FROM
     ) -> Result<()> {
         sqlx::query!(
             r#"
-DELETE FROM all_vessels
-WHERE
-    is_manual = FALSE;
-            "#,
-        )
-        .execute(&mut **tx)
-        .await?;
-
-        sqlx::query!(
-            r#"
 DELETE FROM vessel_conflicts
             "#,
         )
@@ -230,11 +220,12 @@ FROM
 WHERE
     f.call_sign IS NOT NULL
     AND NOT (f.call_sign = ANY ($1::VARCHAR[]))
+    AND NOT f.deprecated
 GROUP BY
     f.call_sign
 HAVING
     COUNT(*) = 1
-ON CONFLICT DO NOTHING;
+ON CONFLICT DO NOTHING
             "#,
             &self.ignored_conflict_call_signs
         )
@@ -253,6 +244,7 @@ FROM
 WHERE
     f.call_sign IS NULL
     OR f.call_sign = ANY ($1::VARCHAR[])
+    AND NOT f.deprecated
 ON CONFLICT DO NOTHING
             "#,
             &self.ignored_conflict_call_signs
@@ -283,6 +275,7 @@ WHERE
     )
     AND f.call_sign IS NOT NULL
     AND NOT (f.call_sign = ANY ($1::VARCHAR[]))
+    AND NOT f.deprecated
 GROUP BY
     f.call_sign
 HAVING
@@ -335,6 +328,8 @@ FROM
             all_vessels v
             INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
             LEFT JOIN ais_vessels a ON v.mmsi = a.mmsi
+        WHERE
+            NOT f.deprecated
     ) q
 WHERE
     v.fiskeridir_vessel_id = q.fiskeridir_vessel_id;
@@ -344,6 +339,161 @@ WHERE
         .await?;
 
         Ok(())
+    }
+
+    pub(crate) async fn mark_vessels_as_deprecated(
+        &self,
+        vessels_without_landings: &[FiskeridirVesselId],
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+UPDATE fiskeridir_vessels
+SET
+    deprecated = TRUE
+WHERE
+    fiskeridir_vessel_id = ANY ($1)
+            "#,
+            vessels_without_landings as &[FiskeridirVesselId]
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn reset_vessels_to_landing_representation(
+        &self,
+        vessels_with_landings: &[FiskeridirVesselId],
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+WITH
+    to_update AS (
+        SELECT DISTINCT
+            ON (fiskeridir_vessel_id) fiskeridir_vessel_id,
+            vessel_call_sign,
+            vessel_registration_id,
+            vessel_name,
+            vessel_length,
+            vessel_building_year,
+            vessel_engine_power,
+            vessel_engine_building_year,
+            fiskeridir_vessel_type_id,
+            vessel_norwegian_municipality_id,
+            vessel_norwegian_county_id,
+            vessel_nation_group_id,
+            vessel_nation_id,
+            vessel_gross_tonnage_1969,
+            vessel_gross_tonnage_other,
+            vessel_rebuilding_year
+        FROM
+            landings l
+        WHERE
+            fiskeridir_vessel_id = ANY ($1::BIGINT[])
+        ORDER BY
+            fiskeridir_vessel_id,
+            landing_timestamp DESC
+    )
+UPDATE fiskeridir_vessels f
+SET
+    call_sign = t.vessel_call_sign,
+    registration_id = t.vessel_registration_id,
+    name = t.vessel_name,
+    length = t.vessel_length,
+    building_year = t.vessel_building_year,
+    engine_power = t.vessel_engine_power,
+    engine_building_year = t.vessel_engine_building_year,
+    fiskeridir_vessel_type_id = t.fiskeridir_vessel_type_id,
+    norwegian_municipality_id = t.vessel_norwegian_municipality_id,
+    norwegian_county_id = t.vessel_norwegian_county_id,
+    fiskeridir_nation_group_id = t.vessel_nation_group_id,
+    nation_id = t.vessel_nation_id,
+    gross_tonnage_1969 = t.vessel_gross_tonnage_1969,
+    gross_tonnage_other = t.vessel_gross_tonnage_other,
+    rebuilding_year = t.vessel_rebuilding_year,
+    fiskeridir_vessel_source_id = $2,
+    register_landing_reset = TRUE
+FROM
+    to_update t
+WHERE
+    f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            "#,
+            vessels_with_landings as &[FiskeridirVesselId],
+            VesselSource::Landings as i32
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn vessels_with_and_without_landings(
+        &self,
+        vessels_removed_from_registry: &[FiskeridirVesselId],
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<(Vec<FiskeridirVesselId>, Vec<FiskeridirVesselId>)> {
+        let mut vessels_with_no_landings =
+            Vec::with_capacity(vessels_removed_from_registry.len() / 2);
+        let mut vessels_with_landings = Vec::with_capacity(vessels_removed_from_registry.len() / 2);
+        sqlx::query!(
+            r#"
+SELECT
+    f.fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
+    COALESCE(COUNT(DISTINCT landing_id), 0) AS "num_landings!"
+FROM
+    fiskeridir_vessels f
+    LEFT JOIN landings l ON f.fiskeridir_vessel_id = l.fiskeridir_vessel_id
+WHERE
+    f.fiskeridir_vessel_id = ANY ($1::BIGINT[])
+GROUP BY
+    f.fiskeridir_vessel_id
+            "#,
+            vessels_removed_from_registry as &[FiskeridirVesselId]
+        )
+        .fetch(&mut **tx)
+        .try_for_each(|f| {
+            if f.num_landings == 0 {
+                vessels_with_no_landings.push(f.fiskeridir_vessel_id);
+            } else {
+                vessels_with_landings.push(f.fiskeridir_vessel_id);
+            }
+            futures::future::ok(())
+        })
+        .await?;
+
+        Ok((vessels_with_landings, vessels_with_no_landings))
+    }
+
+    pub(crate) async fn diff_registry_vessels(
+        &self,
+        vessels: &[fiskeridir_rs::RegisterVessel],
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<Vec<FiskeridirVesselId>> {
+        let ids = vessels
+            .iter()
+            .map(|v| v.id)
+            .collect::<Vec<FiskeridirVesselId>>();
+        let ids = sqlx::query!(
+            r#"
+SELECT
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId"
+FROM
+    fiskeridir_vessels
+WHERE
+    fiskeridir_vessel_source_id = $1
+    AND NOT (fiskeridir_vessel_id = ANY ($2::BIGINT[]))
+        "#,
+            VesselSource::FiskeridirVesselRegister as i32,
+            ids.as_slice() as &[FiskeridirVesselId]
+        )
+        .fetch(&mut **tx)
+        .map_ok(|f| f.fiskeridir_vessel_id)
+        .try_collect()
+        .await?;
+
+        Ok(ids)
     }
 
     pub(crate) async fn set_landing_vessels_call_signs(
@@ -451,6 +601,22 @@ WHERE
             .collect();
 
         let mut tx = self.pool.begin().await?;
+
+        // We have observed that vessels can be removed and altererd in the fiskeridir vessel
+        // registry.
+        // We have chosen the following scheme to reconcile changes:
+        // - Vessels removed from the registry will revert to vessel information present in their
+        // latest landing
+        // - Vessels removed from the registry without any landings will be marked as deprecated and
+        // not considered in vessel conflicts
+        let vessels_removed_from_registry = self.diff_registry_vessels(&vessels, &mut tx).await?;
+        let (vessels_with_landings, vessels_without_landings) = self
+            .vessels_with_and_without_landings(&vessels_removed_from_registry, &mut tx)
+            .await?;
+        self.reset_vessels_to_landing_representation(&vessels_with_landings, &mut tx)
+            .await?;
+        self.mark_vessels_as_deprecated(&vessels_without_landings, &mut tx)
+            .await?;
 
         self.unnest_insert(municipalitis.into_values(), &mut *tx)
             .await?;

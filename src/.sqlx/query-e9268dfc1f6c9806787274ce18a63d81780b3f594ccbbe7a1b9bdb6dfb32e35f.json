@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    to_update AS (\n        SELECT DISTINCT\n            ON (fiskeridir_vessel_id) fiskeridir_vessel_id,\n            vessel_call_sign,\n            vessel_registration_id,\n            vessel_name,\n            vessel_length,\n            vessel_building_year,\n            vessel_engine_power,\n            vessel_engine_building_year,\n            fiskeridir_vessel_type_id,\n            vessel_norwegian_municipality_id,\n            vessel_norwegian_county_id,\n            vessel_nation_group_id,\n            vessel_nation_id,\n            vessel_gross_tonnage_1969,\n            vessel_gross_tonnage_other,\n            vessel_rebuilding_year\n        FROM\n            landings l\n        WHERE\n            fiskeridir_vessel_id = ANY ($1::BIGINT[])\n        ORDER BY\n            fiskeridir_vessel_id,\n            landing_timestamp DESC\n    )\nUPDATE fiskeridir_vessels f\nSET\n    call_sign = t.vessel_call_sign,\n    registration_id = t.vessel_registration_id,\n    name = t.vessel_name,\n    length = t.vessel_length,\n    building_year = t.vessel_building_year,\n    engine_power = t.vessel_engine_power,\n    engine_building_year = t.vessel_engine_building_year,\n    fiskeridir_vessel_type_id = t.fiskeridir_vessel_type_id,\n    norwegian_municipality_id = t.vessel_norwegian_municipality_id,\n    norwegian_county_id = t.vessel_norwegian_county_id,\n    fiskeridir_nation_group_id = t.vessel_nation_group_id,\n    nation_id = t.vessel_nation_id,\n    gross_tonnage_1969 = t.vessel_gross_tonnage_1969,\n    gross_tonnage_other = t.vessel_gross_tonnage_other,\n    rebuilding_year = t.vessel_rebuilding_year,\n    fiskeridir_vessel_source_id = $2,\n    register_landing_reset = TRUE\nFROM\n    to_update t\nWHERE\n    f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e9268dfc1f6c9806787274ce18a63d81780b3f594ccbbe7a1b9bdb6dfb32e35f"
+}

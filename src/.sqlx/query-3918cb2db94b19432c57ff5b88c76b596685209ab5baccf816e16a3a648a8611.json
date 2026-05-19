@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    fiskeridir_vessels (\n        fiskeridir_vessel_id,\n        deprecated,\n        register_landing_reset\n    )\nSELECT\n    *,\n    FALSE,\n    FALSE\nFROM\n    UNNEST($1::BIGINT[])\nON CONFLICT DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3918cb2db94b19432c57ff5b88c76b596685209ab5baccf816e16a3a648a8611"
+}

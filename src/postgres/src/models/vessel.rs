@@ -174,6 +174,8 @@ pub struct NewFiskeridirVessel<'a> {
     pub gross_tonnage_1969: Option<i32>,
     pub gross_tonnage_other: Option<i32>,
     pub rebuilding_year: Option<i32>,
+    pub deprecated: bool,
+    pub register_landing_reset: bool,
 }
 
 #[derive(Debug, Clone, UnnestInsert)]
@@ -193,6 +195,8 @@ pub struct NewRegisterVessel {
     pub width: Option<f64>,
     pub engine_power: Option<i32>,
     pub imo_number: Option<i64>,
+    pub deprecated: bool,
+    pub register_landing_reset: bool,
     #[unnest_insert(sql_type = "JSON")]
     pub owners: serde_json::Value,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
@@ -239,6 +243,8 @@ impl<'a> From<&'a fiskeridir_rs::Vessel> for NewFiskeridirVessel<'a> {
             gross_tonnage_1969: v.gross_tonnage_1969.map(|x| x as i32),
             gross_tonnage_other: v.gross_tonnage_other.map(|x| x as i32),
             rebuilding_year: v.rebuilding_year.map(|x| x as i32),
+            deprecated: false,
+            register_landing_reset: false,
         }
     }
 }
@@ -262,6 +268,8 @@ impl<'a> From<&'a fiskeridir_rs::ErsVesselInfo> for NewFiskeridirVessel<'a> {
             gross_tonnage_1969: v.gross_tonnage_1969.map(|x| x as i32),
             gross_tonnage_other: v.gross_tonnage_other.map(|x| x as i32),
             rebuilding_year: v.rebuilding_year.map(|x| x as i32),
+            deprecated: false,
+            register_landing_reset: false,
         }
     }
 }
@@ -282,6 +290,8 @@ impl TryFrom<fiskeridir_rs::RegisterVessel> for NewRegisterVessel {
             imo_number: v.imo_number,
             owners: serde_json::to_value(&v.owners)?,
             fiskeridir_vessel_source_id: VesselSource::FiskeridirVesselRegister,
+            deprecated: false,
+            register_landing_reset: false,
         })
     }
 }
