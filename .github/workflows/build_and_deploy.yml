@@ -23,23 +23,28 @@ jobs:
            },
            "duckdb" : {
               "container-app-name" : "dev-kyogre-duck-db",
-              "dockerfile" : "dockerfiles/duckdb/Dockerfile"
+              "dockerfile" : "dockerfiles/duckdb/Dockerfile",
+              "tag-override": "latest"
            },
            "fishery-api" : {
               "container-app-name" : "dev-kyogre-fishery-api",
-              "dockerfile" : "dockerfiles/api/Dockerfile"
+              "dockerfile" : "dockerfiles/api/Dockerfile",
+              "tag-override": "latest"
            },
            "ais-consumer" : {
               "container-app-name" : "dev-kyogre-ais-consumer",
-              "dockerfile" : "dockerfiles/ais-consumer/Dockerfile"
+              "dockerfile" : "dockerfiles/ais-consumer/Dockerfile",
+              "tag-override": "latest"
            },
            "engine" : {
               "container-app-name" : "dev-kyogre-engine",
-              "dockerfile" : "dockerfiles/engine/Dockerfile"
+              "dockerfile" : "dockerfiles/engine/Dockerfile",
+              "tag-override": "latest"
            },
            "processors" : {
               "container-app-name" : "dev-kyogre-processors",
-              "dockerfile" : "dockerfiles/processors/Dockerfile"
+              "dockerfile" : "dockerfiles/processors/Dockerfile",
+              "tag-override": "latest"
            }
         }'
       registry: ghcr.io/orcalabs/kyogre
