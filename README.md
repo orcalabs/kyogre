@@ -25,23 +25,49 @@ only data missing will be AIS position data which only exists in our azure
 database. The engine will use quite abit of time on a fresh run, consult the
 docker logs to view its progress.
 
-Commands to run a local instance:
+Additionally, the `processors` container can be started to run various processes such as estimating fuel and benchmarking trips.
+
+These commands will pull and use the docker images from [Github Packages](https://github.com/orgs/orcalabs/packages?repo_name=kyogre).
+To build the images from source code add the `--build` flag to the `docker-compose` commands.
+
+### Database
 
 ```
 docker-compose up -d postgres
-docker-compose -d --build engine
 ```
 
-For a local api instance you will also need to start the duckdb service:
+### Engine
 
 ```
-docker-compose up -d postgres
-docker-compose up -d duckdb
-docker-compose up -d api
+docker-compose up -d engine
+```
+
+### Processors
+
+```
+docker-compose up -d processors
+```
+
+### Api
+
+For a local api instance you will also need to start the duckdb service.
+
+```
+docker-compose up -d duckdb api
 ```
 
 The api will then be availabe at `http://localhost:8080`, swagger at
 `http://localhost:8080/swagger-ui/`.
+
+### Ais Consumer
+
+The ais-consumer also needs your AIS Client ID and Client Secret provided as environment variables.
+
+```
+export AIS_CLIENT_ID=***
+export AIS_CLIENT_SECRET=***
+docker-compose up -d ais-consumer
+```
 
 ## Complile time SQL queries
 

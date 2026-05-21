@@ -27,7 +27,7 @@ services:
       - 5533:5432
 
   test-db:
-    image: ghcr.io/orcalabs/kyogre/test-postgres
+    image: ghcr.io/orcalabs/kyogre/test-postgres:master
     container_name: postgres
     build:
       context: .
@@ -42,7 +42,7 @@ services:
       - 5534:5432
 
   ais-consumer:
-    image: ghcr.io/orcalabs/kyogre/ais-consumer
+    image: ghcr.io/orcalabs/kyogre/ais-consumer:latest
     build:
       context: .
       dockerfile: dockerfiles/ais-consumer/Dockerfile
@@ -53,9 +53,11 @@ services:
       - APP_ENVIRONMENT=local
       - KYOGRE_AIS_CONSUMER__POSTGRES__IP=postgres
       - KYOGRE_AIS_CONSUMER__POSTGRES__PORT=5432
+      - KYOGRE_AIS_CONSUMER__OAUTH__CLIENT_ID=${AIS_CLIENT_ID}
+      - KYOGRE_AIS_CONSUMER__OAUTH__CLIENT_SECRET=${AIS_CLIENT_SECRET}
 
   engine:
-    image: ghcr.io/orcalabs/kyogre/engine
+    image: ghcr.io/orcalabs/kyogre/engine:latest
     build:
       context: .
       dockerfile: dockerfiles/engine/Dockerfile
@@ -68,7 +70,7 @@ services:
       - KYOGRE_ENGINE__POSTGRES__PORT=5432
 
   duckdb:
-    image: ghcr.io/orcalabs/kyogre/duckdb
+    image: ghcr.io/orcalabs/kyogre/duckdb:latest
     ports:
       - 5000:5000
     build:
@@ -96,7 +98,6 @@ services:
       - KYOGRE_DATABASE_MIGRATOR__POSTGRES__PORT=5432
 
   ais-data-migrator:
-    image: ghcr.io/orcalabs/kyogre/ais-data-migrator
     build:
       context: .
       dockerfile: dockerfiles/ais-data-migrator/Dockerfile
@@ -107,7 +108,7 @@ services:
       - APP_ENVIRONMENT=local
 
   processors:
-    image: ghcr.io/orcalabs/kyogre/processors
+    image: ghcr.io/orcalabs/kyogre/processors:latest
     build:
       context: .
       dockerfile: dockerfiles/processors/Dockerfile
@@ -120,7 +121,7 @@ services:
       - KYOGRE_PROCESSORS__POSTGRES__PORT=5432
 
   api:
-    image: ghcr.io/orcalabs/kyogre/api
+    image: ghcr.io/orcalabs/kyogre/fishery-api:latest
     build:
       context: .
       dockerfile: dockerfiles/api/Dockerfile
