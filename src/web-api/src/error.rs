@@ -46,10 +46,11 @@ pub enum Error {
         location: Location,
         object: Object,
     },
-    #[snafu(display("No current active UserHaul"))]
+    #[snafu(display("No current active UserHaul for call_sign '{call_sign}'"))]
     NoActiveUserHaul {
         #[snafu(implicit)]
         location: Location,
+        call_sign: CallSign,
     },
     #[snafu(display("Selected vessel with '{call_sign}' not found"))]
     InvalidVesselSelection {
@@ -249,7 +250,13 @@ impl From<WebApiError> for Error {
                 location,
                 call_sign,
             },
-            WebApiError::NoActiveUserHaul { location } => Error::NoActiveUserHaul { location },
+            WebApiError::NoActiveUserHaul {
+                location,
+                call_sign,
+            } => Error::NoActiveUserHaul {
+                location,
+                call_sign,
+            },
             WebApiError::ObjectNotFound { location, object } => {
                 Error::ObjectNotFound { location, object }
             }

@@ -23,10 +23,11 @@ pub enum Error {
         location: Location,
         object: Object,
     },
-    #[snafu(display("No current active UserHaul"))]
+    #[snafu(display("No current active UserHaul for call_sign '{call_sign}'"))]
     NoActiveUserHaul {
         #[snafu(implicit)]
         location: Location,
+        call_sign: CallSign,
     },
     #[snafu(display("Selected vessel with '{call_sign}' not found"))]
     InvalidVesselSelection {
@@ -269,9 +270,13 @@ impl From<Error> for kyogre_core::WebApiError {
                 location,
                 call_sign: call_sign.clone(),
             },
-            Error::NoActiveUserHaul { location } => {
-                kyogre_core::WebApiError::NoActiveUserHaul { location }
-            }
+            Error::NoActiveUserHaul {
+                location,
+                call_sign,
+            } => kyogre_core::WebApiError::NoActiveUserHaul {
+                location,
+                call_sign,
+            },
             Error::ObjectNotFound { location, object } => {
                 kyogre_core::WebApiError::ObjectNotFound { location, object }
             }
