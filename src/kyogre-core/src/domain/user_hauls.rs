@@ -13,4 +13,5 @@ pub struct HaulStart {
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct HaulEnd {
     pub fuel_liter_end: u32,
+    pub total_living_weight_kg: Option<f64>,
 }

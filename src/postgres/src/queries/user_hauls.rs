@@ -286,7 +286,10 @@ WHERE
         end: &kyogre_core::HaulEnd,
         barentswatch_user_id: BarentswatchUserId,
     ) -> Result<kyogre_core::UserHaul> {
-        let kyogre_core::HaulEnd { fuel_liter_end } = end;
+        let kyogre_core::HaulEnd {
+            fuel_liter_end,
+            total_living_weight_kg,
+        } = end;
 
         let mut tx = self.pool.begin().await?;
 
@@ -299,9 +302,10 @@ WHERE
 UPDATE user_hauls
 SET
     end_ts = $1,
-    end_fuel_liter = $2
+    end_fuel_liter = $2,
+    total_living_weight_kg = $3
 WHERE
-    call_sign = $3
+    call_sign = $4
     AND end_ts IS NULL
     AND end_fuel_liter IS NULL
 RETURNING
@@ -315,6 +319,7 @@ RETURNING
             "#,
             Utc::now(),
             *fuel_liter_end as i32,
+            *total_living_weight_kg,
             &call_sign
         )
         .fetch_one(&mut *tx)
