@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE user_hauls\nSET\n    config = $1,\n    start_ts = $2,\n    end_ts = $3,\n    start_fuel_liter = $4,\n    end_fuel_liter = $5\nWHERE\n    user_haul_id = $6\n    AND call_sign = $7\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config\n            ",
+  "query": "\nUPDATE user_hauls\nSET\n    config = $1,\n    start_ts = $2,\n    end_ts = $3,\n    start_fuel_liter = $4,\n    end_fuel_liter = $5,\n    total_living_weight_kg = $6\nWHERE\n    user_haul_id = $7\n    AND call_sign = $8\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config,\n    total_living_weight_kg\n            ",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "config",
         "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "total_living_weight_kg",
+        "type_info": "Float8"
       }
     ],
     "parameters": {
@@ -41,6 +46,7 @@
         "Timestamptz",
         "Int4",
         "Int4",
+        "Float8",
         "Int4",
         "Text"
       ]
@@ -51,8 +57,9 @@
       true,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "4bea91dfc427dc5fcce7cc6e397f65045e777225c091e04e274d3545128fdb14"
+  "hash": "c4b8ae1ea8c8cb9f373fdbf2a15369d6726a71a0114a1d7173e5006c5862b366"
 }

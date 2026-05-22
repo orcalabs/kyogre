@@ -34,6 +34,7 @@ pub struct UpdateUserHaul {
     pub end_ts: DateTime<Utc>,
     pub start_fuel_liter: u32,
     pub end_fuel_liter: u32,
+    pub total_living_weight_kg: Option<f64>,
     pub config: serde_json::Value,
 }
 
@@ -46,6 +47,7 @@ pub struct UserHaul {
     pub end_ts: DateTime<Utc>,
     pub start_fuel_liter: u32,
     pub end_fuel_liter: u32,
+    pub total_living_weight_kg: Option<f64>,
     pub config: serde_json::Value,
 }
 

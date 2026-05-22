@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config\nFROM\n    user_hauls\nWHERE\n    call_sign = $1\n    AND end_ts IS NOT NULL\n    AND end_fuel_liter IS NOT NULL\nORDER BY\n    start_ts\n            ",
+  "query": "\nSELECT\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config,\n    total_living_weight_kg\nFROM\n    user_hauls\nWHERE\n    call_sign = $1\n    AND end_ts IS NOT NULL\n    AND end_fuel_liter IS NOT NULL\nORDER BY\n    start_ts\n            ",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "config",
         "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "total_living_weight_kg",
+        "type_info": "Float8"
       }
     ],
     "parameters": {
@@ -45,8 +50,9 @@
       true,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "26964398fbecb916fbe936ebb412f9e8ced00b7de7b53e19b061a916f02b269e"
+  "hash": "1ee05167058373502cccc4bc292d5b99581814f8f722f141fea106ad992f31b9"
 }
