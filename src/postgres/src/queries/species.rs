@@ -1,5 +1,6 @@
+use fiskeridir_rs::SpeciesFiskeridirId;
 use futures::{Stream, TryStreamExt};
-use kyogre_core::SpeciesFao;
+use kyogre_core::{SpeciesFao, SpeciesFiskeridir};
 
 use crate::{PostgresAdapter, error::Result, models::*};
 
@@ -11,7 +12,7 @@ impl PostgresAdapter {
             SpeciesFiskeridir,
             r#"
 SELECT
-    species_fiskeridir_id AS id,
+    species_fiskeridir_id AS "id: SpeciesFiskeridirId",
     "name" AS "name?"
 FROM
     species_fiskeridir

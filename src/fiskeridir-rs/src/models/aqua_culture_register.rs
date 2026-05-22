@@ -1,4 +1,6 @@
-use crate::{DeliveryPointId, deserialize_utils::*, string_new_types::NonEmptyString};
+use crate::{
+    DeliveryPointId, SpeciesFiskeridirId, deserialize_utils::*, string_new_types::NonEmptyString,
+};
 use chrono::NaiveDate;
 use serde::Deserialize;
 
@@ -34,7 +36,7 @@ pub struct AquaCultureEntry {
     #[serde(rename = "ART")]
     pub species: NonEmptyString,
     #[serde(rename = "ART_KODE")]
-    pub species_code: u32,
+    pub species_code: SpeciesFiskeridirId,
     #[serde(rename = "TILL_KAP")]
     pub till_kap: f64,
     #[serde(rename = "TILL_ENHET")]
@@ -89,7 +91,7 @@ mod test {
                 purpose: "Purpose".parse().unwrap(),
                 production_form: "Production form".parse().unwrap(),
                 species: "Laks".parse().unwrap(),
-                species_code: 711,
+                species_code: SpeciesFiskeridirId::test_new(711),
                 till_kap: 1.0,
                 till_unit: "LN".parse().unwrap(),
                 delivery_point_id: DeliveryPointId::new_unchecked("LK17"),

@@ -7,6 +7,7 @@ pub mod gear;
 pub mod haul;
 pub mod landing;
 pub mod org;
+pub mod price;
 pub mod species;
 pub mod trip;
 pub mod user;

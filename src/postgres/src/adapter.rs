@@ -659,6 +659,9 @@ impl LiveFuelInbound for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn price(&self, query: PriceQuery) -> WebApiResult<Option<f64>> {
+        Ok(retry(|| self.price_impl(&query)).await?)
+    }
     async fn current_user_haul(
         &self,
         call_sign: &CallSign,

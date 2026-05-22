@@ -1,6 +1,7 @@
 use super::ers_common::{ErsCatch, ErsMessageInfo, ErsVesselInfo, Port};
 use crate::{
-    deserialize_utils::*, string_new_types::NonEmptyString, utils::timestamp_from_date_and_time,
+    SpeciesFiskeridirId, deserialize_utils::*, string_new_types::NonEmptyString,
+    utils::timestamp_from_date_and_time,
 };
 use chrono::{DateTime, Datelike, NaiveDate, NaiveTime, Utc};
 use serde::Deserialize;
@@ -57,7 +58,7 @@ pub struct ErsDep {
     #[serde(rename = "Målart FAO (kode)")]
     pub target_species_fao_code: NonEmptyString,
     #[serde(rename = "Målart - FDIR (kode)")]
-    pub target_species_fdir_code: Option<u32>,
+    pub target_species_fdir_code: Option<SpeciesFiskeridirId>,
     #[serde(flatten)]
     pub vessel_info: ErsVesselInfo,
 }
@@ -113,7 +114,7 @@ mod test {
                 start_longitude_sggdd: "LON".parse().unwrap(),
                 target_species_fao: Some("Cod".parse().unwrap()),
                 target_species_fao_code: "Cod".parse().unwrap(),
-                target_species_fdir_code: Some(1021),
+                target_species_fdir_code: Some(SpeciesFiskeridirId::test_new(1021)),
                 vessel_info: ErsVesselInfo::test_default(Some(fiskeridir_vessel_id)),
             }
         }

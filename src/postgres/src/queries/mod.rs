@@ -19,6 +19,7 @@ pub mod landing_matrix;
 pub mod ocean_climate;
 pub mod org;
 pub mod port;
+pub mod price;
 pub mod processor;
 pub mod rafisklaget;
 pub mod species;

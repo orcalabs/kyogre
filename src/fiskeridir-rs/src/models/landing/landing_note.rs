@@ -13,8 +13,8 @@ use super::{
 };
 use crate::{
     CallSign, CatchLocation, DeliveryPointId, GearDetails, LandingId, NorthSouth62DegreesNorth,
-    SpeciesGroup, SpeciesMainGroup, TwelveMileBorder, Vessel, VesselLengthGroup, VesselType,
-    deserialize_utils::*, string_new_types::NonEmptyString,
+    SpeciesFiskeridirId, SpeciesGroup, SpeciesMainGroup, TwelveMileBorder, Vessel,
+    VesselLengthGroup, VesselType, deserialize_utils::*, string_new_types::NonEmptyString,
     utils::convert_naive_date_and_naive_time_to_utc,
 };
 
@@ -303,7 +303,7 @@ pub struct LandingRaw {
     #[serde(rename = "Art FAO")]
     pub species_fao_name: Option<NonEmptyString>,
     #[serde(rename = "Art - FDIR (kode)")]
-    pub species_fdir_code: u32,
+    pub species_fdir_code: SpeciesFiskeridirId,
     #[serde(rename = "Art - FDIR")]
     pub species_fdir_name: NonEmptyString,
     #[serde(rename = "Art - gruppe (kode)")]
@@ -944,7 +944,7 @@ mod test {
                         fao_code: Some("SIL".parse().unwrap()),
                         fao_name: Some("SILD".parse().unwrap()),
                         fdir_name: "Sild".parse().unwrap(),
-                        fdir_code: 543,
+                        fdir_code: SpeciesFiskeridirId::test_new(543),
                         group_code: SpeciesGroup::AtlanticCod,
                         group_name: SpeciesGroup::AtlanticCod.norwegian_name().parse().unwrap(),
                         main_group: SpeciesMainGroup::ShellfishMolluscaAndEchinoderm

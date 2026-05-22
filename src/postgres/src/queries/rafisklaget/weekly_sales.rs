@@ -1,5 +1,5 @@
 use chrono::{NaiveDate, Weekday};
-use fiskeridir_rs::{Condition, GearGroup, Quality, VesselLengthGroup};
+use fiskeridir_rs::{Condition, GearGroup, Quality, SpeciesFiskeridirId, VesselLengthGroup};
 use kyogre_core::WeeklySale;
 
 use crate::{
@@ -28,7 +28,7 @@ impl PostgresAdapter {
             week.push(v.id.iso_week.week() as i32);
             length_group.push(v.id.vessel_length_group);
             gear_group.push(v.id.gear_group);
-            species.push(v.id.species as i32);
+            species.push(v.id.species);
             condition.push(v.id.condition);
             quality.push(v.id.quality);
             sum_net_quantity_kg.push(v.sum_net_quantity_kg);
@@ -149,7 +149,7 @@ FROM
 WHERE
     t.fiskeridir_vessel_id = q.fiskeridir_vessel_id
             "#,
-            &species,
+            &species as &Vec<SpeciesFiskeridirId>,
             &year,
             &week,
             &length_group as &Vec<VesselLengthGroup>,

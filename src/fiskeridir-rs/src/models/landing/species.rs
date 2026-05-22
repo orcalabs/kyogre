@@ -1,7 +1,20 @@
+use std::{fmt::Display, num::ParseIntError, str::FromStr};
+
 use enum_index_derive::{EnumIndex, IndexEnum};
 use num_derive::FromPrimitive;
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
+
+#[cfg(feature = "oasgen")]
+use oasgen::OaSchema;
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, FromPrimitive, Deserialize, Serialize,
+)]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct SpeciesFiskeridirId(i32);
 
 #[allow(missing_docs)]
 #[repr(i32)]
@@ -188,5 +201,42 @@ impl From<SpeciesGroup> for i32 {
 impl From<SpeciesMainGroup> for i32 {
     fn from(value: SpeciesMainGroup) -> Self {
         value as i32
+    }
+}
+
+impl From<SpeciesFiskeridirId> for i32 {
+    fn from(value: SpeciesFiskeridirId) -> Self {
+        value.0
+    }
+}
+
+impl SpeciesFiskeridirId {
+    pub fn into_inner(self) -> i32 {
+        self.0
+    }
+}
+
+impl FromStr for SpeciesFiskeridirId {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.parse().map(Self)
+    }
+}
+
+impl Display for SpeciesFiskeridirId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+
+    impl SpeciesFiskeridirId {
+        pub fn test_new(value: i32) -> Self {
+            Self(value)
+        }
     }
 }

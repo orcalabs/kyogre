@@ -1,12 +1,9 @@
-use core::f64;
-use std::pin::Pin;
-
+use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use fiskeridir_rs::{CallSign, DataFileId, OrgId};
 use futures::Stream;
-
-use crate::*;
+use std::pin::Pin;
 
 #[async_trait]
 pub trait AisMigratorSource {
@@ -23,6 +20,7 @@ pub type PinBoxStream<'a, T> = Pin<Box<dyn Stream<Item = WebApiResult<T>> + Send
 
 #[async_trait]
 pub trait WebApiOutboundPort {
+    async fn price(&self, query: PriceQuery) -> WebApiResult<Option<f64>>;
     async fn user_hauls(&self, call_sign: &CallSign) -> WebApiResult<Vec<UserHaul>>;
     async fn current_user_haul(
         &self,

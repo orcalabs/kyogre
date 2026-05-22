@@ -1,3 +1,6 @@
+use fiskeridir_rs::SpeciesFiskeridirId;
+use serde::{Deserialize, Serialize};
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Species {
     pub id: u32,
@@ -10,8 +13,10 @@ pub struct SpeciesFao {
     pub name: Option<String>,
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct SpeciesFiskeridir {
-    pub id: u32,
+    pub id: SpeciesFiskeridirId,
     pub name: Option<String>,
 }

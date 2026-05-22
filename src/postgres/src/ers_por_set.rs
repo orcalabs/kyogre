@@ -1,5 +1,6 @@
 use std::collections::{HashMap, hash_map::Entry};
 
+use fiskeridir_rs::SpeciesFiskeridirId;
 use kyogre_core::FiskeridirVesselId;
 
 use crate::{
@@ -11,7 +12,7 @@ use crate::{
 pub struct ErsPorSet<'a> {
     ers_message_types: HashMap<&'a str, NewErsMessageType<'a>>,
     species_fao: HashMap<&'a str, NewSpeciesFao<'a>>,
-    species_fiskeridir: HashMap<i32, NewSpeciesFiskeridir<'a>>,
+    species_fiskeridir: HashMap<SpeciesFiskeridirId, NewSpeciesFiskeridir<'a>>,
     vessels: HashMap<FiskeridirVesselId, NewFiskeridirVessel<'a>>,
     ports: HashMap<&'a str, NewPort<'a>>,
     municipalities: HashMap<i32, NewMunicipality<'a>>,
@@ -177,11 +178,11 @@ impl<'a> ErsPorSet<'a> {
             .or_insert_with(|| NewSpeciesFao::new(code, name));
     }
 
-    fn add_species_fiskeridir(&mut self, code: Option<u32>, name: Option<&'a str>) {
+    fn add_species_fiskeridir(&mut self, code: Option<SpeciesFiskeridirId>, name: Option<&'a str>) {
         if let Some(code) = code {
             self.species_fiskeridir
-                .entry(code as i32)
-                .or_insert_with(|| NewSpeciesFiskeridir::new(code as i32, name));
+                .entry(code)
+                .or_insert_with(|| NewSpeciesFiskeridir::new(code, name));
         }
     }
 
