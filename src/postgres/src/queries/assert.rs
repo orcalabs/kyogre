@@ -31,7 +31,10 @@ WHERE
         if record.is_some() {
             Ok(())
         } else {
-            NoActiveUserHaulSnafu {}.fail()
+            NoActiveUserHaulSnafu {
+                call_sign: call_sign.clone(),
+            }
+            .fail()
         }
     }
     pub async fn assert_call_signs_are_connected_to_same_fishery(

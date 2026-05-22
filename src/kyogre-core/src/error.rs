@@ -47,8 +47,8 @@ impl IsTimeout for std::io::Error {
 /// All objects that has a not found scenario.
 #[derive(Debug, Clone, strum::Display)]
 pub enum Object {
-    #[strum(to_string = "UserHaul with id: '{0}' not found")]
-    UserHaul(UserHaulId),
+    #[strum(to_string = "UserHaul with id: '{0}' for call_sign: '{1}' not found")]
+    UserHaul(UserHaulId, CallSign),
     #[strum(to_string = "The org '{0}' was not found")]
     Org(OrgId),
     #[strum(to_string = "The vessel with call_sign '{0}' was not found")]
@@ -64,10 +64,11 @@ pub enum WebApiError {
         location: Location,
         object: Object,
     },
-    #[snafu(display("No current active UserHaul"))]
+    #[snafu(display("No current active UserHaul for call_sign '{call_sign}'"))]
     NoActiveUserHaul {
         #[snafu(implicit)]
         location: Location,
+        call_sign: CallSign,
     },
     #[snafu(display("Selected vessel with '{call_sign}' not found"))]
     InvalidVesselSelection {

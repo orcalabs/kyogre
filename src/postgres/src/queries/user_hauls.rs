@@ -106,7 +106,7 @@ RETURNING
             Ok(haul.into())
         } else {
             ObjectNotFoundSnafu {
-                object: Object::UserHaul(id),
+                object: Object::UserHaul(id, call_sign.clone()),
             }
             .fail()
         }
@@ -132,7 +132,7 @@ WHERE
 
         if affected == 0 {
             ObjectNotFoundSnafu {
-                object: Object::UserHaul(id),
+                object: Object::UserHaul(id, call_sign.clone()),
             }
             .fail()
         } else {
@@ -212,6 +212,8 @@ WHERE
         } = start;
 
         let mut tx = self.pool.begin().await?;
+
+        self.assert_call_sign_exists(call_sign, &mut *tx).await?;
 
         let haul = sqlx::query_as!(
             StartedUserHaul,
