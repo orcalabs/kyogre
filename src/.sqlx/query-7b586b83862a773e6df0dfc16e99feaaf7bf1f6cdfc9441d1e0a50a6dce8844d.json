@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "id!: DataFileId",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "file_hashes",
+            "name": "file_hash_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "hash",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "file_hashes",
+            "name": "hash"
+          }
+        }
       }
     ],
     "parameters": {

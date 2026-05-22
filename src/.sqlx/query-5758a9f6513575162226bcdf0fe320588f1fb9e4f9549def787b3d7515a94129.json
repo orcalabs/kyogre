@@ -6,17 +6,35 @@
       {
         "ordinal": 0,
         "name": "vessel_id: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "user_hauls",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "start_ts",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_hauls",
+            "name": "start_ts"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "end_ts",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_hauls",
+            "name": "end_ts"
+          }
+        }
       }
     ],
     "parameters": {

@@ -6,17 +6,35 @@
       {
         "ordinal": 0,
         "name": "refresh_boundary!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_hauls_refresh_boundary",
+            "name": "refresh_boundary"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "current_trip_refresh_boundary!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "user_hauls_refresh_boundary",
+            "name": "current_trip_refresh_boundary"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "vessel_id: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "user_hauls_refresh_boundary",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       }
     ],
     "parameters": {

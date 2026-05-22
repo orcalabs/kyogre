@@ -6,92 +6,170 @@
       {
         "ordinal": 0,
         "name": "landing_id!: LandingId",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "landing_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "trip_id: TripId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       },
       {
         "ordinal": 2,
         "name": "landing_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "landing_timestamp"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "catch_area_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "catch_area_id"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "catch_main_area_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "catch_main_area_id"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "gear_id!: Gear",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "gear_id"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "gear_group_id!: GearGroup",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "gear_group_id"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "delivery_point_id: DeliveryPointId",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 8,
         "name": "fiskeridir_vessel_id?: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "vessel_call_sign: CallSign",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "vessel_call_sign"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "vessel_name",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "vessel_name"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "vessel_length",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "vessel_length"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "vessel_length_group!: VesselLengthGroup",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "vessel_length_group_id"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "total_gross_weight!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 14,
         "name": "total_living_weight!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 15,
         "name": "total_product_weight!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 16,
         "name": "catches!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 17,
         "name": "version",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "version"
+          }
+        }
       }
     ],
     "parameters": {

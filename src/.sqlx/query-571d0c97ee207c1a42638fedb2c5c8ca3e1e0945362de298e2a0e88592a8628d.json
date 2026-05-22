@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "id!: LandingId",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "landing_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "version",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "landings",
+            "name": "version"
+          }
+        }
       }
     ],
     "parameters": {

@@ -8,6 +8,7 @@ use fiskeridir_rs::{
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use rand::random;
+use sqlx::AssertSqlSafe;
 use std::future::ready;
 
 /// Wrapper with additional methods inteded for testing purposes.
@@ -271,10 +272,12 @@ FROM
     }
 
     pub async fn create_test_database_from_template(&self, db_name: &str) {
-        sqlx::query(&format!("CREATE DATABASE \"{db_name}\" TEMPLATE postgres;"))
-            .execute(&self.db.pool)
-            .await
-            .unwrap();
+        sqlx::query(AssertSqlSafe(format!(
+            "CREATE DATABASE \"{db_name}\" TEMPLATE postgres;"
+        )))
+        .execute(&self.db.pool)
+        .await
+        .unwrap();
     }
 
     pub async fn vessel(&self, vessel_id: FiskeridirVesselId) -> Vessel {

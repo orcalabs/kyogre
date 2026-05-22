@@ -6,27 +6,52 @@
       {
         "ordinal": 0,
         "name": "id!: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "active_vessels",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "mmsi: Mmsi",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "active_vessels",
+            "name": "mmsi"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "call_sign: CallSign",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "active_vessels",
+            "name": "call_sign"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "current_trip_start?",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "current_trips",
+            "name": "departure_timestamp"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "processing_start",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       }
     ],
     "parameters": {

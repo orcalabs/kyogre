@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "id!: DeliveryPointId",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "delivery_point_ids",
+            "name": "delivery_point_id"
+          }
+        }
       }
     ],
     "parameters": {

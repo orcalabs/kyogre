@@ -43,10 +43,10 @@ oasgen = { workspace = true, features = ["actix", "swagger-ui", "serde_qs"] }
 
 actix-web = "4.9.0"
 actix-cors = "0.7.0"
-jsonwebtoken = { version = "10.2.0", features = ["aws_lc_rs"] }
+jsonwebtoken = { version = "11.0.0", features = ["aws_lc_rs"] }
 serde_qs = { version = "1", features = ["actix4"] }
 pin-project-lite = "0.2.16"
-base64 = "0.22.1"
+base64 = "0.23.1"
 
 [dev-dependencies]
 engine = { path = "../engine", features = ["test"] }

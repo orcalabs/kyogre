@@ -6,107 +6,228 @@
       {
         "ordinal": 0,
         "name": "vessel_id!: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "trip_id!: TripId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "trip_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "period: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "period"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "period_precision?: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "period_precision"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "total_catch_weight!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 5,
         "name": "total_catch_value",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_total_price_for_fisher"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "distance",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "distance"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "benchmark_state_counter",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_state_counter"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "vessel_length_group: VesselLengthGroup",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "fiskeridir_length_group_id"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "engine_power",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_power_final"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "engine_building_year",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_building_year_final"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "auxiliary_engine_power",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "auxiliary_engine_power"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "auxiliary_engine_building_year",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "auxiliary_engine_building_year"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "boiler_engine_power",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "boiler_engine_power"
+          }
+        }
       },
       {
         "ordinal": 14,
         "name": "boiler_engine_building_year",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "boiler_engine_building_year"
+          }
+        }
       },
       {
         "ordinal": 15,
         "name": "engine_type: EngineType",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_type_manual"
+          }
+        }
       },
       {
         "ordinal": 16,
         "name": "engine_rpm",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_rpm_manual"
+          }
+        }
       },
       {
         "ordinal": 17,
         "name": "service_speed",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "service_speed"
+          }
+        }
       },
       {
         "ordinal": 18,
         "name": "degree_of_electrification",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "degree_of_electrification"
+          }
+        }
       },
       {
         "ordinal": 19,
         "name": "call_sign: CallSign",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "all_vessels",
+            "name": "call_sign"
+          }
+        }
       },
       {
         "ordinal": 20,
         "name": "mmsi: Mmsi",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "all_vessels",
+            "name": "mmsi"
+          }
+        }
       }
     ],
     "parameters": {

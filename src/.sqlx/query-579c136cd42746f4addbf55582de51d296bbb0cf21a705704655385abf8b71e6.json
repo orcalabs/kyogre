@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "weather_location_id!: WeatherLocationId",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "weather_locations",
+            "name": "weather_location_id"
+          }
+        }
       },
       {
         "ordinal": 1,
@@ -15,6 +21,12 @@
           "Custom": {
             "name": "geometry",
             "kind": "Simple"
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "weather_locations",
+            "name": "polygon"
           }
         }
       }

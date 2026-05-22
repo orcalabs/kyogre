@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "estimate_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fuel_estimates",
+            "name": "estimate_liter"
+          }
+        }
       }
     ],
     "parameters": {

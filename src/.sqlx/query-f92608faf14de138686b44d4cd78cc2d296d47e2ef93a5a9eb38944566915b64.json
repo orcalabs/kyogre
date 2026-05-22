@@ -6,17 +6,35 @@
       {
         "ordinal": 0,
         "name": "id: BunkeringId",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "bunkerings",
+            "name": "bunkering_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "fuel_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "bunkerings",
+            "name": "fuel_liter"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "bunkerings",
+            "name": "timestamp"
+          }
+        }
       }
     ],
     "parameters": {

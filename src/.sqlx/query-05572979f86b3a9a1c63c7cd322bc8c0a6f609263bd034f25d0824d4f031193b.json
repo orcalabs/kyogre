@@ -1,0 +1,407 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    f.preferred_trip_assembler AS \"preferred_trip_assembler!: TripAssemblerId\",\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    f.fiskeridir_length_group_id AS \"fiskeridir_length_group_id!: VesselLengthGroup\",\n    f.fishery_id AS \"fiskeridir_fishery_id?: FisheryId\",\n    v.call_sign AS \"fiskeridir_call_sign: CallSign\",\n    f.\"name\" AS fiskeridir_name,\n    f.registration_id AS fiskeridir_registration_id,\n    f.\"length\" AS fiskeridir_length,\n    f.\"width\" AS fiskeridir_width,\n    f.owners::TEXT AS \"fiskeridir_owners!\",\n    f.engine_building_year_final AS \"fiskeridir_engine_building_year?\",\n    f.engine_power_final AS \"fiskeridir_engine_power?\",\n    f.building_year AS \"fiskeridir_building_year?\",\n    f.auxiliary_engine_power AS \"fiskeridir_auxiliary_engine_power?\",\n    f.auxiliary_engine_building_year AS \"fiskeridir_auxiliary_engine_building_year?\",\n    f.engine_version AS \"fiskeridir_engine_version!\",\n    f.boiler_engine_power AS \"fiskeridir_boiler_engine_power?\",\n    f.boiler_engine_building_year AS \"fiskeridir_boiler_engine_building_year?\",\n    f.engine_type_manual AS \"fiskeridir_engine_type: EngineType\",\n    f.engine_rpm_manual AS \"fiskeridir_engine_rpm?\",\n    f.service_speed AS fiskeridir_service_speed,\n    f.degree_of_electrification AS fiskeridir_degree_of_electrification,\n    f.gear_group_ids AS \"gear_group_ids!: Vec<GearGroup>\",\n    f.species_group_ids AS \"species_group_ids!: Vec<SpeciesGroup>\",\n    a.mmsi AS \"ais_mmsi?: Mmsi\",\n    a.call_sign AS \"ais_call_sign: CallSign\",\n    a.name AS ais_name,\n    a.draught AS \"ais_draught: Draught\",\n    a.ship_length AS \"ais_length?\",\n    a.ship_width AS \"ais_width?\",\n    c.departure_timestamp AS \"current_trip_departure_timestamp?\",\n    c.target_species_fiskeridir_id AS \"current_trip_target_species_fiskeridir_id?\",\n    v.is_active AS \"is_active!\"\nFROM\n    all_vessels AS v\n    INNER JOIN fiskeridir_vessels AS f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN ais_vessels AS a ON v.mmsi = a.mmsi\n    LEFT JOIN current_trips AS c ON v.fiskeridir_vessel_id = c.fiskeridir_vessel_id\nWHERE\n    (\n        $1::BIGINT IS NULL\n        OR v.fiskeridir_vessel_id = $1\n    )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "preferred_trip_assembler!: TripAssemblerId",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "preferred_trip_assembler"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "fiskeridir_length_group_id!: VesselLengthGroup",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "fiskeridir_length_group_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "fiskeridir_fishery_id?: FisheryId",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "fishery_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "fiskeridir_call_sign: CallSign",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "all_vessels",
+            "name": "call_sign"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "fiskeridir_name",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "fiskeridir_registration_id",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "registration_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "fiskeridir_length",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "length"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "fiskeridir_width",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "width"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "fiskeridir_owners!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "fiskeridir_engine_building_year?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_building_year_final"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "fiskeridir_engine_power?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_power_final"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "fiskeridir_building_year?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "building_year"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "fiskeridir_auxiliary_engine_power?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "auxiliary_engine_power"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "fiskeridir_auxiliary_engine_building_year?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "auxiliary_engine_building_year"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "fiskeridir_engine_version!",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_version"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "fiskeridir_boiler_engine_power?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "boiler_engine_power"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "fiskeridir_boiler_engine_building_year?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "boiler_engine_building_year"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "fiskeridir_engine_type: EngineType",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_type_manual"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "fiskeridir_engine_rpm?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_rpm_manual"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "fiskeridir_service_speed",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "service_speed"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "fiskeridir_degree_of_electrification",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "degree_of_electrification"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "gear_group_ids!: Vec<GearGroup>",
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "gear_group_ids"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "species_group_ids!: Vec<SpeciesGroup>",
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "species_group_ids"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "ais_mmsi?: Mmsi",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "mmsi"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "ais_call_sign: CallSign",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "call_sign"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "ais_name",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "ais_draught: Draught",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "draught"
+          }
+        }
+      },
+      {
+        "ordinal": 28,
+        "name": "ais_length?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "ship_length"
+          }
+        }
+      },
+      {
+        "ordinal": 29,
+        "name": "ais_width?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "ship_width"
+          }
+        }
+      },
+      {
+        "ordinal": 30,
+        "name": "current_trip_departure_timestamp?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "current_trips",
+            "name": "departure_timestamp"
+          }
+        }
+      },
+      {
+        "ordinal": 31,
+        "name": "current_trip_target_species_fiskeridir_id?",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "current_trips",
+            "name": "target_species_fiskeridir_id"
+          }
+        }
+      },
+      {
+        "ordinal": 32,
+        "name": "is_active!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "all_vessels",
+            "name": "is_active"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      null,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "05572979f86b3a9a1c63c7cd322bc8c0a6f609263bd034f25d0824d4f031193b"
+}

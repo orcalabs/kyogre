@@ -6,27 +6,37 @@
       {
         "ordinal": 0,
         "name": "id!: DeliveryPointId",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "delivery_point_ids",
+            "name": "delivery_point_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 2,
         "name": "address",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 3,
         "name": "latitude",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 4,
         "name": "longitude",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       }
     ],
     "parameters": {

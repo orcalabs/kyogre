@@ -6,17 +6,35 @@
       {
         "ordinal": 0,
         "name": "fiskeridir_vessel_id?:FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ers_arrivals",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "arrival_timestamp!:DateTime<Utc>",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ers_arrivals",
+            "name": "arrival_timestamp"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "vessel_event_id?:i64",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ers_arrivals",
+            "name": "vessel_event_id"
+          }
+        }
       }
     ],
     "parameters": {

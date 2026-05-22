@@ -6,17 +6,25 @@
       {
         "ordinal": 0,
         "name": "max_ts!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       },
       {
         "ordinal": 1,
         "name": "min_ts!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       },
       {
         "ordinal": 2,
         "name": "vessel_id: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "user_hauls",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       }
     ],
     "parameters": {

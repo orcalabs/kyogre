@@ -6,7 +6,8 @@
       {
         "ordinal": 0,
         "name": "ids!: Vec<FiskeridirVesselId>",
-        "type_info": "Int8Array"
+        "type_info": "Int8Array",
+        "origin": "Expression"
       }
     ],
     "parameters": {

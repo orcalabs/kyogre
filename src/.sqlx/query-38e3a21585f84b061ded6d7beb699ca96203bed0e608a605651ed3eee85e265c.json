@@ -6,37 +6,79 @@
       {
         "ordinal": 0,
         "name": "mmsi!: Mmsi",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "mmsi"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "call_sign: CallSign",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "call_sign"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "name",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "name"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "draught: Draught",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "draught"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "length",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "ship_length"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "width",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "ship_width"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "eta",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "eta"
+          }
+        }
       }
     ],
     "parameters": {

@@ -6,12 +6,19 @@
       {
         "ordinal": 0,
         "name": "departure_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ers_departures",
+            "name": "departure_timestamp"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "weight!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       }
     ],
     "parameters": {
