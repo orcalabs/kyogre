@@ -64,6 +64,7 @@ RETURNING
             end_ts,
             start_fuel_liter,
             end_fuel_liter,
+            total_living_weight_kg,
         } = update;
 
         let haul = sqlx::query_as!(
@@ -75,23 +76,26 @@ SET
     start_ts = $2,
     end_ts = $3,
     start_fuel_liter = $4,
-    end_fuel_liter = $5
+    end_fuel_liter = $5,
+    total_living_weight_kg = $6
 WHERE
-    user_haul_id = $6
-    AND call_sign = $7
+    user_haul_id = $7
+    AND call_sign = $8
 RETURNING
     user_haul_id AS "id: UserHaulId",
     start_ts,
     end_ts AS "end_ts!",
     start_fuel_liter,
     end_fuel_liter AS "end_fuel_liter!",
-    config
+    config,
+    total_living_weight_kg
             "#,
             config,
             start_ts,
             end_ts,
             *start_fuel_liter as i32,
             *end_fuel_liter as i32,
+            *total_living_weight_kg,
             id as UserHaulId,
             &call_sign
         )
@@ -148,7 +152,8 @@ SELECT
     end_ts AS "end_ts!",
     start_fuel_liter,
     end_fuel_liter AS "end_fuel_liter!",
-    config
+    config,
+    total_living_weight_kg
 FROM
     user_hauls
 WHERE
@@ -305,7 +310,8 @@ RETURNING
     end_ts AS "end_ts!",
     start_fuel_liter,
     end_fuel_liter AS "end_fuel_liter!",
-    config
+    config,
+    total_living_weight_kg
             "#,
             Utc::now(),
             *fuel_liter_end as i32,

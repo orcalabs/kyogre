@@ -16,6 +16,7 @@ pub struct UserHaul {
     pub end_ts: DateTime<Utc>,
     pub start_fuel_liter: i32,
     pub end_fuel_liter: i32,
+    pub total_living_weight_kg: Option<f64>,
     pub config: serde_json::Value,
 }
 
@@ -28,6 +29,7 @@ impl From<UserHaul> for kyogre_core::UserHaul {
             start_fuel_liter,
             end_fuel_liter,
             config,
+            total_living_weight_kg,
         } = value;
         Self {
             id,
@@ -36,6 +38,7 @@ impl From<UserHaul> for kyogre_core::UserHaul {
             start_fuel_liter: start_fuel_liter as u32,
             end_fuel_liter: end_fuel_liter as u32,
             config,
+            total_living_weight_kg,
         }
     }
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE user_hauls\nSET\n    end_ts = $1,\n    end_fuel_liter = $2\nWHERE\n    call_sign = $3\n    AND end_ts IS NULL\n    AND end_fuel_liter IS NULL\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config\n            ",
+  "query": "\nUPDATE user_hauls\nSET\n    end_ts = $1,\n    end_fuel_liter = $2\nWHERE\n    call_sign = $3\n    AND end_ts IS NULL\n    AND end_fuel_liter IS NULL\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config,\n    total_living_weight_kg\n            ",
   "describe": {
     "columns": [
       {
@@ -32,6 +32,11 @@
         "ordinal": 5,
         "name": "config",
         "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "total_living_weight_kg",
+        "type_info": "Float8"
       }
     ],
     "parameters": {
@@ -47,8 +52,9 @@
       true,
       false,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "aef686da1ed1e47036ddd60c06f3c6629d4f94bde03079dbac6b50015b3ff8d6"
+  "hash": "d9ba1f63b3ef9cc7b3c97ec7f818fa762b73173d36e6093e79b9ab0c9345cf84"
 }
