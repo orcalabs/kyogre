@@ -6,7 +6,8 @@
       {
         "ordinal": 0,
         "name": "dates!",
-        "type_info": "DateRange"
+        "type_info": "DateRange",
+        "origin": "Expression"
       }
     ],
     "parameters": {

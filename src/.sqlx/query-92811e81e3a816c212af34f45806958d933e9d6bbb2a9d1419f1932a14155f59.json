@@ -6,27 +6,57 @@
       {
         "ordinal": 0,
         "name": "vessel_event_id",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "vessel_events",
+            "name": "vessel_event_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "vessel_events",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "vessel_event_type_id!: VesselEventType",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "vessel_events",
+            "name": "vessel_event_type_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "report_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "vessel_events",
+            "name": "report_timestamp"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "occurence_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "vessel_events",
+            "name": "occurence_timestamp"
+          }
+        }
       }
     ],
     "parameters": {

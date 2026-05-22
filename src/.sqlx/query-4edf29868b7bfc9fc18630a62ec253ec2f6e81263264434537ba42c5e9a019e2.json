@@ -6,72 +6,151 @@
       {
         "ordinal": 0,
         "name": "latitude!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "latitude"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "longitude!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "longitude"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "timestamp!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "timestamp"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "course_over_ground",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "course_over_ground"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "speed",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "speed"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "navigational_status: NavigationStatus",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "navigation_status_id"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "rate_of_turn",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "rate_of_turn"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "true_heading",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "true_heading"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "distance_to_shore!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "distance_to_shore"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "position_type: PositionType",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "position_type_id"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "pruned_by: TripPositionLayerId",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "pruned_by"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "trip_cumulative_fuel_consumption_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "trip_cumulative_fuel_consumption_liter"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "trip_cumulative_cargo_weight",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "trip_cumulative_cargo_weight"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "active_gear: Gear",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       }
     ],
     "parameters": {

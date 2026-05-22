@@ -6,22 +6,46 @@
       {
         "ordinal": 0,
         "name": "call_sign!: CallSign",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "vessel_conflicts",
+            "name": "call_sign"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "mmsis!: Vec<Option<Mmsi>>",
-        "type_info": "Int4Array"
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "vessel_conflicts",
+            "name": "mmsis"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "vessel_ids!: Vec<Option<FiskeridirVesselId>>",
-        "type_info": "Int8Array"
+        "type_info": "Int8Array",
+        "origin": {
+          "Table": {
+            "table": "vessel_conflicts",
+            "name": "fiskeridir_vessel_ids"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "sources!: Vec<Option<VesselSource>>",
-        "type_info": "Int4Array"
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "vessel_conflicts",
+            "name": "fiskeridir_vessel_source_ids"
+          }
+        }
       }
     ],
     "parameters": {

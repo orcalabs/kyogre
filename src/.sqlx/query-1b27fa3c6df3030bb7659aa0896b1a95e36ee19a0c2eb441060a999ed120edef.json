@@ -6,22 +6,46 @@
       {
         "ordinal": 0,
         "name": "fiskeridir_vessel_id: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "fuel_measurement_ranges",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "fuel_range: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "fuel_measurement_ranges",
+            "name": "fuel_range"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "fuel_used_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fuel_measurement_ranges",
+            "name": "fuel_used_liter"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "is_reset",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "fuel_measurement_ranges",
+            "name": "is_reset"
+          }
+        }
       }
     ],
     "parameters": {

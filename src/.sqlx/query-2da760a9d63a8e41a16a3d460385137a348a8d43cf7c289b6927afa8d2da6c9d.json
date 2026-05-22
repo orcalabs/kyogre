@@ -6,52 +6,62 @@
       {
         "ordinal": 0,
         "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       },
       {
         "ordinal": 1,
         "name": "arrival_vessel_event_id!",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       },
       {
         "ordinal": 2,
         "name": "arrival_port_id",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": "Expression"
       },
       {
         "ordinal": 3,
         "name": "arrival_estimated_timestamp!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       },
       {
         "ordinal": 4,
         "name": "arrival_report_timestamp!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       },
       {
         "ordinal": 5,
         "name": "departure_vessel_event_id!",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": "Expression"
       },
       {
         "ordinal": 6,
         "name": "departure_port_id",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": "Expression"
       },
       {
         "ordinal": 7,
         "name": "departure_estimated_timestamp!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       },
       {
         "ordinal": 8,
         "name": "departure_report_timestamp!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       },
       {
         "ordinal": 9,
         "name": "por_and_dep_events_after_trip!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       }
     ],
     "parameters": {

@@ -6,7 +6,8 @@
       {
         "ordinal": 0,
         "name": "add_vms_position_partitions",
-        "type_info": "Void"
+        "type_info": "Void",
+        "origin": "Expression"
       }
     ],
     "parameters": {

@@ -29,7 +29,7 @@ csv = { workspace = true }
 strum = { workspace = true }
 oasgen = { workspace = true, optional = true }
 sqlx = { workspace = true, features = [
-    "runtime-tokio-rustls",
+    "runtime-tokio",
     "derive",
     "postgres",
 ], optional = true }
@@ -38,7 +38,7 @@ enum_index_derive = { workspace = true }
 
 tar = "0.4.46"
 ahash = "0.8.11"
-zip = "8"
+zip = "9"
 
 [dev-dependencies]
 http-client = { path = "../http-client", default-features = false }

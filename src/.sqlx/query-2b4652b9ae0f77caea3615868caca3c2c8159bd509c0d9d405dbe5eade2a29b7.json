@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "fishery_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "fishery_id"
+          }
+        }
       }
     ],
     "parameters": {

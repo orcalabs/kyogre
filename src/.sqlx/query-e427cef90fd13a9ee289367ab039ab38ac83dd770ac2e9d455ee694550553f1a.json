@@ -6,112 +6,244 @@
       {
         "ordinal": 0,
         "name": "tool_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "tool_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "barentswatch_vessel_id",
-        "type_info": "Uuid"
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "barentswatch_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "fiskeridir_vessel_id?: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "vessel_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "vessel_name"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "call_sign: CallSign",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "call_sign"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "mmsi?: Mmsi",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "mmsi"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "imo",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "imo"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "reg_num",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "reg_num"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "sbr_reg_num",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "sbr_reg_num"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "contact_phone",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "contact_phone"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "contact_email",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "contact_email"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "tool_type!: FishingFacilityToolType",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "tool_type"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "tool_type_name",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "tool_type_name"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "tool_color",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "tool_color"
+          }
+        }
       },
       {
         "ordinal": 14,
         "name": "tool_count",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "tool_count"
+          }
+        }
       },
       {
         "ordinal": 15,
         "name": "setup_timestamp!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "setup_timestamp"
+          }
+        }
       },
       {
         "ordinal": 16,
         "name": "setup_processed_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "setup_processed_timestamp"
+          }
+        }
       },
       {
         "ordinal": 17,
         "name": "removed_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "removed_timestamp"
+          }
+        }
       },
       {
         "ordinal": 18,
         "name": "removed_processed_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "removed_processed_timestamp"
+          }
+        }
       },
       {
         "ordinal": 19,
         "name": "last_changed!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "last_changed"
+          }
+        }
       },
       {
         "ordinal": 20,
         "name": "source",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "source"
+          }
+        }
       },
       {
         "ordinal": 21,
         "name": "comment",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "comment"
+          }
+        }
       },
       {
         "ordinal": 22,
@@ -121,12 +253,24 @@
             "name": "geometry",
             "kind": "Simple"
           }
+        },
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "geometry_wkt"
+          }
         }
       },
       {
         "ordinal": 23,
         "name": "api_source!: FishingFacilityApiSource",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fishing_facilities",
+            "name": "api_source"
+          }
+        }
       }
     ],
     "parameters": {

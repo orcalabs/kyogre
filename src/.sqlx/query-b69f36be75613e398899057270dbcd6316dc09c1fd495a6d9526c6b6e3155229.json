@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "call_sign!:String",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "vms_positions",
+            "name": "call_sign"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "timestamp!:DateTime<Utc>",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "vms_positions",
+            "name": "timestamp"
+          }
+        }
       }
     ],
     "parameters": {

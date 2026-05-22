@@ -6,57 +6,113 @@
       {
         "ordinal": 0,
         "name": "trip_assembler_log_id",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "trip_assembler_log_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "calculation_timer_prior",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "calculation_timer_prior"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "calculation_timer_post",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "calculation_timer_post"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "conflict",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "conflict"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "conflict_vessel_event_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "conflict_vessel_event_timestamp"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "conflict_vessel_event_id",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "conflict_vessel_event_id"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "conflict_vessel_event_type_id: VesselEventType",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "conflict_vessel_event_type_id"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "prior_trip_vessel_events!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 9,
         "name": "new_vessel_events!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 10,
         "name": "conflict_strategy",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "trip_assembler_logs",
+            "name": "conflict_strategy"
+          }
+        }
       }
     ],
     "parameters": {

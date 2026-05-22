@@ -6,22 +6,46 @@
       {
         "ordinal": 0,
         "name": "id: FuelMeasurementId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "fuel_measurements",
+            "name": "fuel_measurement_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "fiskeridir_vessel_id: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "fuel_measurements",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "fuel_measurements",
+            "name": "timestamp"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "fuel_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fuel_measurements",
+            "name": "fuel_liter"
+          }
+        }
       }
     ],
     "parameters": {

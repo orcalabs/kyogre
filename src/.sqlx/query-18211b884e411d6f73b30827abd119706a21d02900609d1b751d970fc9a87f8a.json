@@ -6,182 +6,363 @@
       {
         "ordinal": 0,
         "name": "trip_id!: TripId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "trip_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "fiskeridir_length_group_id!: VesselLengthGroup",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "fiskeridir_length_group_id"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "period!: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "period"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "period_extended: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "period_extended"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "period_precision: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "period_precision"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "landing_coverage!: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_coverage"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "num_deliveries",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "num_landings"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "total_living_weight",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_total_living_weight"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "total_gross_weight",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_total_gross_weight"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "total_product_weight",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_total_product_weight"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "total_price_for_fisher",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_total_price_for_fisher"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "price_for_fisher_is_estimated",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "price_for_fisher_is_estimated"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "delivery_points: Vec<DeliveryPointId>",
-        "type_info": "VarcharArray"
+        "type_info": "VarcharArray",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "delivery_point_ids"
+          }
+        }
       },
       {
         "ordinal": 14,
         "name": "gear_ids: Vec<Gear>",
-        "type_info": "Int4Array"
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_gear_ids"
+          }
+        }
       },
       {
         "ordinal": 15,
         "name": "gear_group_ids: Vec<GearGroup>",
-        "type_info": "Int4Array"
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_gear_group_ids"
+          }
+        }
       },
       {
         "ordinal": 16,
         "name": "species_group_ids: Vec<SpeciesGroup>",
-        "type_info": "Int4Array"
+        "type_info": "Int4Array",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_species_group_ids"
+          }
+        }
       },
       {
         "ordinal": 17,
         "name": "latest_landing_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "most_recent_landing"
+          }
+        }
       },
       {
         "ordinal": 18,
         "name": "catches!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 19,
         "name": "start_port_id",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "start_port_id"
+          }
+        }
       },
       {
         "ordinal": 20,
         "name": "end_port_id",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "end_port_id"
+          }
+        }
       },
       {
         "ordinal": 21,
         "name": "trip_assembler_id!: TripAssemblerId",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "trip_assembler_id"
+          }
+        }
       },
       {
         "ordinal": 22,
         "name": "vessel_events!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 23,
         "name": "hauls!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 24,
         "name": "tra!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 25,
         "name": "landing_ids: Vec<LandingId>",
-        "type_info": "VarcharArray"
+        "type_info": "VarcharArray",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "landing_ids"
+          }
+        }
       },
       {
         "ordinal": 26,
         "name": "fishing_facilities!",
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": "Expression"
       },
       {
         "ordinal": 27,
         "name": "distance",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "distance"
+          }
+        }
       },
       {
         "ordinal": 28,
         "name": "target_species_fiskeridir_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "target_species_fiskeridir_id"
+          }
+        }
       },
       {
         "ordinal": 29,
         "name": "target_species_fao_id",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "target_species_fao_id"
+          }
+        }
       },
       {
         "ordinal": 30,
         "name": "fuel_consumption_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 31,
         "name": "fuel_consumption_liter_estimated_only",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_fuel_consumption_liter_estimated_only"
+          }
+        }
       },
       {
         "ordinal": 32,
         "name": "percentage_of_trip_covered_by_measurements",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 33,
         "name": "track_coverage",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "track_coverage"
+          }
+        }
       },
       {
         "ordinal": 34,
         "name": "has_track: HasTrack",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "has_track"
+          }
+        }
       },
       {
         "ordinal": 35,
         "name": "first_arrival",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "first_arrival"
+          }
+        }
       }
     ],
     "parameters": {

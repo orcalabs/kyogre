@@ -6,7 +6,8 @@
       {
         "ordinal": 0,
         "name": "call_signs!",
-        "type_info": "TextArray"
+        "type_info": "TextArray",
+        "origin": "Expression"
       }
     ],
     "parameters": {

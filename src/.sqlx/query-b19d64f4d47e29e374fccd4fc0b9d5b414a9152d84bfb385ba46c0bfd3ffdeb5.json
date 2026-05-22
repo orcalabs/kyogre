@@ -6,57 +6,123 @@
       {
         "ordinal": 0,
         "name": "id!: TripId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "trip_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "period!: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "period"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "period_precision: DateRange",
-        "type_info": "TstzRange"
+        "type_info": "TstzRange",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "period_precision"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "weight_per_hour",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_weight_per_hour"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "weight_per_distance",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_weight_per_distance"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "fuel_consumption_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_fuel_consumption_liter"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "weight_per_fuel_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_weight_per_fuel_liter"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "catch_value_per_fuel_liter",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_catch_value_per_fuel_liter"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "eeoi",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_eeoi"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "carbon_intensity",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_carbon_intensity"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "fui",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trips_detailed",
+            "name": "benchmark_fui"
+          }
+        }
       }
     ],
     "parameters": {

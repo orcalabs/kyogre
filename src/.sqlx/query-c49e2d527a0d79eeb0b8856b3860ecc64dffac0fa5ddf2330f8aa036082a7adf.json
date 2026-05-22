@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "refresh_boundary?",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trips_refresh_boundary",
+            "name": "refresh_boundary"
+          }
+        }
       }
     ],
     "parameters": {

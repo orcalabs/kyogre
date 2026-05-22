@@ -6,37 +6,79 @@
       {
         "ordinal": 0,
         "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trip_calculation_timers",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_calculation_timers",
+            "name": "timer"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "queued_reset!",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "trip_calculation_timers",
+            "name": "queued_reset"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "conflict",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_calculation_timers",
+            "name": "conflict"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "conflict_vessel_event_id",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trip_calculation_timers",
+            "name": "conflict_vessel_event_id"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "conflict_event_type: VesselEventType",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trip_calculation_timers",
+            "name": "conflict_vessel_event_type_id"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "conflict_vessel_event_timestamp",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_calculation_timers",
+            "name": "conflict_vessel_event_timestamp"
+          }
+        }
       }
     ],
     "parameters": {

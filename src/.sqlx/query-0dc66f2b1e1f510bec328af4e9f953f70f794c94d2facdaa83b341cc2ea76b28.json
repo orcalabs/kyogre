@@ -6,42 +6,85 @@
       {
         "ordinal": 0,
         "name": "trip_id: TripId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "trip_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "latitude!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "latitude"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "longitude!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "longitude"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "timestamp!",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "timestamp"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "speed",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "speed"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "position_type_id!: PositionType",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "position_type_id"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "covered_by_manual_fuel_entry!",
-        "type_info": "Bool"
+        "type_info": "Bool",
+        "origin": "Expression"
       },
       {
         "ordinal": 7,
         "name": "cumulative_fuel_consumption_liter!",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "trip_positions",
+            "name": "trip_cumulative_fuel_consumption_liter"
+          }
+        }
       }
     ],
     "parameters": {

@@ -6,12 +6,24 @@
       {
         "ordinal": 0,
         "name": "year",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rafisklaget_weekly_sales",
+            "name": "year"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "week",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "rafisklaget_weekly_sales",
+            "name": "week"
+          }
+        }
       }
     ],
     "parameters": {

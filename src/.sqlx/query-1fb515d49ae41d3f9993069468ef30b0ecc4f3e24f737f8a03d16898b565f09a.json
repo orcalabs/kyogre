@@ -6,27 +6,57 @@
       {
         "ordinal": 0,
         "name": "port_id",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "port_dock_points",
+            "name": "port_id"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "port_dock_point_id",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "port_dock_points",
+            "name": "port_dock_point_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "latitude",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "port_dock_points",
+            "name": "latitude"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "longitude",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "port_dock_points",
+            "name": "longitude"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "name",
-        "type_info": "Varchar"
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "port_dock_points",
+            "name": "name"
+          }
+        }
       }
     ],
     "parameters": {

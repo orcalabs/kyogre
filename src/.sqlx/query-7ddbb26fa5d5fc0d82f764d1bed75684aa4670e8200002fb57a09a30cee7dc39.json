@@ -6,87 +6,174 @@
       {
         "ordinal": 0,
         "name": "mmsi!: Mmsi",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "active_vessels",
+            "name": "mmsi"
+          }
+        }
       },
       {
         "ordinal": 1,
         "name": "vessel_id!: FiskeridirVesselId",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "fiskeridir_vessel_id"
+          }
+        }
       },
       {
         "ordinal": 2,
         "name": "engine_building_year!",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_building_year_final"
+          }
+        }
       },
       {
         "ordinal": 3,
         "name": "engine_power!",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_power_final"
+          }
+        }
       },
       {
         "ordinal": 4,
         "name": "auxiliary_engine_power?",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "auxiliary_engine_power"
+          }
+        }
       },
       {
         "ordinal": 5,
         "name": "auxiliary_engine_building_year?",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "auxiliary_engine_building_year"
+          }
+        }
       },
       {
         "ordinal": 6,
         "name": "boiler_engine_power?",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "boiler_engine_power"
+          }
+        }
       },
       {
         "ordinal": 7,
         "name": "boiler_engine_building_year?",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "boiler_engine_building_year"
+          }
+        }
       },
       {
         "ordinal": 8,
         "name": "engine_type: EngineType",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_type_manual"
+          }
+        }
       },
       {
         "ordinal": 9,
         "name": "engine_rpm",
-        "type_info": "Int4"
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "engine_rpm_manual"
+          }
+        }
       },
       {
         "ordinal": 10,
         "name": "service_speed?",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "service_speed"
+          }
+        }
       },
       {
         "ordinal": 11,
         "name": "degree_of_electrification?",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "fiskeridir_vessels",
+            "name": "degree_of_electrification"
+          }
+        }
       },
       {
         "ordinal": 12,
         "name": "current_trip_start?",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "current_trips",
+            "name": "departure_timestamp"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "breadth",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 14,
         "name": "length",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": "Expression"
       },
       {
         "ordinal": 15,
         "name": "current_draught: Draught",
-        "type_info": "Float8"
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "ais_vessels",
+            "name": "draught"
+          }
+        }
       },
       {
         "ordinal": 16,
         "name": "latest_position_timestamp?",
-        "type_info": "Timestamptz"
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       }
     ],
     "parameters": {

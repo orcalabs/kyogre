@@ -6,7 +6,13 @@
       {
         "ordinal": 0,
         "name": "num_landings",
-        "type_info": "Int8"
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "delivery_point_ids",
+            "name": "num_landings"
+          }
+        }
       }
     ],
     "parameters": {
