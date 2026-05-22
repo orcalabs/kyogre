@@ -1,4 +1,7 @@
+use fiskeridir_rs::SpeciesFiskeridirId;
 use unnest_insert::UnnestInsert;
+
+use crate::queries::type_to_i32;
 
 #[derive(UnnestInsert)]
 #[unnest_insert(table_name = "landing_entries", conflict = "landing_id,line_number")]
@@ -56,7 +59,8 @@ pub struct NewLandingEntry<'a> {
     // Art - gruppe (kode)
     pub species_group_id: i32,
     // Art - FDIR (kode)
-    pub species_fiskeridir_id: i32,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub species_fiskeridir_id: SpeciesFiskeridirId,
     // Art - hovedgruppe (kode)
     pub species_main_group_id: i32,
     pub product_quality_id: i32,
@@ -91,7 +95,7 @@ impl<'a> From<&'a fiskeridir_rs::Landing> for NewLandingEntry<'a> {
             species_id: landing.product.species.code as i32,
             species_fao_id: landing.product.species.fao_code.as_deref(),
             species_group_id: landing.product.species.group_code as i32,
-            species_fiskeridir_id: landing.product.species.fdir_code as i32,
+            species_fiskeridir_id: landing.product.species.fdir_code,
             species_main_group_id: landing.product.species.main_group_code as i32,
             product_quality_id: landing.product.quality as i32,
         }

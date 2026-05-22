@@ -69,9 +69,9 @@ WHERE
         for a in &f_entries {
             ids.push(NewDeliveryPointId::from(&a.delivery_point_id));
 
-            species.entry(a.species_code).or_insert_with(|| {
-                NewSpeciesFiskeridir::new(a.species_code as i32, Some(&a.species))
-            });
+            species
+                .entry(a.species_code)
+                .or_insert_with(|| NewSpeciesFiskeridir::new(a.species_code, Some(&a.species)));
 
             if let Entry::Vacant(e) =
                 aqua_species.entry((a.till_nr.as_ref(), a.till_unit.as_ref(), a.species_code))

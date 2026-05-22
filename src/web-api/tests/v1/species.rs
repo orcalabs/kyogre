@@ -1,5 +1,7 @@
 use super::helper::test;
 use engine::*;
+use fiskeridir_rs::SpeciesFiskeridirId;
+use kyogre_core::SpeciesFiskeridir;
 use strum::IntoEnumIterator;
 use web_api::routes::v1::species::*;
 
@@ -129,15 +131,15 @@ async fn test_species_fiskeridir_returns_all_species_fiskeridir() {
     test(|helper, builder| async move {
         let expected = vec![
             SpeciesFiskeridir {
-                id: 0,
+                id: SpeciesFiskeridirId::test_new(0),
                 name: Some("Ukjent".into()),
             },
             SpeciesFiskeridir {
-                id: 200,
+                id: SpeciesFiskeridirId::test_new(200),
                 name: Some("test".into()),
             },
             SpeciesFiskeridir {
-                id: 201,
+                id: SpeciesFiskeridirId::test_new(201),
                 name: Some("test2".into()),
             },
         ];

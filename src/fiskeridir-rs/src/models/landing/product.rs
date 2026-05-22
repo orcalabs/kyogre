@@ -2,7 +2,9 @@ use num_derive::{FromPrimitive, ToPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum::{AsRefStr, Display, EnumString};
 
-use crate::{SpeciesGroup, SpeciesMainGroup, string_new_types::NonEmptyString};
+use crate::{
+    SpeciesFiskeridirId, SpeciesGroup, SpeciesMainGroup, string_new_types::NonEmptyString,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Product {
@@ -38,7 +40,7 @@ pub struct Species {
     pub name: NonEmptyString,
     pub fao_code: Option<NonEmptyString>,
     pub fao_name: Option<NonEmptyString>,
-    pub fdir_code: u32,
+    pub fdir_code: SpeciesFiskeridirId,
     pub fdir_name: NonEmptyString,
     pub group_code: SpeciesGroup,
     pub group_name: NonEmptyString,
@@ -334,6 +336,7 @@ impl Quality {
     EnumString,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub enum Condition {
     Levende = 100,
     Rund = 110,

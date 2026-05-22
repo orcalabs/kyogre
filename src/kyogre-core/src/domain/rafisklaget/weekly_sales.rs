@@ -1,12 +1,12 @@
 use chrono::IsoWeek;
-use fiskeridir_rs::{Condition, GearGroup, Quality, VesselLengthGroup};
+use fiskeridir_rs::{Condition, GearGroup, Quality, SpeciesFiskeridirId, VesselLengthGroup};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct WeeklySaleId {
     pub iso_week: IsoWeek,
     pub vessel_length_group: VesselLengthGroup,
     pub gear_group: GearGroup,
-    pub species: u32,
+    pub species: SpeciesFiskeridirId,
     pub condition: Condition,
     pub quality: Quality,
 }
@@ -32,7 +32,7 @@ mod test {
                 iso_week: ts.iso_week(),
                 vessel_length_group: VesselLengthGroup::FifteenToTwentyOne,
                 gear_group: GearGroup::Trawl,
-                species: 1032,
+                species: SpeciesFiskeridirId::test_new(1032),
                 condition: Condition::Levende,
                 quality: Quality::Superior,
             }

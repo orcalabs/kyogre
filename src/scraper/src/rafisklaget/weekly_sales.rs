@@ -2,7 +2,9 @@ use std::{any::type_name, collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
 use chrono::{Datelike, Duration, IsoWeek, NaiveDate, NaiveDateTime, Utc, Weekday};
-use fiskeridir_rs::{Condition, GearGroup, Quality, SalesTeam, VesselLengthGroup};
+use fiskeridir_rs::{
+    Condition, GearGroup, Quality, SalesTeam, SpeciesFiskeridirId, VesselLengthGroup,
+};
 use http_client::HttpClient;
 use kyogre_core::{BearerToken, WeeklySale, WeeklySaleId};
 use num_traits::FromPrimitive;
@@ -12,6 +14,7 @@ use tracing::info;
 
 use crate::{ApiClientConfig, DataSource, Error, Processor, ScraperId};
 
+// https://app.swaggerhub.com/apis/RAFISKLAGET/api_for_sales_data
 pub struct WeeklySalesScraper {
     config: Option<ApiClientConfig>,
     client: Arc<HttpClient>,
@@ -159,7 +162,7 @@ pub struct SalesData {
     pub landing_zone: Option<String>,
     /// See code list
     #[serde_as(as = "DisplayFromStr")]
-    pub species: u32,
+    pub species: SpeciesFiskeridirId,
     /// See code list
     pub size: String,
     /// | species                        | sizeGroup | Description NOR | Description ENG |

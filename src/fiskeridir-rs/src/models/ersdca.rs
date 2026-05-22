@@ -2,6 +2,7 @@ use super::ers_common::{ErsMessageInfo, ErsSpecies, ErsVesselInfo, Port};
 use crate::Gear;
 use crate::GearGroup;
 use crate::MainGearGroup;
+use crate::SpeciesFiskeridirId;
 use crate::deserialize_utils::*;
 use crate::string_new_types::NonEmptyString;
 use crate::utils::opt_timestamp_from_date_and_time;
@@ -191,7 +192,7 @@ pub struct DcaCatch {
     pub majority_species_fao_code: Option<NonEmptyString>,
     #[serde(rename = "Hovedart - FDIR (kode)")]
     #[serde_as(as = "OptPrimitiveFromStr")]
-    pub majority_species_fdir_code: Option<u32>,
+    pub majority_species_fdir_code: Option<SpeciesFiskeridirId>,
     #[serde(flatten)]
     pub species: ErsSpecies,
 }
@@ -372,7 +373,7 @@ mod test {
             Self {
                 majority_species_fao: Some("Torsk".parse().unwrap()),
                 majority_species_fao_code: Some("COD".parse().unwrap()),
-                majority_species_fdir_code: Some(1022),
+                majority_species_fdir_code: Some(SpeciesFiskeridirId::test_new(1022)),
                 species: ErsSpecies::test_default(),
             }
         }

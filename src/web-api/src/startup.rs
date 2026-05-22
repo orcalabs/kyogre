@@ -168,7 +168,8 @@ where
             .route(
                 "/trip/benchmarks/average_eeoi",
                 get().to(routes::v1::trip::benchmarks::average_eeoi::<T>),
-            );
+            )
+            .route("/price", get().to(routes::v1::price::price::<T>));
 
         if let Some(guard) = bw_state.guard() {
             scope = scope

@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{
-    FiskdirVesselNationalityGroup, Gear, GearGroup, MainGearGroup, SpeciesGroup, SpeciesMainGroup,
-    WhaleGender,
+    FiskdirVesselNationalityGroup, Gear, GearGroup, MainGearGroup, SpeciesFiskeridirId,
+    SpeciesGroup, SpeciesMainGroup, WhaleGender,
 };
 use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
@@ -92,10 +92,12 @@ pub struct NewErsDcaBody<'a> {
     pub herring_population_id: Option<&'a str>,
     pub herring_population_fiskeridir_id: Option<i32>,
     pub majority_species_fao_id: Option<&'a str>,
-    pub majority_species_fiskeridir_id: Option<i32>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
+    pub majority_species_fiskeridir_id: Option<SpeciesFiskeridirId>,
     pub living_weight: Option<i32>,
     pub species_fao_id: Option<&'a str>,
-    pub species_fiskeridir_id: Option<i32>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
+    pub species_fiskeridir_id: Option<SpeciesFiskeridirId>,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
     pub species_group_id: SpeciesGroup,
     #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
@@ -196,10 +198,10 @@ impl<'a> From<&'a fiskeridir_rs::ErsDca> for NewErsDcaBody<'a> {
             herring_population_id: v.herring_population_code.as_deref(),
             herring_population_fiskeridir_id: v.herring_population_fdir_code.map(|v| v as i32),
             majority_species_fao_id: v.catch.majority_species_fao_code.as_deref(),
-            majority_species_fiskeridir_id: v.catch.majority_species_fdir_code.map(|v| v as i32),
+            majority_species_fiskeridir_id: v.catch.majority_species_fdir_code,
             living_weight: v.catch.species.living_weight.map(|v| v as i32),
             species_fao_id: v.catch.species.species_fao_code.as_deref(),
-            species_fiskeridir_id: v.catch.species.species_fdir_code.map(|v| v as i32),
+            species_fiskeridir_id: v.catch.species.species_fdir_code,
             species_group_id: v
                 .catch
                 .species

@@ -1,4 +1,7 @@
+use fiskeridir_rs::SpeciesFiskeridirId;
 use unnest_insert::UnnestInsert;
+
+use crate::queries::type_to_i32;
 
 #[derive(Debug, Clone, PartialEq, Eq, UnnestInsert)]
 #[unnest_insert(table_name = "species", conflict = "species_id", update_coalesce_all)]
@@ -27,8 +30,12 @@ pub struct NewSpeciesFao<'a> {
     update_coalesce_all
 )]
 pub struct NewSpeciesFiskeridir<'a> {
-    #[unnest_insert(field_name = "species_fiskeridir_id")]
-    pub id: i32,
+    #[unnest_insert(
+        field_name = "species_fiskeridir_id",
+        sql_type = "INT",
+        type_conversion = "type_to_i32"
+    )]
+    pub id: SpeciesFiskeridirId,
     pub name: Option<&'a str>,
 }
 
@@ -36,12 +43,6 @@ pub struct NewSpeciesFiskeridir<'a> {
 pub struct Species {
     pub id: i32,
     pub name: String,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SpeciesFiskeridir {
-    pub id: i32,
-    pub name: Option<String>,
 }
 
 impl<'a> From<&'a fiskeridir_rs::Species> for NewSpecies<'a> {
@@ -56,7 +57,7 @@ impl<'a> From<&'a fiskeridir_rs::Species> for NewSpecies<'a> {
 impl<'a> From<&'a fiskeridir_rs::Species> for NewSpeciesFiskeridir<'a> {
     fn from(val: &'a fiskeridir_rs::Species) -> Self {
         Self {
-            id: val.fdir_code as i32,
+            id: val.fdir_code,
             name: Some(&val.fdir_name),
         }
     }
@@ -76,22 +77,13 @@ impl<'a> NewSpeciesFao<'a> {
 }
 
 impl<'a> NewSpeciesFiskeridir<'a> {
-    pub fn new(id: i32, name: Option<&'a str>) -> Self {
+    pub fn new(id: SpeciesFiskeridirId, name: Option<&'a str>) -> Self {
         Self { id, name }
     }
 }
 
 impl From<Species> for kyogre_core::Species {
     fn from(value: Species) -> Self {
-        Self {
-            id: value.id as u32,
-            name: value.name,
-        }
-    }
-}
-
-impl From<SpeciesFiskeridir> for kyogre_core::SpeciesFiskeridir {
-    fn from(value: SpeciesFiskeridir) -> Self {
         Self {
             id: value.id as u32,
             name: value.name,

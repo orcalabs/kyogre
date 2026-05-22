@@ -1,9 +1,11 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{FiskdirVesselNationalityGroup, SpeciesGroup, SpeciesMainGroup};
+use fiskeridir_rs::{
+    FiskdirVesselNationalityGroup, SpeciesFiskeridirId, SpeciesGroup, SpeciesMainGroup,
+};
 use kyogre_core::FiskeridirVesselId;
 use unnest_insert::UnnestInsert;
 
-use crate::queries::{opt_type_to_i64, type_to_i32};
+use crate::queries::{opt_type_to_i32, opt_type_to_i64, type_to_i32};
 
 #[derive(UnnestInsert)]
 #[unnest_insert(
@@ -63,7 +65,8 @@ pub struct NewErsPorCatch<'a> {
     pub ers_quantum_type_id: Option<&'a str>,
     pub living_weight: Option<i32>,
     pub species_fao_id: Option<&'a str>,
-    pub species_fiskeridir_id: Option<i32>,
+    #[unnest_insert(sql_type = "INT", type_conversion = "opt_type_to_i32")]
+    pub species_fiskeridir_id: Option<SpeciesFiskeridirId>,
     pub species_group_id: i32,
     pub species_main_group_id: i32,
 }
@@ -135,7 +138,7 @@ impl<'a> NewErsPorCatch<'a> {
                 ers_quantum_type_id: ers_por.catch.quantum_type_code.as_deref(),
                 living_weight: s.living_weight.map(|v| v as i32),
                 species_fao_id: ers_por.catch.species.species_fao_code.as_deref(),
-                species_fiskeridir_id: ers_por.catch.species.species_fdir_code.map(|v| v as i32),
+                species_fiskeridir_id: ers_por.catch.species.species_fdir_code,
                 species_group_id: ers_por
                     .catch
                     .species

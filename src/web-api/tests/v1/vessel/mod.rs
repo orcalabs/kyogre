@@ -1,8 +1,8 @@
 use super::helper::test;
 use chrono::{Duration, TimeZone, Utc};
 use engine::*;
-use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup};
+use fiskeridir_rs::{SpeciesFiskeridirId, SpeciesGroup};
 use float_cmp::approx_eq;
 use http_client::StatusCode;
 use kyogre_core::ScraperInboundPort;
@@ -869,9 +869,9 @@ async fn test_vessels_returns_correct_current_trip() {
             .dep(2)
             .modify_idx(|i, d| {
                 if i == 0 {
-                    d.dep.target_species_fdir_code = Some(100);
+                    d.dep.target_species_fdir_code = Some(SpeciesFiskeridirId::test_new(100));
                 } else {
-                    d.dep.target_species_fdir_code = Some(101);
+                    d.dep.target_species_fdir_code = Some(SpeciesFiskeridirId::test_new(101));
                 }
             })
             .build()

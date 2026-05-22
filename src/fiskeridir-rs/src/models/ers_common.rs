@@ -1,5 +1,5 @@
 use crate::utils::timestamp_from_date_and_time;
-use crate::{SpeciesGroup, SpeciesMainGroup, VesselLengthGroup};
+use crate::{SpeciesFiskeridirId, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup};
 use crate::{deserialize_utils::*, string_new_types::NonEmptyString};
 use chrono::{DateTime, Datelike, Duration, NaiveDate, NaiveTime, Utc};
 use jurisdiction::Jurisdiction;
@@ -102,7 +102,7 @@ pub struct ErsSpecies {
     pub species_fdir: Option<NonEmptyString>,
     #[serde(rename = "Art - FDIR (kode)")]
     #[serde_as(as = "OptPrimitiveFromStr")]
-    pub species_fdir_code: Option<u32>,
+    pub species_fdir_code: Option<SpeciesFiskeridirId>,
     #[serde(rename = "Art - gruppe")]
     #[serde_as(as = "OptFromStrFromAny")]
     pub species_group: Option<NonEmptyString>,
@@ -323,7 +323,7 @@ mod test {
                 species_fao: Some("Torsk".parse().unwrap()),
                 species_fao_code: Some("COD".parse().unwrap()),
                 species_fdir: Some("Torsk".parse().unwrap()),
-                species_fdir_code: Some(1022),
+                species_fdir_code: Some(SpeciesFiskeridirId::test_new(1022)),
                 species_group: Some(SpeciesGroup::AtlanticCod.norwegian_name().parse().unwrap()),
                 species_group_code: Some(SpeciesGroup::AtlanticCod),
                 species_main_group: Some(

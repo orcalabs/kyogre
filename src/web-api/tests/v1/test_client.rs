@@ -4,7 +4,7 @@ use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
     ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, CreateFuelMeasurement,
     DeleteFuelMeasurement, FiskeridirVesselId, FuelEntry, FuelMeasurement, LiveFuel, Mmsi,
-    OrgBenchmarks, UpdateUser, UpdateVessel, VesselBenchmarks,
+    OrgBenchmarks, SpeciesFiskeridir, UpdateUser, UpdateVessel, VesselBenchmarks,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use web_api::{
@@ -19,9 +19,7 @@ use web_api::{
         haul::{Haul, HaulsMatrix, HaulsMatrixParams, HaulsParams},
         landing::{Landing, LandingMatrix, LandingMatrixParams, LandingsParams},
         org::OrgBenchmarkParameters,
-        species::{
-            Species, SpeciesFao, SpeciesFiskeridir, SpeciesGroupDetailed, SpeciesMainGroupDetailed,
-        },
+        species::{Species, SpeciesFao, SpeciesGroupDetailed, SpeciesMainGroupDetailed},
         trip::{
             CurrentTrip, Trip, TripsParameters,
             benchmarks::{

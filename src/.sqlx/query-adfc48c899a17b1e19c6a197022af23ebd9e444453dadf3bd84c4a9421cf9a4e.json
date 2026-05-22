@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    sum_price::FLOAT8 / sum_calculated_living_weight::FLOAT8 AS price\nFROM\n    rafisklaget_weekly_sales\nWHERE\n    vessel_length_group = $1\n    AND gear_group = $2\n    AND species = $3\n    AND condition = $4\n    AND quality = $5\n    AND sum_calculated_living_weight > 0\nORDER BY\n    \"year\" DESC,\n    week DESC\nLIMIT\n    1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "price",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "adfc48c899a17b1e19c6a197022af23ebd9e444453dadf3bd84c4a9421cf9a4e"
+}

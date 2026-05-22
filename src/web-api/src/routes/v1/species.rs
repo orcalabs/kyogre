@@ -1,6 +1,7 @@
 use actix_web::web;
 use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
+use kyogre_core::SpeciesFiskeridir;
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_with::{DisplayFromStr, serde_as};
@@ -50,7 +51,7 @@ pub async fn species_fiskeridir<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
 ) -> StreamResponse<SpeciesFiskeridir> {
     stream_response! {
-        db.species_fiskeridir().map_ok(SpeciesFiskeridir::from)
+        db.species_fiskeridir()
     }
 }
 
@@ -91,13 +92,6 @@ pub struct SpeciesMainGroupDetailed {
 
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
-pub struct SpeciesFiskeridir {
-    pub id: u32,
-    pub name: Option<String>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
 pub struct SpeciesFao {
     pub id: String,
     pub name: Option<String>,
@@ -133,15 +127,6 @@ impl From<fiskeridir_rs::SpeciesMainGroup> for SpeciesMainGroupDetailed {
 impl From<kyogre_core::SpeciesFao> for SpeciesFao {
     fn from(value: kyogre_core::SpeciesFao) -> Self {
         SpeciesFao {
-            id: value.id,
-            name: value.name,
-        }
-    }
-}
-
-impl From<kyogre_core::SpeciesFiskeridir> for SpeciesFiskeridir {
-    fn from(value: kyogre_core::SpeciesFiskeridir) -> Self {
-        SpeciesFiskeridir {
             id: value.id,
             name: value.name,
         }

@@ -1,6 +1,7 @@
 use super::super::helper::test;
 use chrono::{Datelike, Duration, TimeZone, Utc};
 use engine::*;
+use fiskeridir_rs::SpeciesFiskeridirId;
 use http_client::StatusCode;
 use kyogre_core::{Month, TEST_SIGNED_IN_VESSEL_CALLSIGN};
 
@@ -25,25 +26,25 @@ async fn test_vessel_benchmarks_returns_correct_cumulative_landings() {
                 0 => {
                     v.landing.landing_timestamp =
                         Utc.with_ymd_and_hms(2022, 1, 1, 1, 0, 0).unwrap();
-                    v.landing.product.species.fdir_code = 201
+                    v.landing.product.species.fdir_code = SpeciesFiskeridirId::test_new(201)
                 }
                 1 => {
                     v.landing.landing_timestamp =
                         Utc.with_ymd_and_hms(now.year(), 2, 1, 1, 0, 0).unwrap();
                     v.landing.product.living_weight = Some(200.0);
-                    v.landing.product.species.fdir_code = 201
+                    v.landing.product.species.fdir_code = SpeciesFiskeridirId::test_new(201)
                 }
                 2 => {
                     v.landing.landing_timestamp =
                         Utc.with_ymd_and_hms(now.year(), 3, 1, 1, 0, 0).unwrap();
                     v.landing.product.living_weight = Some(300.0);
-                    v.landing.product.species.fdir_code = 201
+                    v.landing.product.species.fdir_code = SpeciesFiskeridirId::test_new(201)
                 }
                 3 => {
                     v.landing.landing_timestamp =
                         Utc.with_ymd_and_hms(now.year(), 3, 1, 1, 0, 0).unwrap();
                     v.landing.product.living_weight = Some(5000.0);
-                    v.landing.product.species.fdir_code = 200
+                    v.landing.product.species.fdir_code = SpeciesFiskeridirId::test_new(200)
                 }
                 _ => unreachable!(),
             })

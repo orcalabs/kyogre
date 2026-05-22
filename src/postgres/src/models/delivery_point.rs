@@ -1,5 +1,7 @@
 use chrono::{NaiveDate, NaiveDateTime};
-use fiskeridir_rs::{BuyerAddress, BuyerLocationId, BuyerLocationType, DeliveryPointId};
+use fiskeridir_rs::{
+    BuyerAddress, BuyerLocationId, BuyerLocationType, DeliveryPointId, SpeciesFiskeridirId,
+};
 use kyogre_core::DeliveryPointType;
 use unnest_insert::UnnestInsert;
 
@@ -79,7 +81,8 @@ pub struct AquaCultureSpecies<'a> {
     pub delivery_point_id: &'a str,
     pub till_nr: &'a str,
     pub till_unit: &'a str,
-    pub species_fiskeridir_id: i32,
+    #[unnest_insert(sql_type = "INT", type_conversion = "type_to_i32")]
+    pub species_fiskeridir_id: SpeciesFiskeridirId,
     pub till_kap: f64,
 }
 
@@ -152,7 +155,7 @@ impl<'a> From<&'a fiskeridir_rs::AquaCultureEntry> for AquaCultureSpecies<'a> {
             delivery_point_id: v.delivery_point_id.as_ref(),
             till_nr: v.till_nr.as_ref(),
             till_unit: v.till_unit.as_ref(),
-            species_fiskeridir_id: v.species_code as i32,
+            species_fiskeridir_id: v.species_code,
             till_kap: v.till_kap,
         }
     }
