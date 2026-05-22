@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nUPDATE user_hauls\nSET\n    end_ts = $1,\n    end_fuel_liter = $2\nWHERE\n    call_sign = $3\n    AND end_ts IS NULL\n    AND end_fuel_liter IS NULL\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config,\n    total_living_weight_kg\n            ",
+  "query": "\nUPDATE user_hauls\nSET\n    end_ts = $1,\n    end_fuel_liter = $2,\n    total_living_weight_kg = $3\nWHERE\n    call_sign = $4\n    AND end_ts IS NULL\n    AND end_fuel_liter IS NULL\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config,\n    total_living_weight_kg\n            ",
   "describe": {
     "columns": [
       {
@@ -43,6 +43,7 @@
       "Left": [
         "Timestamptz",
         "Int4",
+        "Float8",
         "Text"
       ]
     },
@@ -56,5 +57,5 @@
       true
     ]
   },
-  "hash": "d9ba1f63b3ef9cc7b3c97ec7f818fa762b73173d36e6093e79b9ab0c9345cf84"
+  "hash": "f90a2172ff1181fc0355d016b18b76043ca57c244c40bb75a2a9a4541eca7cb7"
 }
