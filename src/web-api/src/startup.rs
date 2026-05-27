@@ -88,11 +88,11 @@ where
             .route("/species", get().to(routes::v1::species::species::<T>))
             .route(
                 "/species_groups",
-                get().to(routes::v1::species::species_groups::<T>),
+                get().to(routes::v1::species::species_groups),
             )
             .route(
                 "/species_main_groups",
-                get().to(routes::v1::species::species_main_groups::<T>),
+                get().to(routes::v1::species::species_main_groups),
             )
             .route(
                 "/species_fao",
@@ -102,6 +102,8 @@ where
                 "/species_fiskeridir",
                 get().to(routes::v1::species::species_fiskeridir::<T>),
             )
+            .route("/condition", get().to(routes::v1::species::conditions))
+            .route("/quality", get().to(routes::v1::species::qualities))
             .route("/gear", get().to(routes::v1::gear::gear))
             .route("/gear_groups", get().to(routes::v1::gear::gear_groups))
             .route(
