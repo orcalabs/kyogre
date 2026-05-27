@@ -1,5 +1,5 @@
 use actix_web::web;
-use fiskeridir_rs::{SpeciesGroup, SpeciesMainGroup};
+use fiskeridir_rs::{Condition, Quality, SpeciesGroup, SpeciesMainGroup};
 use futures::TryStreamExt;
 use kyogre_core::SpeciesFiskeridir;
 use oasgen::{OaSchema, oasgen};
@@ -23,10 +23,9 @@ pub async fn species<T: Database + Send + Sync + 'static>(
     }
 }
 
-#[oasgen(skip(db), tags("Species"))]
+#[oasgen(tags("Species"))]
 #[tracing::instrument]
-pub async fn species_groups<T: Database + 'static + 'static>() -> Response<Vec<SpeciesGroupDetailed>>
-{
+pub async fn species_groups() -> Response<Vec<SpeciesGroupDetailed>> {
     Response::new(
         fiskeridir_rs::SpeciesGroup::iter()
             .map(SpeciesGroupDetailed::from)
@@ -34,10 +33,9 @@ pub async fn species_groups<T: Database + 'static + 'static>() -> Response<Vec<S
     )
 }
 
-#[oasgen(skip(db), tags("Species"))]
+#[oasgen(tags("Species"))]
 #[tracing::instrument]
-pub async fn species_main_groups<T: Database + 'static>() -> Response<Vec<SpeciesMainGroupDetailed>>
-{
+pub async fn species_main_groups() -> Response<Vec<SpeciesMainGroupDetailed>> {
     Response::new(
         fiskeridir_rs::SpeciesMainGroup::iter()
             .map(SpeciesMainGroupDetailed::from)
@@ -63,6 +61,18 @@ pub async fn species_fao<T: Database + Send + Sync + 'static>(
     stream_response! {
         db.species_fao().map_ok(SpeciesFao::from)
     }
+}
+
+#[oasgen(tags("Species"))]
+#[tracing::instrument]
+pub async fn conditions() -> Response<Vec<ConditionDetailed>> {
+    Response::new(fiskeridir_rs::Condition::iter().map(From::from).collect())
+}
+
+#[oasgen(tags("Species"))]
+#[tracing::instrument]
+pub async fn qualities() -> Response<Vec<QualityDetailed>> {
+    Response::new(fiskeridir_rs::Quality::iter().map(From::from).collect())
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, OaSchema, Ord, PartialOrd, PartialEq, Eq)]
@@ -97,6 +107,24 @@ pub struct SpeciesFao {
     pub name: Option<String>,
 }
 
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct ConditionDetailed {
+    #[serde_as(as = "DisplayFromStr")]
+    pub id: Condition,
+    pub name: &'static str,
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityDetailed {
+    #[serde_as(as = "DisplayFromStr")]
+    pub id: Quality,
+    pub name: &'static str,
+}
+
 impl From<kyogre_core::Species> for Species {
     fn from(value: kyogre_core::Species) -> Self {
         Species {
@@ -129,6 +157,24 @@ impl From<kyogre_core::SpeciesFao> for SpeciesFao {
         SpeciesFao {
             id: value.id,
             name: value.name,
+        }
+    }
+}
+
+impl From<Condition> for ConditionDetailed {
+    fn from(value: Condition) -> Self {
+        Self {
+            id: value,
+            name: value.name(),
+        }
+    }
+}
+
+impl From<Quality> for QualityDetailed {
+    fn from(value: Quality) -> Self {
+        Self {
+            id: value,
+            name: value.norwegian_name(),
         }
     }
 }

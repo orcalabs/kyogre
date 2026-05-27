@@ -1,6 +1,6 @@
 use num_derive::{FromPrimitive, ToPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use strum::{AsRefStr, Display, EnumString};
+use strum::{AsRefStr, Display, EnumIter, EnumString};
 
 use crate::{
     SpeciesFiskeridirId, SpeciesGroup, SpeciesMainGroup, string_new_types::NonEmptyString,
@@ -266,6 +266,7 @@ impl ConservationMethod {
     Display,
     AsRefStr,
     EnumString,
+    EnumIter,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -334,6 +335,7 @@ impl Quality {
     Display,
     AsRefStr,
     EnumString,
+    EnumIter,
 )]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -448,10 +450,10 @@ impl Condition {
             RundMedRogn => "Rund, m/rogn",
             VatTilstand => "Våt tilstand",
             SloydMedHode => "Sløyd m/hode",
-            SloydUtenHodeRundtsnitt => "Sløyd u/hode, rundsnitt ",
+            SloydUtenHodeRundtsnitt => "Sløyd u/hode, rundsnitt",
             SloydUtenHodeUtenOrebein => "Sløyd u/hode og u/ørebein",
             SloydUtenHodeUtenSpord => "Sløyd u/hode og uten spord",
-            SloydUtenHodeRettsnitt => "Sløyd u/hode, rettsnitt ",
+            SloydUtenHodeRettsnitt => "Sløyd u/hode, rettsnitt",
             SloydUtenHodeUtenBuk => "Sløyd u/hode, uten buk",
             SloydMedHodeUtenSpord => "Sløyd m/hode og uten spord",
             SloydMedHodeUtenGjellelokkUtenBrystfinner => {
@@ -478,8 +480,8 @@ impl Condition {
             Rotskjaer => "Rotskjær",
             Splitt => "Splitt",
             Flekt => "Flekt",
-            FiletMedSkinnMedBein => "Filet m/skinn og m/bein ",
-            FiletUtenSkinnMedBein => "Filet u/skinn, m/bein ",
+            FiletMedSkinnMedBein => "Filet m/skinn og m/bein",
+            FiletUtenSkinnMedBein => "Filet u/skinn, m/bein",
             FiletUtenSkinnUtenBein => "Filet u/skinn og u/bein",
             FiletMedSkinnUtenBein => "Filet m/skinn, u/bein",
             FiletUtenSkinnUtenBeinUtenBuklapp => "Filet uten skinn, uten bein, uten buklapp",
@@ -514,7 +516,7 @@ impl Condition {
             NakkerUtenKinn => "Nakker u/kinn",
             Rogn => "Rogn",
             Lever => "Lever",
-            IselMelke => "Isel, melke ",
+            IselMelke => "Isel, melke",
             Spekk => "Spekk",
             Kjott => "Kjøtt",
             Svartspekk => "Svartspekk",
