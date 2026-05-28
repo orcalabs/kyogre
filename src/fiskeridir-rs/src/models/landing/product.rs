@@ -20,8 +20,8 @@ pub struct Product {
     pub product_weight_over_quota: Option<f64>,
     pub living_weight_over_quota: Option<f64>,
     pub living_weight: Option<f64>,
-    pub quality: Quality,
-    pub quality_name: NonEmptyString,
+    pub quality: Option<Quality>,
+    pub quality_name: Option<NonEmptyString>,
     pub purpose: Purpose,
     pub species: Species,
 }

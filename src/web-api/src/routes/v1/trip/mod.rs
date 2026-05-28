@@ -172,9 +172,9 @@ pub struct Catch {
     pub gross_weight: f64,
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
-    #[serde_as(as = "DisplayFromStr")]
-    pub product_quality_id: Quality,
-    pub product_quality_name: String,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub product_quality_id: Option<Quality>,
+    pub product_quality_name: Option<String>,
     pub price_for_fisher: f64,
 }
 
@@ -344,7 +344,7 @@ impl From<kyogre_core::Catch> for Catch {
             product_weight,
             species_fiskeridir_id,
             product_quality_id,
-            product_quality_name: product_quality_id.norwegian_name().to_owned(),
+            product_quality_name: product_quality_id.map(|v| v.norwegian_name().to_owned()),
             price_for_fisher,
         }
     }

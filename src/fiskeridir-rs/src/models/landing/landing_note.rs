@@ -273,9 +273,10 @@ pub struct LandingRaw {
     #[serde_as(as = "OptFloatFromStr")]
     pub living_weight: Option<f64>,
     #[serde(rename = "Kvalitet (kode)")]
-    pub quality: Quality,
+    #[serde_as(as = "OptPrimitiveFromStr")]
+    pub quality: Option<Quality>,
     #[serde(rename = "Kvalitet")]
-    pub quality_name: NonEmptyString,
+    pub quality_name: Option<NonEmptyString>,
 
     //
     // Product Purpose
@@ -971,8 +972,8 @@ mod test {
                         group_code: Some(1),
                         group_name: Some("Konsum".parse().unwrap()),
                     },
-                    quality: Quality::A,
-                    quality_name: Quality::A.norwegian_name().parse().unwrap(),
+                    quality: Some(Quality::A),
+                    quality_name: Some(Quality::A.norwegian_name().parse().unwrap()),
                 },
                 catch_location: CatchLocation {
                     catch_field: "34343".parse().unwrap(),

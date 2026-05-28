@@ -63,14 +63,22 @@ impl LandingTripBuilder {
 fn add_weekly_sales(base: &mut TestStateBuilder, current_idx: usize) -> usize {
     let weekly_sale_ids = base.landings[current_idx..]
         .iter()
-        .filter_map(|l| l.landing.vessel.length_group_code.map(|v| (v, &l.landing)))
-        .map(|(length_group, l)| WeeklySaleId {
+        .filter_map(|l| {
+            match (
+                l.landing.vessel.length_group_code,
+                l.landing.product.quality,
+            ) {
+                (Some(g), Some(q)) => Some((g, q, &l.landing)),
+                _ => None,
+            }
+        })
+        .map(|(length_group, quality, l)| WeeklySaleId {
             iso_week: l.landing_timestamp.iso_week(),
             vessel_length_group: length_group,
             gear_group: l.gear.group,
             species: l.product.species.fdir_code,
             condition: l.product.condition,
-            quality: l.product.quality,
+            quality,
         })
         .collect::<HashSet<_>>();
 
