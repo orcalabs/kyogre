@@ -301,7 +301,7 @@ pub struct Catch {
     pub gross_weight: f64,
     pub product_weight: f64,
     pub species_fiskeridir_id: i32,
-    pub product_quality_id: Quality,
+    pub product_quality_id: Option<Quality>,
     pub price_for_fisher: f64,
 }
 
