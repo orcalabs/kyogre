@@ -1,5 +1,3 @@
-use std::ops::Bound;
-
 use crate::{
     PostgresAdapter,
     error::{ObjectNotFoundSnafu, Result},
@@ -9,12 +7,179 @@ use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear};
 use futures::TryStreamExt;
 use kyogre_core::{
-    BarentswatchUserId, FiskeridirVesselId, HaulStart, Object, ProcessingStatus, UpdateUserHaul,
-    UserHaulId,
+    BarentswatchUserId, FiskeridirVesselId, HaulStart, Object, ProcessingStatus, TripId,
+    UpdateUserHaul, UserHaulId,
 };
 use sqlx::{PgTransaction, postgres::types::PgRange};
+use std::ops::Bound;
 
 impl PostgresAdapter {
+    pub(crate) async fn refresh_user_haul_mappings_impl(&self) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        #[derive(Debug)]
+        struct RefreshBoundary {
+            vessel_id: FiskeridirVesselId,
+            refresh_boundary: DateTime<Utc>,
+            current_trip_refresh_boundary: DateTime<Utc>,
+        }
+
+        // This has to be wrapped in a transaction as the scraper might modify these entries and we
+        // might use an outdated value if this select was not in the same tx as the write.
+        let to_refresh = sqlx::query_as!(
+            RefreshBoundary,
+            r#"
+SELECT
+    refresh_boundary AS "refresh_boundary!",
+    current_trip_refresh_boundary AS "current_trip_refresh_boundary!",
+    fiskeridir_vessel_id AS "vessel_id: FiskeridirVesselId"
+FROM
+    user_hauls_refresh_boundary
+WHERE
+    refresh_boundary IS NOT NULL
+    AND current_trip_refresh_boundary IS NOT NULL
+            "#
+        )
+        .fetch_all(&mut *tx)
+        .await?;
+
+        if to_refresh.is_empty() {
+            return Ok(());
+        }
+
+        let mut to_reset = Vec::new();
+        for t in to_refresh {
+            self.refresh_user_haul_mappings_by_timestamp(t.vessel_id, t.refresh_boundary, &mut tx)
+                .await?;
+            self.set_trips_refresh_boundary(t.vessel_id, t.refresh_boundary, &mut tx)
+                .await?;
+
+            let current_trip_start_before_latest_update = sqlx::query!(
+                r#"
+SELECT
+    departure_timestamp
+FROM
+    current_trips
+WHERE
+    fiskeridir_vessel_id = $1
+    AND departure_timestamp <= $2
+            "#,
+                t.vessel_id as FiskeridirVesselId,
+                t.current_trip_refresh_boundary
+            )
+            .fetch_optional(&mut *tx)
+            .await?;
+
+            if let Some(dep) = current_trip_start_before_latest_update {
+                self.refresh_current_trip_user_hauls(t.vessel_id, dep.departure_timestamp, &mut tx)
+                    .await?;
+            }
+            to_reset.push(t.vessel_id)
+        }
+
+        sqlx::query!(
+            r#"
+UPDATE user_hauls_refresh_boundary
+SET
+    refresh_boundary = NULL,
+    current_trip_refresh_boundary = NULL
+WHERE
+    fiskeridir_vessel_id = ANY ($1::BIGINT[])
+            "#,
+            &to_reset as &[FiskeridirVesselId]
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+    pub(crate) async fn set_user_haul_refresh_boundary(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        min_timestamp: DateTime<Utc>,
+        max_timestamp: DateTime<Utc>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+INSERT INTO
+    user_hauls_refresh_boundary (
+        refresh_boundary,
+        current_trip_refresh_boundary,
+        fiskeridir_vessel_id
+    )
+VALUES
+    ($1, $2, $3)
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+SET
+    refresh_boundary = LEAST(
+        user_hauls_refresh_boundary.refresh_boundary,
+        excluded.refresh_boundary
+    ),
+    current_trip_refresh_boundary = GREATEST(
+        user_hauls_refresh_boundary.current_trip_refresh_boundary,
+        excluded.current_trip_refresh_boundary
+    )
+            "#,
+            min_timestamp,
+            max_timestamp,
+            vessel_id as FiskeridirVesselId,
+        )
+        .execute(&mut **tx)
+        .await?;
+        Ok(())
+    }
+    pub(crate) async fn set_user_haul_refresh_boundary_from_haul_event_ids(
+        &self,
+        vessel_event_ids: &[i64],
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+WITH
+    per_vessel AS (
+        SELECT
+            MIN(occurence_timestamp) AS min_timestamp,
+            MAX(occurence_timestamp) AS max_timestamp,
+            fiskeridir_vessel_id
+        FROM
+            vessel_events
+        WHERE
+            vessel_event_id = ANY ($1::BIGINT[])
+        GROUP BY
+            fiskeridir_vessel_id
+    )
+INSERT INTO
+    user_hauls_refresh_boundary (
+        refresh_boundary,
+        current_trip_refresh_boundary,
+        fiskeridir_vessel_id
+    )
+SELECT
+    q.min_timestamp,
+    q.max_timestamp,
+    q.fiskeridir_vessel_id
+FROM
+    per_vessel q
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+SET
+    refresh_boundary = LEAST(
+        user_hauls_refresh_boundary.refresh_boundary,
+        excluded.refresh_boundary
+    ),
+    current_trip_refresh_boundary = GREATEST(
+        user_hauls_refresh_boundary.current_trip_refresh_boundary,
+        excluded.current_trip_refresh_boundary
+    )
+            "#,
+            vessel_event_ids
+        )
+        .execute(&mut **tx)
+        .await?;
+        Ok(())
+    }
     pub(crate) async fn update_current_user_haul_impl(
         &self,
         call_sign: &CallSign,
@@ -108,6 +273,9 @@ WHERE
             .build()
         })?;
 
+        self.assert_is_not_current_active_haul(call_sign, id, &mut tx)
+            .await?;
+
         let haul = sqlx::query_as!(
             UserHaul,
             r#"
@@ -153,6 +321,14 @@ RETURNING
         self.invalidate_fuel(haul.vessel_id, start, Some(end), &mut tx)
             .await?;
 
+        self.set_user_haul_refresh_boundary(
+            haul.vessel_id,
+            start,
+            haul.start_ts.max(prev.start_ts),
+            &mut tx,
+        )
+        .await?;
+
         tx.commit().await?;
 
         Ok(haul.into())
@@ -164,6 +340,9 @@ RETURNING
         id: UserHaulId,
     ) -> Result<()> {
         let mut tx = self.pool.begin().await?;
+
+        self.assert_is_not_current_active_haul(call_sign, id, &mut tx)
+            .await?;
 
         let deleted = sqlx::query!(
             r#"
@@ -190,6 +369,14 @@ RETURNING
 
         self.invalidate_fuel(deleted.vessel_id, deleted.start_ts, deleted.end_ts, &mut tx)
             .await?;
+
+        self.set_user_haul_refresh_boundary(
+            deleted.vessel_id,
+            deleted.start_ts,
+            deleted.start_ts,
+            &mut tx,
+        )
+        .await?;
 
         tx.commit().await?;
 
@@ -404,6 +591,9 @@ RETURNING
         .fetch_one(&mut *tx)
         .await?;
 
+        self.set_user_haul_refresh_boundary(haul.vessel_id, haul.start_ts, haul.start_ts, &mut tx)
+            .await?;
+
         let haul: kyogre_core::UserHaul = haul.into();
 
         let start_fuel = kyogre_core::CreateFuelMeasurement {
@@ -483,6 +673,160 @@ WHERE
             ProcessingStatus::Unprocessed as i32,
             vessel_id as FiskeridirVesselId,
             range,
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn add_user_haul_trip_mappings(
+        &self,
+        trip_ids: &[TripId],
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+WITH
+    overlapping AS (
+        SELECT
+            ANY_VALUE (t.trip_id) AS trip_id,
+            u.user_haul_id
+        FROM
+            trips t
+            INNER JOIN user_hauls u ON t.period && u.period
+            AND u.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+        WHERE
+            t.trip_id = ANY ($1::BIGINT[])
+            AND u.haul_id IS NULL
+        GROUP BY
+            u.user_haul_id
+        HAVING
+            COUNT(DISTINCT t.trip_id) = 1
+    )
+UPDATE user_hauls u
+SET
+    trip_id = o.trip_id
+FROM
+    overlapping o
+WHERE
+    o.user_haul_id = u.user_haul_id
+        "#,
+            trip_ids as &[TripId]
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn refresh_user_haul_mappings_by_timestamp(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        timestamp: DateTime<Utc>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        let user_haul_ids: Vec<_> = sqlx::query!(
+            r#"
+UPDATE user_hauls
+SET
+    haul_id = NULL,
+    trip_id = NULL
+WHERE
+    fiskeridir_vessel_id = $1
+    AND end_ts >= $2
+RETURNING
+    user_haul_id
+        "#,
+            vessel_id as FiskeridirVesselId,
+            timestamp
+        )
+        .fetch(&mut **tx)
+        .map_ok(|r| r.user_haul_id)
+        .try_collect()
+        .await?;
+
+        if user_haul_ids.is_empty() {
+            return Ok(());
+        }
+
+        sqlx::query!(
+            r#"
+WITH
+    overlapping AS (
+        SELECT
+            ANY_VALUE (q.haul_id) AS haul_id,
+            q.user_haul_id
+        FROM
+            (
+                SELECT
+                    h.haul_id,
+                    ANY_VALUE (u.user_haul_id) AS user_haul_id,
+                    EXTRACT(
+                        EPOCH
+                        FROM
+                            (
+                                UPPER(h.period * ANY_VALUE (u.period)) - LOWER(h.period * ANY_VALUE (u.period))
+                            )
+                    ) AS overlap
+                FROM
+                    user_hauls u
+                    INNER JOIN hauls h ON h.period && u.period
+                    AND u.fiskeridir_vessel_id = h.fiskeridir_vessel_id
+                WHERE
+                    u.user_haul_id = ANY ($1::INT[])
+                GROUP BY
+                    h.haul_id
+                HAVING
+                    COUNT(DISTINCT u.user_haul_id) = 1
+            ) q
+        GROUP BY
+            q.user_haul_id
+        HAVING
+            COUNT(DISTINCT q.haul_id) = 1
+    )
+UPDATE user_hauls u
+SET
+    haul_id = o.haul_id,
+    trip_id = NULL
+FROM
+    overlapping o
+WHERE
+    o.user_haul_id = u.user_haul_id
+        "#,
+            &user_haul_ids
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+WITH
+    overlapping AS (
+        SELECT
+            ANY_VALUE (t.trip_id) AS trip_id,
+            u.user_haul_id
+        FROM
+            user_hauls u
+            INNER JOIN trips t ON t.period && u.period
+            AND u.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+        WHERE
+            u.user_haul_id = ANY ($1)
+            AND u.haul_id IS NULL
+        GROUP BY
+            u.user_haul_id
+        HAVING
+            COUNT(DISTINCT t.trip_id) = 1
+    )
+UPDATE user_hauls u
+SET
+    trip_id = o.trip_id
+FROM
+    overlapping o
+WHERE
+    o.user_haul_id = u.user_haul_id
+        "#,
+            &user_haul_ids
         )
         .execute(&mut **tx)
         .await?;

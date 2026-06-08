@@ -13,6 +13,7 @@ use crate::{
         haul::HaulConstructor,
         item_distribution::ItemDistribution,
         landing::LandingTripBuilder,
+        user_haul::{UserHaulConstructor, UserHaulTripBuilder},
     },
     *,
 };
@@ -230,6 +231,50 @@ impl TripBuilder {
             state: self,
         }
     }
+
+    // NOTE: will be associated with the vessel with the default test call sign and defauLt test
+    // barentswatch user_id. This will not match a .vessels(n) call in a test, use the
+    // vessel_with_test_callsign() method to create the appropriate vessel.
+    pub fn user_hauls(mut self, amount: usize) -> UserHaulTripBuilder {
+        assert!(amount != 0);
+        let base = &mut self.state.state;
+
+        let num_trips = base.trips[self.current_index..].len();
+        let distribution = ItemDistribution::new(amount, num_trips);
+
+        for (i, trip) in base.trips[self.current_index..].iter_mut().enumerate() {
+            let num_hauls = distribution.num_elements(i);
+
+            for _ in 0..num_hauls {
+                let start_ts = trip.current_data_timestamp;
+
+                let end_ts = if (start_ts + DEFAULT_HAUL_DURATION) >= trip.end() {
+                    trip.end()
+                } else {
+                    start_ts + DEFAULT_HAUL_DURATION
+                };
+
+                base.user_hauls.push(UserHaulConstructor::new(
+                    base.cycle,
+                    start_ts,
+                    end_ts,
+                    &base.call_sign,
+                    base.user_id,
+                ));
+
+                trip.current_data_timestamp = end_ts + base.trip_data_timestamp_gap;
+
+                if trip.current_data_timestamp >= trip.end() {
+                    trip.current_data_timestamp = trip.end();
+                }
+            }
+        }
+
+        UserHaulTripBuilder {
+            current_index: base.user_hauls.len() - amount,
+            state: self,
+        }
+    }
     pub fn hauls(mut self, amount: usize) -> HaulTripBuilder {
         assert!(amount != 0);
         let base = &mut self.state.state;
@@ -250,10 +295,10 @@ impl TripBuilder {
                 dca.message_info.set_message_timestamp(start);
                 dca.set_start_timestamp(start);
 
-                let end = if (start + base.default_haul_duration) >= trip.end() {
+                let end = if (start + DEFAULT_HAUL_DURATION) >= trip.end() {
                     trip.end()
                 } else {
-                    start + base.default_haul_duration
+                    start + DEFAULT_HAUL_DURATION
                 };
 
                 dca.set_stop_timestamp(end);

@@ -8,6 +8,7 @@ use super::ais_vms::AisOrVmsPosition;
 use super::landing::LandingVesselBuilder;
 use super::*;
 use crate::test_helper::item_distribution::ItemDistribution;
+use crate::test_helper::user_haul::UserHaulVesselBuilder;
 use crate::*;
 
 pub struct VesselBuilder {
@@ -177,6 +178,37 @@ impl VesselBuilder {
             state: self,
         }
     }
+
+    // NOTE: will be associated with the vessel with the default test call sign and defauLt test
+    // barentswatch user_id. This will not match a .vessels(n) call in a test, use the
+    // vessel_with_test_callsign() method to create the appropriate vessel.
+    pub fn user_hauls(mut self, amount: usize) -> UserHaulVesselBuilder {
+        assert!(amount != 0);
+        let base = &mut self.state;
+
+        let num_vessels = base.vessels[self.current_index..].len();
+        assert_eq!(num_vessels, 1);
+
+        for _ in 0..amount {
+            let start_ts = base.global_data_timestamp_counter;
+            let end_ts = start_ts + DEFAULT_HAUL_DURATION;
+
+            base.user_hauls.push(UserHaulConstructor::new(
+                base.cycle,
+                start_ts,
+                end_ts,
+                &base.call_sign,
+                base.user_id,
+            ));
+
+            base.global_data_timestamp_counter = end_ts + base.data_timestamp_gap;
+        }
+
+        UserHaulVesselBuilder {
+            current_index: base.user_hauls.len() - amount,
+            state: self,
+        }
+    }
     pub fn hauls(mut self, amount: usize) -> HaulVesselBuilder {
         assert!(amount != 0);
         let base = &mut self.state;
@@ -195,7 +227,7 @@ impl VesselBuilder {
                 );
 
                 let start = timestamp;
-                let end = timestamp + base.default_haul_duration;
+                let end = timestamp + DEFAULT_HAUL_DURATION;
                 dca.message_info.set_message_timestamp(start);
                 dca.set_start_timestamp(start);
 

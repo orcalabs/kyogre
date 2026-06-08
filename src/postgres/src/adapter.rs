@@ -843,8 +843,14 @@ impl WebApiOutboundPort for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
+        logged_in_user_call_sign: Option<&CallSign>,
     ) -> WebApiResult<Option<CurrentTrip>> {
-        convert_optional(retry(|| self.current_trip_impl(vessel_id, read_fishing_facility)).await?)
+        convert_optional(
+            retry(|| {
+                self.current_trip_impl(vessel_id, read_fishing_facility, logged_in_user_call_sign)
+            })
+            .await?,
+        )
     }
 
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> WebApiResult<HaulsMatrix> {
@@ -1342,6 +1348,14 @@ impl TripPipelineOutbound for PostgresAdapter {
         self.trips_without_precision_impl(vessel_id, limit)
             .convert_collect()
             .await
+    }
+}
+
+#[async_trait]
+impl UserHaulsRefresher for PostgresAdapter {
+    async fn refresh_user_haul_mappings(&self) -> CoreResult<()> {
+        self.refresh_user_haul_mappings_impl().await?;
+        Ok(())
     }
 }
 

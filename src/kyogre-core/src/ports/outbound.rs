@@ -88,6 +88,7 @@ pub trait WebApiOutboundPort {
         &self,
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
+        logged_in_user_call_sign: Option<&CallSign>,
     ) -> WebApiResult<Option<CurrentTrip>>;
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> WebApiResult<HaulsMatrix>;
     fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing>;

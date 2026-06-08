@@ -1,4 +1,10 @@
-use crate::{test_helper::item_distribution::ItemDistribution, *};
+use crate::{
+    test_helper::{
+        item_distribution::ItemDistribution,
+        user_haul::{UserHaulConstructor, UserHaulHaulTripBuilder},
+    },
+    *,
+};
 use chrono::Duration;
 use fiskeridir_rs::ErsDca;
 
@@ -23,6 +29,58 @@ pub struct HaulVesselBuilder {
 pub struct HaulConstructor {
     pub dca: ErsDca,
     pub cycle: Cycle,
+}
+
+impl HaulTripBuilder {
+    // Creates 'amount' number of user_haul for each haul in the current selection by 'current_index' matching
+    // the start/stop timestamp of the ers haul.
+    // This will lead to an error if timestamps are not modified as this is intended only for
+    // creating error cases.
+    pub fn overlapping_user_hauls(mut self, amount: usize) -> UserHaulHaulTripBuilder {
+        let base = &mut self.state.state.state;
+
+        let num_hauls = base.hauls[self.current_index..].len();
+
+        for haul in base.hauls[self.current_index..].iter_mut() {
+            for _ in 0..amount {
+                base.user_hauls.push(UserHaulConstructor::new(
+                    base.cycle,
+                    haul.dca.start_timestamp().unwrap(),
+                    haul.dca.stop_timestamp().unwrap(),
+                    &base.call_sign,
+                    base.user_id,
+                ));
+            }
+        }
+
+        UserHaulHaulTripBuilder {
+            current_index: base.user_hauls.len() - num_hauls * amount,
+            state: self,
+        }
+    }
+
+    // Creates a single user_haul for each haul in the current selection by 'current_index' matching
+    // the start/stop timestamp of the ers haul.
+    pub fn user_hauls(mut self) -> UserHaulHaulTripBuilder {
+        let base = &mut self.state.state.state;
+
+        let num_hauls = base.hauls[self.current_index..].len();
+
+        for haul in base.hauls[self.current_index..].iter_mut() {
+            base.user_hauls.push(UserHaulConstructor::new(
+                base.cycle,
+                haul.dca.start_timestamp().unwrap(),
+                haul.dca.stop_timestamp().unwrap(),
+                &base.call_sign,
+                base.user_id,
+            ));
+        }
+
+        UserHaulHaulTripBuilder {
+            current_index: base.user_hauls.len() - num_hauls,
+            state: self,
+        }
+    }
 }
 
 impl HaulVesselBuilder {

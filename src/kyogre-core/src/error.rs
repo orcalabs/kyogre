@@ -58,6 +58,11 @@ pub enum Object {
 #[derive(Snafu, StackError)]
 #[snafu(module)]
 pub enum WebApiError {
+    #[snafu(display("The currently active user haul cannot be fully updated"))]
+    CannotModifyActiveUserHaul {
+        #[snafu(implicit)]
+        location: Location,
+    },
     #[snafu(display("{object}"))]
     ObjectNotFound {
         #[snafu(implicit)]

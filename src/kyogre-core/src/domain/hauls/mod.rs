@@ -1,25 +1,53 @@
-use std::fmt::{self, Display};
-
+use super::TripId;
+use crate::{
+    ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature, HaulMatrixYFeature, ProcessingStatus,
+};
 use chrono::{DateTime, Duration, Utc};
 use fiskeridir_rs::{
     CallSign, FiskeridirVesselId, Gear, GearGroup, SpeciesGroup, SpeciesMainGroup,
     VesselLengthGroup, WhaleGender,
 };
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display};
 
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
-
-use crate::{
-    ActiveHaulsFilter, CatchLocationId, HaulMatrixXFeature, HaulMatrixYFeature, ProcessingStatus,
-};
-
-use super::TripId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct HaulId(i64);
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct TripsDetailedHaul {
+    #[serde(alias = "haul_id")]
+    pub id: Option<HaulId>,
+    pub trip_id: Option<TripId>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    pub gear_group_id: Option<GearGroup>,
+    pub gear_id: Gear,
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
+    pub haul_distance: Option<i32>,
+    pub start_latitude: Option<f64>,
+    pub start_longitude: Option<f64>,
+    pub stop_latitude: Option<f64>,
+    pub stop_longitude: Option<f64>,
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_timestamp: DateTime<Utc>,
+    pub vessel_length_group: Option<VesselLengthGroup>,
+    pub catches: Vec<HaulCatch>,
+    pub vessel_name: Option<String>,
+    pub call_sign: CallSign,
+
+    // Existing JSONB blobs in the db do not contain these fields
+    #[serde(default)]
+    pub config: Option<serde_json::Value>,
+    #[serde(default)]
+    pub start_fuel_liter: Option<u32>,
+    #[serde(default)]
+    pub end_fuel_liter: Option<u32>,
+}
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Haul {
@@ -123,6 +151,15 @@ impl Haul {
     }
 }
 
+impl TripsDetailedHaul {
+    pub fn duration(&self) -> Duration {
+        self.stop_timestamp - self.start_timestamp
+    }
+    pub fn total_living_weight(&self) -> i32 {
+        self.catches.iter().map(|c| c.living_weight).sum()
+    }
+}
+
 impl HaulsMatrix {
     pub fn is_empty(&self) -> bool {
         let Self {
@@ -175,7 +212,7 @@ impl HaulsMatrix {
 
 #[cfg(feature = "test")]
 mod test {
-    use super::*;
+    use crate::HaulId;
 
     impl HaulId {
         pub fn test_new(value: i64) -> Self {
