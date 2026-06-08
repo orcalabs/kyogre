@@ -1,5 +1,5 @@
 use crate::{
-    FuelEstimator, LiveFuel, Result, Settings, TripBenchmarkRunner,
+    FuelEstimator, LiveFuel, Result, Settings, TripBenchmarkRunner, UserHaulRefresher,
     current_position::CurrentPositionProcessor,
 };
 use orca_core::Environment;
@@ -13,6 +13,7 @@ pub struct App {
     trip_benchmark_runner: TripBenchmarkRunner,
     live_fuel: LiveFuel,
     current_position: CurrentPositionProcessor,
+    user_haul_refresher: UserHaulRefresher,
     environment: Environment,
 }
 
@@ -36,6 +37,7 @@ impl App {
                 postgres.clone(),
                 settings.fuel_estimation_vessels.clone(),
             ),
+            user_haul_refresher: UserHaulRefresher::new(postgres.clone()),
             current_position: CurrentPositionProcessor::new(
                 postgres,
                 settings.current_positions_batch_size,
@@ -58,12 +60,14 @@ impl App {
                     current_position,
                     environment: _,
                     trip_benchmark_runner,
+                    user_haul_refresher,
                 } = self;
 
                 set.spawn(estimator.run_continuous());
                 set.spawn(live_fuel.run_continuous());
                 set.spawn(current_position.run_continuous());
                 set.spawn(trip_benchmark_runner.run_continuous());
+                set.spawn(user_haul_refresher.run_continuous());
 
                 set.join_next().await.unwrap().unwrap();
             }
@@ -74,12 +78,14 @@ impl App {
                     current_position,
                     environment: _,
                     mut trip_benchmark_runner,
+                    user_haul_refresher,
                 } = self;
 
                 estimator.run_single(None).await?;
                 live_fuel.run_single().await?;
                 current_position.run_single().await?;
                 trip_benchmark_runner.run_single().await?;
+                user_haul_refresher.run_single().await?;
 
                 Ok(())
             }

@@ -27,7 +27,7 @@ services:
       - 5533:5432
 
   test-db:
-    image: ghcr.io/orcalabs/kyogre/test-postgres:master
+    image: ghcr.io/orcalabs/kyogre/test-postgres:latest
     container_name: postgres
     build:
       context: .

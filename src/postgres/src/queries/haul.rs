@@ -934,6 +934,8 @@ RETURNING
 
         self.connect_trip_to_events(&event_ids, VesselEventType::Haul, tx)
             .await?;
+        self.set_user_haul_refresh_boundary_from_haul_event_ids(&event_ids, tx)
+            .await?;
 
         Ok(event_ids)
     }

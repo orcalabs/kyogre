@@ -2,9 +2,10 @@ use actix_web::http::Method;
 use fiskeridir_rs::{CallSign, OrgId};
 use http_client::{HttpClient, StatusCode};
 use kyogre_core::{
-    ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, CreateFuelMeasurement,
-    DeleteFuelMeasurement, FiskeridirVesselId, FuelEntry, FuelMeasurement, LiveFuel, Mmsi,
-    OrgBenchmarks, SpeciesFiskeridir, UpdateUser, UpdateVessel, VesselBenchmarks,
+    ActiveHaulsFilter, ActiveLandingFilter, AverageTripBenchmarks, BarentswatchUserId,
+    CreateFuelMeasurement, DeleteFuelMeasurement, FiskeridirVesselId, FuelEntry, FuelMeasurement,
+    HaulEnd, HaulStart, LiveFuel, Mmsi, OrgBenchmarks, SpeciesFiskeridir, StartedUserHaul,
+    UpdateUser, UpdateUserHaul, UpdateVessel, UserHaul, UserHaulId, VesselBenchmarks,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use web_api::{
@@ -60,8 +61,11 @@ impl ApiClient {
         }
     }
 
+    pub fn login_user_with_id(&mut self, id: BarentswatchUserId) {
+        self.current_token = Some(self.bw_helper.get_bw_token(Some(id)));
+    }
     pub fn login_user(&mut self) {
-        self.current_token = Some(self.bw_helper.get_bw_token());
+        self.current_token = Some(self.bw_helper.get_bw_token(None));
     }
 
     pub fn login_user_with_full_ais_permissions(&mut self) {
@@ -244,6 +248,57 @@ impl ApiClient {
     }
     pub async fn get_delivery_points(&self) -> Result<Vec<DeliveryPoint>, Error> {
         self.send("delivery_points", Method::GET, &(), None::<&()>)
+            .await
+    }
+
+    pub async fn user_hauls(&self) -> Result<Vec<UserHaul>, Error> {
+        self.send("user_hauls", Method::GET, &(), None::<&()>).await
+    }
+
+    pub async fn start_user_haul(&self, start: &HaulStart) -> Result<StartedUserHaul, Error> {
+        self.send("user_hauls/start", Method::POST, &start, None::<&()>)
+            .await
+    }
+
+    pub async fn abort_user_haul(&self) -> Result<(), Error> {
+        self.send("user_hauls/abort", Method::POST, &(), None::<&()>)
+            .await
+    }
+
+    pub async fn update_user_haul(
+        &self,
+        id: UserHaulId,
+        update: &UpdateUserHaul,
+    ) -> Result<UserHaul, Error> {
+        self.send(
+            format!("user_hauls/{id}"),
+            Method::PUT,
+            &update,
+            None::<&()>,
+        )
+        .await
+    }
+
+    pub async fn update_current_user_haul(
+        &self,
+        update: &HaulStart,
+    ) -> Result<StartedUserHaul, Error> {
+        self.send("user_hauls/current", Method::PUT, &update, None::<&()>)
+            .await
+    }
+
+    pub async fn delete_user_haul(&self, id: UserHaulId) -> Result<(), Error> {
+        self.send(format!("user_hauls/{id}"), Method::DELETE, &(), None::<&()>)
+            .await
+    }
+
+    pub async fn stop_user_haul(&self, end: &HaulEnd) -> Result<UserHaul, Error> {
+        self.send("user_hauls/stop", Method::POST, &end, None::<&()>)
+            .await
+    }
+
+    pub async fn current_user_haul(&self) -> Result<Option<StartedUserHaul>, Error> {
+        self.send("user_hauls/current", Method::GET, &(), None::<&()>)
             .await
     }
 

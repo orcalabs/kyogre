@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    user_haul_id\nFROM\n    user_hauls\nWHERE\n    call_sign = $1\n    AND user_haul_id = $2\n    AND end_ts IS NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_haul_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a197ccde98f4b5f9230932c4c795ece2b23c772a0450747624143736b95ac00a"
+}

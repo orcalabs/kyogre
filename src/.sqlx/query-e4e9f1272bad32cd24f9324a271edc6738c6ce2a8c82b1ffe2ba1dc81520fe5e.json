@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE user_hauls_refresh_boundary\nSET\n    refresh_boundary = NULL,\n    current_trip_refresh_boundary = NULL\nWHERE\n    fiskeridir_vessel_id = ANY ($1::BIGINT[])\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e4e9f1272bad32cd24f9324a271edc6738c6ce2a8c82b1ffe2ba1dc81520fe5e"
+}

@@ -1,4 +1,10 @@
-use crate::*;
+use crate::{
+    test_helper::user_haul::{
+        UserHaulBuilder, UserHaulConstructor, UserHaulHaulTripBuilder, UserHaulTripBuilder,
+        UserHaulVesselBuilder,
+    },
+    *,
+};
 use async_trait::async_trait;
 use test_helper::{ais::AisPositionBuilder, ais_vms::AisVmsPositionBuilder};
 
@@ -32,6 +38,25 @@ macro_rules! impl_cycleable {
     };
 }
 
+impl_cycleable!(
+    UserHaulVesselBuilder,
+    UserHaulConstructor,
+    state.state,
+    cycle
+);
+impl_cycleable!(
+    UserHaulTripBuilder,
+    UserHaulConstructor,
+    state.state.state,
+    cycle
+);
+impl_cycleable!(
+    UserHaulHaulTripBuilder,
+    UserHaulConstructor,
+    state.state.state.state,
+    cycle
+);
+impl_cycleable!(UserHaulBuilder, UserHaulConstructor, state, cycle);
 impl_cycleable!(WeatherBuilder, WeatherConstructor, state, cycle);
 impl_cycleable!(AisVesselBuilder, AisVesselConstructor, state, cycle);
 impl_cycleable!(
@@ -170,6 +195,22 @@ macro_rules! impl_modifiable {
     };
 }
 
+impl_modifiable!(
+    UserHaulVesselBuilder,
+    UserHaulConstructor,
+    state.state.user_hauls
+);
+impl_modifiable!(
+    UserHaulTripBuilder,
+    UserHaulConstructor,
+    state.state.state.user_hauls
+);
+impl_modifiable!(
+    UserHaulHaulTripBuilder,
+    UserHaulConstructor,
+    state.state.state.state.user_hauls
+);
+impl_modifiable!(UserHaulBuilder, UserHaulConstructor, state.user_hauls);
 impl_modifiable!(
     AisVmsPositionBuilder,
     AisVmsPositionConstructor,
@@ -378,6 +419,9 @@ where
     fn vms_positions(self, amount: usize) -> VmsPositionBuilder {
         self.up().vms_positions(amount)
     }
+    fn user_hauls(self, amount: usize) -> UserHaulVesselBuilder {
+        self.up().user_hauls(amount)
+    }
 }
 
 macro_rules! impl_vessel_level {
@@ -396,6 +440,7 @@ macro_rules! impl_vessel_level {
     };
 }
 
+impl_vessel_level!(UserHaulVesselBuilder);
 impl_vessel_level!(LandingVesselBuilder);
 impl_vessel_level!(TripBuilder);
 impl_vessel_level!(TraVesselBuilder);
@@ -434,6 +479,9 @@ where
     fn delivery_points(self, amount: usize) -> DeliveryPointBuilder {
         self.base().delivery_points(amount)
     }
+    fn user_hauls(self, amount: usize) -> UserHaulBuilder {
+        self.base().user_hauls(amount)
+    }
 }
 
 macro_rules! impl_global_level {
@@ -446,6 +494,7 @@ macro_rules! impl_global_level {
     };
 }
 
+impl_global_level!(UserHaulBuilder);
 impl_global_level!(AisVesselBuilder);
 impl_global_level!(VesselBuilder);
 impl_global_level!(HaulBuilder);
@@ -490,6 +539,9 @@ where
     fn fishing_facilities(self, amount: usize) -> FishingFacilityTripBuilder {
         self.up().fishing_facilities(amount)
     }
+    fn user_hauls(self, amount: usize) -> UserHaulTripBuilder {
+        self.up().user_hauls(amount)
+    }
 }
 
 macro_rules! impl_trip_level {
@@ -505,6 +557,7 @@ macro_rules! impl_trip_level {
     };
 }
 
+impl_trip_level!(UserHaulTripBuilder);
 impl_trip_level!(HaulTripBuilder);
 impl_trip_level!(TraTripBuilder);
 impl_trip_level!(LandingTripBuilder);
@@ -602,3 +655,36 @@ macro_rules! impl_landing_trip_level {
 }
 
 impl_landing_trip_level!(WeeklySaleLandingTripBuilder);
+
+#[async_trait]
+pub trait HaulTripLevel
+where
+    Self: Sized,
+{
+    fn base(self) -> TestStateBuilder;
+    fn up(self) -> HaulTripBuilder;
+    async fn build(self) -> TestState {
+        self.base().build().await
+    }
+    fn user_hauls(self) -> UserHaulHaulTripBuilder {
+        self.up().user_hauls()
+    }
+    fn overlapping_user_hauls(self, amount: usize) -> UserHaulHaulTripBuilder {
+        self.up().overlapping_user_hauls(amount)
+    }
+}
+
+macro_rules! impl_haul_trip_level {
+    ($type: ty) => {
+        impl HaulTripLevel for $type {
+            fn base(self) -> TestStateBuilder {
+                self.state.state.state.state
+            }
+            fn up(self) -> HaulTripBuilder {
+                self.state
+            }
+        }
+    };
+}
+
+impl_haul_trip_level!(UserHaulHaulTripBuilder);

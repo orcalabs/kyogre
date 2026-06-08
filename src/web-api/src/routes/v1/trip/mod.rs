@@ -3,23 +3,25 @@ use crate::{
     error::Result,
     extractors::OptionBwProfile,
     response::{Response, ResponseOrStream, StreamResponse, ais_unfold},
-    routes::v1::ais_vms::AisVmsPosition,
+    routes::v1::{ais_vms::AisVmsPosition, haul::HaulCatch},
     stream_response, *,
 };
 use actix_web::web::{self, Path};
 use chrono::{DateTime, Utc};
 use extractors::UserAuth;
-use fiskeridir_rs::{Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup};
+use fiskeridir_rs::{
+    CallSign, Gear, GearGroup, LandingId, Quality, SpeciesGroup, VesselLengthGroup,
+};
 use futures::TryStreamExt;
 use kyogre_core::{
-    FiskeridirVesselId, HasTrack, OptionalDateTimeRange, Ordering, Pagination, Tra,
-    TripAssemblerId, TripId, TripSorting, Trips, TripsQuery, VesselEventType,
+    CatchLocationId, FiskeridirVesselId, HasTrack, HaulId, OptionalDateTimeRange, Ordering,
+    Pagination, Tra, TripAssemblerId, TripId, TripSorting, Trips, TripsQuery, UserHaul,
+    VesselEventType,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
 use serde_qs::actix::QsQuery as Query;
 use serde_with::{DisplayFromStr, serde_as};
-use v1::haul::Haul;
 
 pub mod benchmarks;
 
@@ -94,11 +96,16 @@ pub async fn current_trip<T: Database + 'static>(
     path: Path<CurrentTripPath>,
 ) -> Result<Response<Option<CurrentTrip>>> {
     let read_fishing_facility = profile.read_fishing_facilities();
+    let call_sign = profile.call_sign(db.as_ref()).await?;
 
     Ok(Response::new(
-        db.current_trip(path.fiskeridir_vessel_id, read_fishing_facility)
-            .await?
-            .map(CurrentTrip::from),
+        db.current_trip(
+            path.fiskeridir_vessel_id,
+            read_fishing_facility,
+            call_sign.as_ref(),
+        )
+        .await?
+        .map(CurrentTrip::from),
     ))
 }
 
@@ -134,7 +141,7 @@ pub struct Trip {
     #[serde_as(as = "Vec<DisplayFromStr>")]
     pub gear_ids: Vec<Gear>,
     pub delivery_point_ids: Vec<fiskeridir_rs::DeliveryPointId>,
-    pub hauls: Vec<Haul>,
+    pub hauls: Vec<TripsDetailedHaul>,
     pub tra: Vec<Tra>,
     pub fishing_facilities: Vec<FishingFacility>,
     pub delivery: Delivery,
@@ -183,7 +190,7 @@ pub struct Catch {
 pub struct CurrentTrip {
     pub departure: DateTime<Utc>,
     pub target_species_fiskeridir_id: Option<i32>,
-    pub hauls: Vec<Haul>,
+    pub hauls: Vec<TripsDetailedHaul>,
     pub fishing_facilities: Vec<FishingFacility>,
 }
 
@@ -234,6 +241,44 @@ impl From<TripsParameters> for TripsQuery {
     }
 }
 
+#[serde_as]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct TripsDetailedHaul {
+    #[serde(alias = "haul_id")]
+    pub id: Option<HaulId>,
+    pub trip_id: Option<TripId>,
+    pub catch_locations: Option<Vec<CatchLocationId>>,
+    #[serde_as(as = "DisplayFromStr")]
+    pub gear_group_id: GearGroup,
+    #[serde_as(as = "DisplayFromStr")]
+    pub gear: Gear,
+    #[serde_as(as = "Vec<DisplayFromStr>")]
+    pub species_group_ids: Vec<SpeciesGroup>,
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
+    pub haul_distance: Option<i32>,
+    pub start_latitude: Option<f64>,
+    pub start_longitude: Option<f64>,
+    pub stop_latitude: Option<f64>,
+    pub stop_longitude: Option<f64>,
+    pub start_timestamp: DateTime<Utc>,
+    pub stop_timestamp: DateTime<Utc>,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub vessel_length_group: Option<VesselLengthGroup>,
+    pub catches: Vec<HaulCatch>,
+    pub vessel_name: Option<String>,
+    pub call_sign: CallSign,
+    pub config: Option<serde_json::Value>,
+    pub start_fuel_liter: Option<u32>,
+    pub end_fuel_liter: Option<u32>,
+}
+
+impl TripsDetailedHaul {
+    pub fn is_user_haul(&self) -> bool {
+        self.config.is_some() && self.start_fuel_liter.is_some() && self.end_fuel_liter.is_some()
+    }
+}
+
 impl From<kyogre_core::TripDetailed> for Trip {
     fn from(value: kyogre_core::TripDetailed) -> Self {
         let kyogre_core::TripDetailed {
@@ -279,7 +324,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             most_recent_delivery_date,
             gear_ids,
             delivery_point_ids,
-            hauls: hauls.into_iter().map(Haul::from).collect(),
+            hauls: hauls.into_iter().map(TripsDetailedHaul::from).collect(),
             fishing_facilities: fishing_facilities
                 .into_iter()
                 .map(FishingFacility::from)
@@ -301,6 +346,58 @@ impl From<kyogre_core::TripDetailed> for Trip {
             tra,
             has_track,
             fuel_consumption_estimated_only: fuel_consumption_liter_estimated_only,
+        }
+    }
+}
+
+impl From<kyogre_core::TripsDetailedHaul> for TripsDetailedHaul {
+    fn from(v: kyogre_core::TripsDetailedHaul) -> Self {
+        let kyogre_core::TripsDetailedHaul {
+            id,
+            trip_id,
+            catch_locations,
+            gear_group_id,
+            gear_id,
+            species_group_ids,
+            fiskeridir_vessel_id,
+            haul_distance,
+            start_latitude,
+            start_longitude,
+            stop_latitude,
+            stop_longitude,
+            start_timestamp,
+            stop_timestamp,
+            vessel_length_group,
+            catches,
+            vessel_name,
+            call_sign,
+            config,
+            start_fuel_liter,
+            end_fuel_liter,
+        } = v;
+
+        Self {
+            id,
+            trip_id,
+            catch_locations,
+            gear_group_id: gear_group_id.unwrap_or(gear_id.gear_group()),
+            gear: gear_id,
+            species_group_ids,
+            fiskeridir_vessel_id,
+            haul_distance,
+            start_latitude,
+            start_longitude,
+            stop_latitude,
+            stop_longitude,
+            start_timestamp,
+            stop_timestamp,
+            vessel_length_group,
+            catches: catches.into_iter().map(HaulCatch::from).collect(),
+            vessel_name,
+            call_sign,
+            config,
+            start_fuel_liter,
+            end_fuel_liter,
         }
     }
 }
@@ -362,7 +459,7 @@ impl From<kyogre_core::CurrentTrip> for CurrentTrip {
         Self {
             departure,
             target_species_fiskeridir_id,
-            hauls: hauls.into_iter().map(Haul::from).collect(),
+            hauls: hauls.into_iter().map(TripsDetailedHaul::from).collect(),
             fishing_facilities: fishing_facilities
                 .into_iter()
                 .map(FishingFacility::from)
@@ -433,5 +530,92 @@ impl PartialEq<kyogre_core::TripDetailed> for Trip {
     fn eq(&self, other: &kyogre_core::TripDetailed) -> bool {
         let converted: Trip = From::from(other.clone());
         converted.eq(self)
+    }
+}
+
+impl PartialEq<kyogre_core::HaulCatch> for HaulCatch {
+    fn eq(&self, other: &kyogre_core::HaulCatch) -> bool {
+        let kyogre_core::HaulCatch {
+            living_weight,
+            species_fao_id: _,
+            species_fiskeridir_id,
+            species_group_id,
+            species_main_group_id: _,
+        } = other;
+
+        self.living_weight == *living_weight
+            && self.species_group_id == *species_group_id
+            && self.species_fiskeridir_id == *species_fiskeridir_id
+    }
+}
+
+impl PartialEq<kyogre_core::Haul> for TripsDetailedHaul {
+    fn eq(&self, other: &kyogre_core::Haul) -> bool {
+        let kyogre_core::Haul {
+            id,
+            trip_id,
+            catch_locations,
+            gear_group_id,
+            gear_id,
+            species_group_ids,
+            fiskeridir_vessel_id,
+            haul_distance,
+            start_latitude,
+            start_longitude,
+            stop_latitude,
+            stop_longitude,
+            start_timestamp,
+            stop_timestamp,
+            vessel_length_group,
+            catches,
+            vessel_name,
+            call_sign,
+        } = other;
+
+        // If we are comparing these two, we assume that id is set
+        self.id.unwrap() == *id
+            && self.trip_id == *trip_id
+            && self.catch_locations == *catch_locations
+            && self.gear_group_id == *gear_group_id
+            && self.gear == *gear_id
+            && self.species_group_ids == *species_group_ids
+            && self.fiskeridir_vessel_id == *fiskeridir_vessel_id
+            && self.haul_distance == *haul_distance
+            && self.start_latitude.unwrap() == *start_latitude
+            && self.start_longitude.unwrap() == *start_longitude
+            && self.stop_latitude.unwrap() == *stop_latitude
+            && self.stop_longitude.unwrap() == *stop_longitude
+            && self.start_timestamp == *start_timestamp
+            && self.stop_timestamp == *stop_timestamp
+            && self.vessel_length_group.unwrap() == *vessel_length_group
+            && self.catches == *catches
+            && self.vessel_name == *vessel_name
+            && self.call_sign == *call_sign
+    }
+}
+
+impl PartialEq<TripsDetailedHaul> for UserHaul {
+    fn eq(&self, other: &TripsDetailedHaul) -> bool {
+        let UserHaul {
+            id: _,
+            start_ts: _,
+            end_ts: _,
+            start_fuel_liter,
+            end_fuel_liter,
+            total_living_weight_kg: _,
+            config,
+            gear,
+        } = self;
+
+        other.start_fuel_liter.unwrap() == *start_fuel_liter
+            && other.end_fuel_liter.unwrap() == *end_fuel_liter
+            && other.config.as_ref().unwrap() == config
+            && other.gear == *gear
+    }
+}
+
+impl PartialEq<UserHaul> for TripsDetailedHaul {
+    fn eq(&self, other: &UserHaul) -> bool {
+        other.eq(self)
     }
 }

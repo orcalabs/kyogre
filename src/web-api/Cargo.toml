@@ -51,6 +51,7 @@ base64 = "0.22.1"
 engine = { path = "../engine", features = ["test"] }
 http-client = { path = "../http-client", default-features = false }
 
+machine = { workspace = true }
 fiskeridir-rs = { workspace = true, features = ["test"] }
 orca-core = { workspace = true, features = ["test-helper"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }

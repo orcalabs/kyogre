@@ -4,14 +4,16 @@ use crate::{
     Haul, HaulsQuery, Landing, LandingTripAssembler, LandingsQuery, LandingsSorting, Mmsi,
     NewAisPosition, NewAisStatic, OceanClimate, Ordering, Pagination, PrecisionId, ScrapeState,
     SharedState, Step, TripDetailed, Trips, TripsQuery, Vessel, VmsPosition, Weather,
+    test_helper::user_haul::{UserHaulBuilder, UserHaulConstructor},
 };
 use async_channel::Sender;
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth};
+use fiskeridir_rs::{CallSign, DeliveryPointId, LandingMonth, RegisterVessel};
 use futures::TryStreamExt;
 use kyogre_core::{
-    BuyerLocation, FisheryId, FiskeridirVesselId, NewVesselConflict, NewWeather, TestStorage, Tra,
-    TripAssembler, TripDistancer, TripPositionLayer, UpdateVessel, WeeklySale, WeeklySaleId,
+    BarentswatchUserId, BuyerLocation, FisheryId, FiskeridirVesselId, NewVesselConflict,
+    NewWeather, TEST_SIGNED_IN_VESSEL_CALLSIGN, TestStorage, Tra, TripAssembler, TripDistancer,
+    TripPositionLayer, UpdateUserHaul, UpdateVessel, UserHaul, WeeklySale, WeeklySaleId,
 };
 use machine::StateMachine;
 use orca_core::PsqlSettings;
@@ -40,6 +42,7 @@ mod ocean_climate;
 mod por;
 mod tra;
 mod trip;
+mod user_haul;
 mod vessel;
 mod vms;
 mod weather;
@@ -64,6 +67,7 @@ pub use weekly_sale::*;
 
 use self::cycle::Cycle;
 
+pub static DEFAULT_HAUL_DURATION: Duration = Duration::hours(1);
 pub static FISHING_SPOT_PREDICTOR_NUM_DAYS: u32 = 2;
 pub static FISHING_WEIGHT_PREDICTOR_NUM_DAYS: u32 = 2;
 pub static FISHING_WEIGHT_PREDICTOR_NUM_CL: u32 = 2;
@@ -82,6 +86,7 @@ pub struct TestState {
     pub trips: Vec<TripDetailed>,
     pub landings: Vec<Landing>,
     pub hauls: Vec<Haul>,
+    pub user_hauls: Vec<UserHaul>,
     pub tra: Vec<Tra>,
     pub dep: Vec<Departure>,
     pub por: Vec<Arrival>,
@@ -93,6 +98,7 @@ pub struct TestState {
     pub fishing_facilities: Vec<FishingFacility>,
     pub weather: Vec<Weather>,
     pub ocean_climate: Vec<OceanClimate>,
+    pub user_id: BarentswatchUserId,
 }
 
 pub struct TestStateBuilder {
@@ -111,6 +117,7 @@ pub struct TestStateBuilder {
     vms_positions: Vec<VmsPositionConstructor>,
     trips: Vec<TripConstructor>,
     hauls: Vec<HaulConstructor>,
+    user_hauls: Vec<UserHaulConstructor>,
     landings: Vec<LandingConstructor>,
     tra: Vec<TraConstructor>,
     dep: Vec<DepConstructor>,
@@ -121,7 +128,6 @@ pub struct TestStateBuilder {
     weather: Vec<WeatherConstructor>,
     ocean_climate: Vec<OceanClimateConstructor>,
     default_trip_duration: Duration,
-    default_haul_duration: Duration,
     default_fishing_facility_duration: Duration,
     trip_data_timestamp_gap: Duration,
     ers_message_number_per_vessel: HashMap<VesselKey, u32>,
@@ -131,6 +137,10 @@ pub struct TestStateBuilder {
     pub processors: processors::App,
     cycle: Cycle,
     trip_queue_reset: Option<Cycle>,
+    // The default user_id, call_sign used for creating objects that requires it (currently only used in
+    // user_hauls).
+    user_id: BarentswatchUserId,
+    call_sign: CallSign,
 }
 
 enum TripPrecisonStartPoint {
@@ -240,7 +250,6 @@ impl TestStateBuilder {
             mmsi_counter: 1,
             trip_data_timestamp_gap: Duration::hours(1),
             hauls: vec![],
-            default_haul_duration: Duration::hours(1),
             tra: vec![],
             weekly_sales: vec![],
             global_data_timestamp_counter: Utc.with_ymd_and_hms(2010, 2, 5, 10, 0, 0).unwrap(),
@@ -264,6 +273,9 @@ impl TestStateBuilder {
                 fuel_estimation_mode: FuelImplDiscriminants::Maru,
             })
             .await,
+            user_hauls: vec![],
+            call_sign: CallSign::try_from(TEST_SIGNED_IN_VESSEL_CALLSIGN).unwrap(),
+            user_id: BarentswatchUserId::test_new(),
         }
     }
 
@@ -426,7 +438,7 @@ impl TestStateBuilder {
             let mut dca = fiskeridir_rs::ErsDca::test_default(next_ers_message_id(), None);
 
             let start = timestamp;
-            let end = timestamp + self.default_haul_duration;
+            let end = timestamp + DEFAULT_HAUL_DURATION;
             dca.message_info.set_message_timestamp(start);
             dca.set_start_timestamp(start);
 
@@ -446,6 +458,30 @@ impl TestStateBuilder {
         }
     }
 
+    pub fn user_hauls(mut self, amount: usize) -> UserHaulBuilder {
+        assert!(amount != 0);
+
+        for _ in 0..amount {
+            let start_ts = self.global_data_timestamp_counter;
+            let end_ts = self.global_data_timestamp_counter + self.data_timestamp_gap;
+
+            self.user_hauls.push(UserHaulConstructor::new(
+                self.cycle,
+                start_ts,
+                end_ts,
+                &self.call_sign,
+                self.user_id,
+            ));
+
+            self.global_data_timestamp_counter = end_ts + self.data_timestamp_gap;
+        }
+
+        UserHaulBuilder {
+            current_index: self.user_hauls.len() - amount,
+            state: self,
+        }
+    }
+
     pub fn weather(mut self, amount: usize) -> WeatherBuilder {
         assert_ne!(amount, 0);
 
@@ -460,6 +496,40 @@ impl TestStateBuilder {
 
         WeatherBuilder {
             current_index: self.weather.len() - amount,
+            state: self,
+        }
+    }
+
+    pub fn vessel_with_test_call_sign(mut self) -> VesselBuilder {
+        let vessel_id = FiskeridirVesselId::test_new(self.vessel_id_counter);
+
+        let mut vessel = fiskeridir_rs::RegisterVessel::test_default(vessel_id);
+        let call_sign = CallSign::try_from(TEST_SIGNED_IN_VESSEL_CALLSIGN).unwrap();
+        let ais_static =
+            NewAisStatic::test_default(Mmsi::test_new(self.mmsi_counter), call_sign.as_ref());
+        vessel.radio_call_sign = Some(call_sign.clone());
+
+        let key = VesselKey {
+            vessel_vec_index: self.vessels.len() + 1,
+        };
+        self.vessels.push(VesselContructor {
+            key,
+            fiskeridir: vessel,
+            ais: ais_static,
+            cycle: self.cycle,
+            clear_trip_precision: false,
+            clear_trip_distancing: false,
+            active_vessel: None,
+            set_engine_building_year: false,
+            fishery_id: None,
+        });
+
+        self.ers_message_number_per_vessel.insert(key, 1);
+        self.vessel_id_counter += 1;
+        self.mmsi_counter += 1;
+
+        VesselBuilder {
+            current_index: self.vessels.len() - 1,
             state: self,
         }
     }
@@ -524,6 +594,8 @@ impl TestStateBuilder {
         // TODO: get weather/climate from db and not conversion.
         let mut weather = Vec::new();
         let mut ocean_climate = Vec::new();
+        let mut user_hauls = Vec::with_capacity(self.user_hauls.len());
+        let mut user_haul_vessels = HashSet::new();
 
         let mut delivery_point_ids: HashSet<DeliveryPointId> = HashSet::new();
 
@@ -987,6 +1059,54 @@ impl TestStateBuilder {
             weather.extend(new_weather.iter().map(Weather::from));
             self.storage.add_weather(new_weather).await.unwrap();
 
+            for h in self.user_hauls.iter() {
+                if h.cycle != i {
+                    continue;
+                }
+
+                if !user_haul_vessels.contains(&h.call_sign) {
+                    let mut new_vessel =
+                        RegisterVessel::test_default(FiskeridirVesselId::test_new(rand::random()));
+                    new_vessel.radio_call_sign = Some(h.call_sign.clone());
+                    user_haul_vessels.insert(h.call_sign.clone());
+                    self.storage
+                        .add_register_vessels(vec![new_vessel])
+                        .await
+                        .unwrap();
+                }
+
+                self.storage
+                    .start_user_haul(&h.call_sign, h.user_id, &h.start)
+                    .await
+                    .unwrap();
+
+                let user_haul = self
+                    .storage
+                    .stop_user_haul(&h.call_sign, &h.end, h.user_id)
+                    .await
+                    .unwrap();
+
+                let user_haul = self
+                    .storage
+                    .update_user_haul(
+                        &h.call_sign,
+                        user_haul.id,
+                        &UpdateUserHaul {
+                            start_ts: h.start_ts,
+                            end_ts: h.end_ts,
+                            start_fuel_liter: user_haul.start_fuel_liter,
+                            end_fuel_liter: user_haul.end_fuel_liter,
+                            total_living_weight_kg: user_haul.total_living_weight_kg,
+                            config: user_haul.config,
+                            gear: h.gear,
+                        },
+                    )
+                    .await
+                    .unwrap();
+
+                user_hauls.push(user_haul);
+            }
+
             self.engine = self.engine.run_single().await;
             loop {
                 if self.engine.current_state_name() == "Pending" {
@@ -1101,6 +1221,7 @@ impl TestStateBuilder {
         por.sort_by_key(|v| (v.fiskeridir_vessel_id, v.timestamp, v.message_number));
         delivery_points.sort_by_key(|v| v.id.clone());
         fishing_facilities.sort_by_key(|v| (v.fiskeridir_vessel_id, v.setup_timestamp));
+        user_hauls.sort_by_key(|v| v.start_ts);
 
         TestState {
             ais_positions,
@@ -1119,6 +1240,8 @@ impl TestStateBuilder {
             weather,
             ocean_climate,
             tra,
+            user_hauls,
+            user_id: self.user_id,
         }
     }
 }

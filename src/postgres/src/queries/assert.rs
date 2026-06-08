@@ -1,13 +1,43 @@
 use crate::{
     PostgresAdapter,
     error::{
-        CallSignDoesNotExistSnafu, InvalidVesselSelectionSnafu, NoActiveUserHaulSnafu, Result,
+        CallSignDoesNotExistSnafu, CannotModifyActiveUserHaulSnafu, InvalidVesselSelectionSnafu,
+        NoActiveUserHaulSnafu, Result,
     },
 };
 use fiskeridir_rs::{CallSign, OrgId};
-use kyogre_core::FiskeridirVesselId;
+use kyogre_core::{FiskeridirVesselId, UserHaulId};
 
 impl PostgresAdapter {
+    pub async fn assert_is_not_current_active_haul(
+        &self,
+        call_sign: &CallSign,
+        id: UserHaulId,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        let exists = sqlx::query!(
+            r#"
+SELECT
+    user_haul_id
+FROM
+    user_hauls
+WHERE
+    call_sign = $1
+    AND user_haul_id = $2
+    AND end_ts IS NULL
+            "#,
+            call_sign,
+            id as UserHaulId
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if exists.is_some() {
+            CannotModifyActiveUserHaulSnafu {}.fail()
+        } else {
+            Ok(())
+        }
+    }
     pub async fn assert_user_haul_is_in_progress(
         &self,
         call_sign: &CallSign,
