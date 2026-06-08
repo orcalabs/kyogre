@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    overlapping AS (\n        SELECT\n            ANY_VALUE (q.haul_id) AS haul_id,\n            q.user_haul_id\n        FROM\n            (\n                SELECT\n                    h.haul_id,\n                    ANY_VALUE (u.user_haul_id) AS user_haul_id,\n                    EXTRACT(\n                        EPOCH\n                        FROM\n                            (\n                                UPPER(h.period * ANY_VALUE (u.period)) - LOWER(h.period * ANY_VALUE (u.period))\n                            )\n                    ) AS overlap\n                FROM\n                    user_hauls u\n                    INNER JOIN hauls h ON h.period && u.period\n                    AND u.fiskeridir_vessel_id = h.fiskeridir_vessel_id\n                WHERE\n                    u.user_haul_id = ANY ($1::INT[])\n                GROUP BY\n                    h.haul_id\n                HAVING\n                    COUNT(DISTINCT u.user_haul_id) = 1\n            ) q\n        GROUP BY\n            q.user_haul_id\n        HAVING\n            COUNT(DISTINCT q.haul_id) = 1\n    )\nUPDATE user_hauls u\nSET\n    haul_id = o.haul_id,\n    trip_id = NULL\nFROM\n    overlapping o\nWHERE\n    o.user_haul_id = u.user_haul_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ce7b03498fb4ee9ac0fb70ff57627db2b2391ed28439ad32dd4093932fbd4391"
+}

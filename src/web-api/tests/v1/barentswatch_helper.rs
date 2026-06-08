@@ -109,9 +109,9 @@ impl BarentswatchHelper {
         encode(&header, &claims, &encoding_key).unwrap()
     }
 
-    pub fn get_bw_token(&self) -> String {
+    pub fn get_bw_token(&self, id: Option<BarentswatchUserId>) -> String {
         let claims = Claims {
-            id: BarentswatchUserId::test_new(),
+            id: id.unwrap_or_else(BarentswatchUserId::test_new),
             exp: i64::MAX,
             aud: self.audience.clone(),
             policies: BwPolicy::iter().collect(),

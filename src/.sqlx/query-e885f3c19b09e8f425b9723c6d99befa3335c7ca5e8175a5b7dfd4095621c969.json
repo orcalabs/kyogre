@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE user_hauls\nSET\n    haul_id = NULL,\n    trip_id = NULL\nWHERE\n    fiskeridir_vessel_id = $1\n    AND end_ts >= $2\nRETURNING\n    user_haul_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_haul_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e885f3c19b09e8f425b9723c6d99befa3335c7ca5e8175a5b7dfd4095621c969"
+}

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    trip_id AS \"trip_id!: TripId\"\nFROM\n    trips t\nWHERE\n    t.fiskeridir_vessel_id = $1\n    --! This refreshes all trips that has started prior to the refresh boundary.\n    --! Using 'LOWER' would skip the trip if the boundary was in the middle of it.\n    AND UPPER(t.period) >= $2\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "trip_id!: TripId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1b9f1a86bcc52c0c28739819068fbc0ee04ed791ec61a9ce59e9b3bac4bd008b"
+}

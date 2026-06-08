@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    overlapping AS (\n        SELECT\n            t.trip_id,\n            u.user_haul_id\n        FROM\n            trips t\n            INNER JOIN user_hauls u ON t.period @> u.period\n            AND u.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n        WHERE\n            t.trip_id = ANY ($1::BIGINT[])\n            AND u.haul_id IS NULL\n    )\nUPDATE user_hauls u\nSET\n    trip_id = o.trip_id\nFROM\n    overlapping o\nWHERE\n    o.user_haul_id = u.user_haul_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7df13bc2d2353e611c359d02e6ca6e7b0e6c4965d9ddd0ee99257a5ce20f4cb3"
+}

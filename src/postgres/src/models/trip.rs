@@ -7,7 +7,7 @@ use crate::{
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup};
 use kyogre_core::{
-    AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, HasTrack, Haul,
+    AisVmsPosition, Catch, DateRange, FishingFacility, FiskeridirVesselId, HasTrack,
     MinimalVesselEvent, PositionType, PrecisionId, PrecisionOutcome, ProcessingStatus,
     PrunedTripPosition, TripAssemblerConflict, TripAssemblerId, TripDistancerId, TripId,
     TripPositionLayerId, TripToInsert, TripsConflictStrategy, VesselEventType,
@@ -468,7 +468,7 @@ impl TryFrom<CurrentTrip> for kyogre_core::CurrentTrip {
         Ok(Self {
             departure: departure_timestamp,
             target_species_fiskeridir_id,
-            hauls: serde_json::from_str::<Vec<Haul>>(&hauls)?,
+            hauls: serde_json::from_str::<Vec<kyogre_core::TripsDetailedHaul>>(&hauls)?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(&fishing_facilities)?,
         })
     }
@@ -566,7 +566,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             gear_group_ids,
             species_group_ids,
             delivery_point_ids: delivery_points,
-            hauls: serde_json::from_str::<Vec<Haul>>(&hauls)?,
+            hauls: serde_json::from_str::<Vec<kyogre_core::TripsDetailedHaul>>(&hauls)?,
             fishing_facilities: serde_json::from_str::<Vec<FishingFacility>>(&fishing_facilities)?,
             delivery: kyogre_core::Delivery {
                 delivered: serde_json::from_str::<Vec<Catch>>(&catches)?,

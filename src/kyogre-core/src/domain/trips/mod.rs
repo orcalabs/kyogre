@@ -154,7 +154,7 @@ pub struct BenchmarkTrip {
 pub struct CurrentTrip {
     pub departure: DateTime<Utc>,
     pub target_species_fiskeridir_id: Option<i32>,
-    pub hauls: Vec<Haul>,
+    pub hauls: Vec<TripsDetailedHaul>,
     pub fishing_facilities: Vec<FishingFacility>,
 }
 
@@ -266,7 +266,7 @@ pub struct TripDetailed {
     pub gear_group_ids: Vec<fiskeridir_rs::GearGroup>,
     pub species_group_ids: Vec<fiskeridir_rs::SpeciesGroup>,
     pub delivery_point_ids: Vec<DeliveryPointId>,
-    pub hauls: Vec<Haul>,
+    pub hauls: Vec<TripsDetailedHaul>,
     pub tra: Vec<Tra>,
     pub fishing_facilities: Vec<FishingFacility>,
     pub delivery: Delivery,

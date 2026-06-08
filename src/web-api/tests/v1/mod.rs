@@ -20,6 +20,7 @@ pub mod species;
 pub mod test_client;
 pub mod trip;
 pub mod user;
+pub mod user_haul;
 pub mod vessel;
 pub mod vessel_event;
 pub mod vessel_org_fuel;

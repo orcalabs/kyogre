@@ -4,10 +4,11 @@ use duckdb_rs::{CacheStorage, adapter};
 use engine::*;
 use futures::Future;
 use kyogre_core::*;
+use machine::StateMachine;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings, TestHelperBuilder};
 use postgres::{HAULS_VERIFY_CHUNK_SIZE, LANDINGS_VERIFY_CHUNK_SIZE, PostgresAdapter, TestDb};
+use processors::FuelImplDiscriminants;
 use std::collections::HashMap;
-use std::f64;
 use std::ops::AddAssign;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -39,6 +40,44 @@ pub struct TestHelper {
 }
 
 impl TestHelper {
+    // Adds a run of all processors prior to running the builder/engine
+    pub async fn builder_with_processor_pre_run(&self) -> TestStateBuilder {
+        let engine = engine(self.adapter().clone(), &self.db_settings).await;
+
+        TestStateBuilder::new(
+            Box::new(self.adapter().clone()),
+            Box::new(self.adapter().clone()),
+            engine,
+            &self.db_settings,
+        )
+        .await
+    }
+
+    pub async fn run_processors(&self) {
+        let settings = processors::Settings {
+            fuel_estimation_vessels: None,
+            num_fuel_estimation_workers: 1,
+            current_positions_batch_size: 10,
+            environment: orca_core::Environment::Test,
+            postgres: self.db_settings.clone(),
+            fuel_estimation_mode: FuelImplDiscriminants::Maru,
+        };
+
+        let processors = processors::App::build(&settings).await;
+
+        processors.run().await.unwrap();
+    }
+    pub async fn run_engine_cycle(&self) {
+        let mut engine = engine(self.adapter().clone(), &self.db_settings).await;
+
+        engine = engine.run_single().await;
+        loop {
+            if engine.current_state_name() == "Pending" {
+                break;
+            }
+            engine = engine.run_single().await;
+        }
+    }
     pub async fn builder(&self) -> TestStateBuilder {
         let engine = engine(self.adapter().clone(), &self.db_settings).await;
 

@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    fishery_id_of_logged_in_user AS (\n        SELECT\n            fh.fishery_id\n        FROM\n            all_vessels a\n            INNER JOIN fiskeridir_vessels f ON a.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n            INNER JOIN fisheries fh ON fh.fishery_id = f.fishery_id\n        WHERE\n            a.call_sign = $1\n    )\nSELECT\n    departure_timestamp,\n    CASE\n        WHEN v.fiskeridir_vessel_id IS NOT NULL\n        OR fh.fishery_id IS NOT NULL THEN t.ers_and_user_hauls\n        ELSE t.ers_hauls\n    END::TEXT AS \"hauls!\",\n    CASE\n        WHEN $2 THEN fishing_facilities::TEXT\n        ELSE '[]'\n    END AS \"fishing_facilities!\",\n    target_species_fiskeridir_id\nFROM\n    current_trips t\n    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    LEFT JOIN all_vessels v ON t.fiskeridir_vessel_id = v.fiskeridir_vessel_id\n    AND v.call_sign = $1\n    LEFT JOIN fishery_id_of_logged_in_user fh ON fh.fishery_id = f.fishery_id\nWHERE\n    t.fiskeridir_vessel_id = $3\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "departure_timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "hauls!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "fishing_facilities!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "target_species_fiskeridir_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bool",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null,
+      true
+    ]
+  },
+  "hash": "fc688c0d70f0d0997ee7f5dc1f442a1ce5b9a7f814b6ba4ae45cb3edad747b1e"
+}
