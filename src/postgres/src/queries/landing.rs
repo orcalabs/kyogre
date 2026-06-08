@@ -361,15 +361,18 @@ FROM
         self.unnest_insert_returning(landings, &mut **tx)
             .try_for_each(|i| {
                 if let (Some(id), Some(event_id)) = (i.fiskeridir_vessel_id, i.vessel_event_id) {
+                    let conflict_ts = Utc.from_utc_datetime(&NaiveDateTime::new(
+                        i.landing_timestamp.date_naive(),
+                        NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+                    ));
                     trip_assembler_conflicts
                         .entry(id)
-                        .and_modify(|v| v.timestamp = min(v.timestamp, i.landing_timestamp))
+                        .and_modify(|v| {
+                            v.timestamp = min(v.timestamp, conflict_ts);
+                        })
                         .or_insert_with(|| NewTripAssemblerConflict {
                             fiskeridir_vessel_id: id,
-                            timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
-                                i.landing_timestamp.date_naive(),
-                                NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
-                            )),
+                            timestamp: conflict_ts,
                             vessel_event_id: Some(event_id),
                             event_type: VesselEventType::Landing,
                             vessel_event_timestamp: i.landing_timestamp,
@@ -383,15 +386,16 @@ FROM
 
         for d in deleted {
             if let Some(id) = d.fiskeridir_vessel_id {
+                let conflict_ts = Utc.from_utc_datetime(&NaiveDateTime::new(
+                    d.landing_timestamp.date_naive(),
+                    NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+                ));
                 trip_assembler_conflicts
                     .entry(id)
-                    .and_modify(|v| v.timestamp = min(v.timestamp, d.landing_timestamp))
+                    .and_modify(|v| v.timestamp = min(v.timestamp, conflict_ts))
                     .or_insert_with(|| NewTripAssemblerConflict {
                         fiskeridir_vessel_id: id,
-                        timestamp: Utc.from_utc_datetime(&NaiveDateTime::new(
-                            d.landing_timestamp.date_naive(),
-                            NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
-                        )),
+                        timestamp: conflict_ts,
                         vessel_event_id: None,
                         event_type: VesselEventType::Landing,
                         vessel_event_timestamp: d.landing_timestamp,

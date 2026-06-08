@@ -1,5 +1,5 @@
 use crate::helper::test;
-use chrono::{Duration, TimeZone, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use engine::*;
 use kyogre_core::*;
 
@@ -347,6 +347,60 @@ async fn test_deleting_second_landing_deletes_trip() {
             .await;
 
         assert_eq!(state.trips.len(), 1);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_conflicts_on_same_day() {
+    test(|_helper, builder| async move {
+        let landing: DateTime<Utc> = "2026-02-07 14:16:03.000 +0100".parse().unwrap();
+        let landing2: DateTime<Utc> = "2026-02-07 20:00:00.000 +0100".parse().unwrap();
+        let landing3: DateTime<Utc> = "2026-02-08 09:42:45.000 +0100".parse().unwrap();
+        let landing4: DateTime<Utc> = "2026-02-08 15:43:50.000 +0100".parse().unwrap();
+        let landing5: DateTime<Utc> = "2026-02-09 09:51:22.000 +0100".parse().unwrap();
+        let landing6: DateTime<Utc> = "2026-02-09 14:38:39.000 +0100".parse().unwrap();
+        let landing7: DateTime<Utc> = "2026-02-10 16:44:18.000 +0100".parse().unwrap();
+
+        let _state = builder
+            .vessels(1)
+            .landings(4)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.landing.landing_timestamp = landing;
+                }
+                1 => {
+                    v.landing.landing_timestamp = landing2;
+                }
+                2 => {
+                    v.landing.landing_timestamp = landing3;
+                }
+                3 => {
+                    v.landing.landing_timestamp = landing4;
+                }
+                _ => unreachable!(),
+            })
+            .new_cycle()
+            .landings(1)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.landing.landing_timestamp = landing5;
+                }
+                _ => unreachable!(),
+            })
+            .new_cycle()
+            .landings(2)
+            .modify_idx(|i, v| match i {
+                0 => {
+                    v.landing.landing_timestamp = landing6;
+                }
+                1 => {
+                    v.landing.landing_timestamp = landing7;
+                }
+                _ => unreachable!(),
+            })
+            .build()
+            .await;
     })
     .await;
 }
