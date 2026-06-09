@@ -85,7 +85,11 @@ impl LiveFuel {
         // in the future.
         range.set_start_bound(Bound::Inclusive);
 
-        let positions = self.adapter.ais_positions(vessel.mmsi, &range).await?;
+        let positions = self
+            .adapter
+            .ais_positions(vessel.vessel_id, vessel.mmsi, &range)
+            .await?;
+
         if positions.len() <= 1 {
             return Ok(vec![]);
         }

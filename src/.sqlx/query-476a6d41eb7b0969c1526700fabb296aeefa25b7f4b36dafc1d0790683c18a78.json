@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    user_haul_id AS \"id: UserHaulId\",\n    fiskeridir_vessel_id AS \"vessel_id: FiskeridirVesselId\",\n    gear_id AS \"gear: Gear\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config,\n    total_living_weight_kg\nFROM\n    user_hauls\nWHERE\n    call_sign = $1\n    AND end_ts IS NOT NULL\n    AND end_fuel_liter IS NOT NULL\nORDER BY\n    start_ts\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: UserHaulId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "vessel_id: FiskeridirVesselId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "gear: Gear",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "start_ts",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "end_ts!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "start_fuel_liter",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "end_fuel_liter!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "config",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "total_living_weight_kg",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "476a6d41eb7b0969c1526700fabb296aeefa25b7f4b36dafc1d0790683c18a78"
+}

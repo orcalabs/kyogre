@@ -166,8 +166,7 @@ WHERE
     )
     .fetch_all(adapter.no_plan_cache_pool())
     .await?
-    .into_iter()
-    ;
+    .into_iter();
 
     let mut id = 1;
     let mut prev = None;
@@ -196,7 +195,7 @@ WHERE
         let ais = fuel_estimate.num_ais_positions;
         let vms = fuel_estimate.num_vms_positions;
 
-        let steaming_usage_per_sec = 12_000. / (24. * 60. * 60.);
+        let steaming_usage_per_sec = 13_000. / (24. * 60. * 60.);
         let steaming_usage = steaming_usage_per_sec * (range.stop - range.start).as_seconds_f64();
 
         let diff = estimate - steaming_usage;

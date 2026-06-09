@@ -19,7 +19,12 @@ pub trait LiveFuelInbound: Send + Sync {
         threshold: DateTime<Utc>,
     ) -> CoreResult<()>;
     async fn live_fuel_vessels(&self) -> CoreResult<Vec<LiveFuelVessel>>;
-    async fn ais_positions(&self, mmsi: Mmsi, range: &DateRange) -> CoreResult<Vec<AisPosition>>;
+    async fn ais_positions(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Mmsi,
+        range: &DateRange,
+    ) -> CoreResult<Vec<AisPosition>>;
 }
 
 #[async_trait]

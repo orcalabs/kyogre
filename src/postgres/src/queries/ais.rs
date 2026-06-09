@@ -4,11 +4,12 @@ use crate::{
     models::{self, NewAisCurrentPosition, NewAisVessel, NewAisVesselHistoric, NewAisVesselMmsi},
 };
 use chrono::{DateTime, Utc};
+use fiskeridir_rs::{Gear, GearGroup};
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisPermission, AisPosition, AisVesselMigrate, DateRange, LEISURE_VESSEL_LENGTH_AIS_BOUNDARY,
-    LEISURE_VESSEL_SHIP_TYPES, Mmsi, NavigationStatus, NewAisPosition, NewAisStatic,
-    PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
+    AisPermission, AisPosition, AisVesselMigrate, DateRange, FiskeridirVesselId,
+    LEISURE_VESSEL_LENGTH_AIS_BOUNDARY, LEISURE_VESSEL_SHIP_TYPES, Mmsi, NavigationStatus,
+    NewAisPosition, NewAisStatic, PRIVATE_AIS_DATA_VESSEL_LENGTH_BOUNDARY,
 };
 use std::collections::HashMap;
 
@@ -32,7 +33,8 @@ SELECT
     rate_of_turn,
     speed_over_ground,
     true_heading,
-    distance_to_shore
+    distance_to_shore,
+    NULL AS "active_gear: Gear"
 FROM
     ais_positions
 WHERE
@@ -95,7 +97,8 @@ SELECT
     rate_of_turn,
     speed_over_ground,
     true_heading,
-    distance_to_shore
+    distance_to_shore,
+    NULL AS "active_gear: Gear"
 FROM
     ais_positions
 WHERE
@@ -117,6 +120,90 @@ ORDER BY
             mmsi as Option<Mmsi>,
             start,
             end,
+        )
+        .fetch_all(self.no_plan_cache_pool())
+        .await
+        .map_err(|e| e.into())
+    }
+
+    pub(crate) async fn ais_positions_with_inside_user_haul_impl(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Mmsi,
+        range: &DateRange,
+    ) -> Result<Vec<AisPosition>> {
+        sqlx::query_as!(
+            AisPosition,
+            r#"
+WITH
+    vessel_hauls AS MATERIALIZED (
+        SELECT
+            period,
+            gear_id
+        FROM
+            hauls
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND period && TSTZRANGE ($2, $3, '[)')
+            AND gear_group_id = ANY ($4)
+    ),
+    vessel_user_hauls AS MATERIALIZED (
+        SELECT
+            h.period,
+            h.gear_id
+        FROM
+            user_hauls h
+            INNER JOIN gear g ON h.gear_id = g.gear_id
+        WHERE
+            h.fiskeridir_vessel_id = $1
+            AND g.gear_group_id = ANY ($4)
+    )
+SELECT
+    latitude,
+    longitude,
+    mmsi AS "mmsi!: Mmsi",
+    timestamp AS msgtime,
+    course_over_ground,
+    navigation_status_id AS "navigational_status: NavigationStatus",
+    rate_of_turn,
+    speed_over_ground,
+    true_heading,
+    distance_to_shore,
+    COALESCE(
+        (
+            SELECT
+                h.gear_id
+            FROM
+                vessel_hauls h
+            WHERE
+                p.timestamp <@ h.period
+            ORDER BY
+                LEN_OF_RANGE (h.period) DESC
+            LIMIT
+                1
+        ),
+        (
+            SELECT
+                h.gear_id
+            FROM
+                vessel_user_hauls h
+            WHERE
+                p.timestamp <@ h.period
+        )
+    ) AS "active_gear: Gear"
+FROM
+    ais_positions p
+WHERE
+    mmsi = $5
+    AND timestamp BETWEEN $2 AND $3
+ORDER BY
+    timestamp ASC
+            "#,
+            vessel_id as FiskeridirVesselId,
+            range.start(),
+            range.end(),
+            GearGroup::active() as &[GearGroup],
+            mmsi as Mmsi,
         )
         .fetch_all(self.no_plan_cache_pool())
         .await

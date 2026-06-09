@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi AS \"mmsi!: Mmsi\",\n    timestamp AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nWHERE\n    (\n        $1::INT IS NULL\n        OR mmsi = $1\n    )\n    AND (\n        $2::TIMESTAMPTZ IS NULL\n        OR timestamp >= $2\n    )\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR timestamp <= $3\n    )\nORDER BY\n    timestamp ASC\n            ",
+  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi AS \"mmsi!: Mmsi\",\n    \"timestamp\" AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore,\n    NULL AS \"active_gear: Gear\"\nFROM\n    ais_positions\nWHERE\n    (\n        $1::INT IS NULL\n        OR mmsi = $1\n    )\n    AND (\n        (\n            $2::timestamptz IS NULL\n            AND $3::timestamptz IS NULL\n        )\n        OR \"timestamp\" BETWEEN $2 AND $3\n    )\nORDER BY\n    \"timestamp\" ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -52,6 +52,11 @@
         "ordinal": 9,
         "name": "distance_to_shore",
         "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "active_gear: Gear",
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -71,8 +76,9 @@
       true,
       true,
       true,
-      false
+      false,
+      null
     ]
   },
-  "hash": "242cf1b61e6a95a34bb890e3f62624f3bc04cdf0cdd1221af1adbc9744557f6e"
+  "hash": "14aa46867c0ff8b5cf75e5e4f1a2e2a81cdd5337f371ed0c8b82290da5f392f8"
 }

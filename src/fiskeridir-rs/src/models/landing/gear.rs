@@ -241,13 +241,13 @@ impl Gear {
     }
 
     pub fn is_active_gear(&self) -> bool {
-        GearGroup::active_int().contains(&(self.gear_group() as i32))
+        GearGroup::active().contains(&self.gear_group())
     }
 
     pub fn haul_load_factor(&self) -> f64 {
         if self.is_active_gear() {
             match self {
-                Self::BottomTrawl => 15.,
+                Self::BottomTrawl => 70.,
                 Self::MidwaterTrawl => 2.5,
                 _ => 10.,
             }
@@ -258,14 +258,15 @@ impl Gear {
 }
 
 impl GearGroup {
-    pub fn active_int() -> [i32; 4] {
-        [
-            GearGroup::Trawl as i32,
-            GearGroup::HookGear as i32,
-            GearGroup::Seine as i32,
-            GearGroup::DanishSeine as i32,
+    pub const fn active() -> &'static [Self] {
+        &[
+            GearGroup::Trawl,
+            GearGroup::HookGear,
+            GearGroup::Seine,
+            GearGroup::DanishSeine,
         ]
     }
+
     /// Returns the norwegian name of the gear group type.
     pub fn norwegian_name(&self) -> &'static str {
         use GearGroup::*;

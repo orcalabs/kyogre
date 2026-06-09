@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    start_ts,\n    end_ts\nFROM\n    user_hauls\nWHERE\n    user_haul_id = $1\n    AND call_sign = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "start_ts",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "end_ts",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "2ec540bbd98441342be690aae90b638e94a9d723ee2bb4517c772be56b8e9d07"
+}

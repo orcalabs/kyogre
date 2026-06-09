@@ -679,14 +679,26 @@ pub struct FuelItem {
 
 impl From<&DailyFuelEstimationPosition> for FuelItem {
     fn from(value: &DailyFuelEstimationPosition) -> Self {
+        let DailyFuelEstimationPosition {
+            trip_id: _,
+            latitude,
+            longitude,
+            timestamp,
+            speed,
+            position_type_id,
+            cumulative_cargo_weight,
+            cumulative_fuel_consumption_liter: _,
+            active_gear,
+        } = value;
+
         Self {
-            speed: value.speed,
-            latitude: value.latitude,
-            longitude: value.longitude,
-            timestamp: value.timestamp,
-            position_type_id: value.position_type_id,
-            cumulative_cargo_weight: value.cumulative_cargo_weight,
-            active_gear: None,
+            speed: *speed,
+            latitude: *latitude,
+            longitude: *longitude,
+            timestamp: *timestamp,
+            position_type_id: *position_type_id,
+            cumulative_cargo_weight: *cumulative_cargo_weight,
+            active_gear: *active_gear,
         }
     }
 }
@@ -707,13 +719,27 @@ impl From<&AisVmsPosition> for FuelItem {
 
 impl From<&AisPosition> for FuelItem {
     fn from(value: &AisPosition) -> Self {
+        let AisPosition {
+            latitude,
+            longitude,
+            mmsi: _,
+            msgtime,
+            course_over_ground: _,
+            navigational_status: _,
+            rate_of_turn: _,
+            speed_over_ground,
+            true_heading: _,
+            distance_to_shore: _,
+            active_gear,
+        } = value;
+
         Self {
-            speed: value.speed_over_ground,
-            latitude: value.latitude,
-            longitude: value.longitude,
-            timestamp: value.msgtime,
+            speed: *speed_over_ground,
+            latitude: *latitude,
+            longitude: *longitude,
+            timestamp: *msgtime,
             position_type_id: PositionType::Ais,
-            active_gear: None,
+            active_gear: *active_gear,
             cumulative_cargo_weight: 0.,
         }
     }

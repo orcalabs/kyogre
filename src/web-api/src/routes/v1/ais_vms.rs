@@ -271,6 +271,7 @@ impl PartialEq<AisVmsPosition> for AisPosition {
             speed_over_ground,
             true_heading,
             distance_to_shore,
+            active_gear: _,
         } = self;
 
         *latitude as i32 == other.lat as i32

@@ -1,0 +1,55 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE user_hauls\nSET\n    config = $1,\n    start_fuel_liter = $2,\n    gear_id = $3\nWHERE\n    call_sign = $4\n    AND end_ts IS NULL\n    AND end_fuel_liter IS NULL\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    fiskeridir_vessel_id AS \"vessel_id: FiskeridirVesselId\",\n    gear_id AS \"gear: Gear\",\n    start_ts,\n    start_fuel_liter,\n    config\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: UserHaulId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "vessel_id: FiskeridirVesselId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "gear: Gear",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "start_ts",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "start_fuel_liter",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "config",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Int4",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7164fe96570769fa36be426ebb79812b1d7037207ad992195ed924119448bdde"
+}

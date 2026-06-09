@@ -1,0 +1,101 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessel_hauls AS MATERIALIZED (\n        SELECT\n            h.period,\n            h.gear_id\n        FROM\n            hauls h\n            INNER JOIN trips t ON (\n                h.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n                AND h.period && t.period\n            )\n        WHERE\n            t.trip_id = $1\n            AND h.gear_group_id = ANY ($2)\n    ),\n    vessel_user_hauls AS MATERIALIZED (\n        SELECT\n            h.period,\n            h.gear_id\n        FROM\n            user_hauls h\n            INNER JOIN gear g ON h.gear_id = g.gear_id\n            INNER JOIN trips t ON (\n                h.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n                AND h.period && t.period\n            )\n        WHERE\n            t.trip_id = $1\n            AND g.gear_group_id = ANY ($2)\n    )\nSELECT\n    latitude AS \"latitude!\",\n    longitude AS \"longitude!\",\n    timestamp AS \"timestamp!\",\n    course_over_ground,\n    speed,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    true_heading,\n    distance_to_shore AS \"distance_to_shore!\",\n    position_type_id AS \"position_type: PositionType\",\n    pruned_by AS \"pruned_by: TripPositionLayerId\",\n    trip_cumulative_fuel_consumption_liter,\n    trip_cumulative_cargo_weight,\n    COALESCE(\n        (\n            SELECT\n                h.gear_id\n            FROM\n                vessel_hauls h\n            WHERE\n                p.timestamp <@ h.period\n            ORDER BY\n                LEN_OF_RANGE (h.period) DESC\n            LIMIT\n                1\n        ),\n        (\n            SELECT\n                h.gear_id\n            FROM\n                vessel_user_hauls h\n            WHERE\n                p.timestamp <@ h.period\n        )\n    ) AS \"active_gear: Gear\"\nFROM\n    trip_positions p\nWHERE\n    trip_id = $1\nORDER BY\n    timestamp ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "course_over_ground",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "speed",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "navigational_status: NavigationStatus",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "rate_of_turn",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "true_heading",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "distance_to_shore!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "position_type: PositionType",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "pruned_by: TripPositionLayerId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "trip_cumulative_fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "trip_cumulative_cargo_weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 13,
+        "name": "active_gear: Gear",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "9ba5e251cfa4e30cc03b63d3ec5dceab336bd215398faf671278cf56762a89cb"
+}

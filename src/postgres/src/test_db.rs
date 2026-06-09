@@ -126,7 +126,8 @@ SELECT
     rate_of_turn,
     speed_over_ground,
     true_heading,
-    distance_to_shore
+    distance_to_shore,
+    NULL AS "active_gear: Gear"
 FROM
     ais_positions
 WHERE
@@ -167,7 +168,8 @@ SELECT
     speed_over_ground,
     TIMESTAMP AS msgtime,
     navigation_status_id AS "navigational_status: NavigationStatus",
-    distance_to_shore
+    distance_to_shore,
+    NULL AS "active_gear: Gear"
 FROM
     current_ais_positions
             "#
