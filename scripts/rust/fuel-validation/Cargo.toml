@@ -4,17 +4,22 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-kyogre-core = { path = "../../../src/kyogre-core" }
+orca-core = { version = "0.39.0", registry = "orcalabs-orcastrator" }
+fiskeridir-rs = { path = "../../../src/fiskeridir-rs", features = ["test"] }
+kyogre-core = { path = "../../../src/kyogre-core", features = ["test"] }
+processors = { path = "../../../src/processors" }
+postgres = { path = "../../../src/postgres", features = ["test"] }
 
 chrono = "0.4"
 anyhow = "1.0.96"
-calamine = { version = "0.26.1", features = ["chrono", "dates"] }
+calamine = { version = "0.35.0", features = ["chrono", "dates"] }
 serde = { version = "1.0.218", features = ["derive"] }
-sqlx = { version = "0.8.3", features = [
+sqlx = { version = "0.8", features = [
+    "runtime-tokio-rustls",
     "postgres",
     "chrono",
     "json",
-    "runtime-tokio-rustls",
-] }
+], default-features = false }
 tokio = { version = "1.43.0", features = ["full"] }
 clap = { version = "4.5", features = ["derive"] }
+futures = "0.3.32"

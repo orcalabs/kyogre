@@ -2,19 +2,23 @@ use std::{
     collections::HashMap,
     fmt::Display,
     fs::File,
-    io::{stdout, Cursor, Write},
+    io::{Cursor, Write, stdout},
 };
 
 use anyhow::Result;
-use calamine::{open_workbook_from_rs, Data, DataType, RangeDeserializerBuilder, Reader, Xlsx};
+use calamine::{Data, DataType, RangeDeserializerBuilder, Reader, Xlsx, open_workbook_from_rs};
 use chrono::{Datelike, Duration, Months};
 use kyogre_core::DateRange;
 use serde::de::DeserializeOwned;
 use sqlx::{
+    PgPool,
     postgres::{PgConnectOptions, PgPoolOptions},
     types::chrono::NaiveDate,
-    PgPool,
 };
+
+mod user_haul;
+
+pub use user_haul::*;
 
 #[derive(Debug, Clone)]
 pub struct Trip {
@@ -186,12 +190,7 @@ pub async fn run_sille_marie() -> Result<()> {
     let n = diffs.len() as f64;
     let mean = diffs.iter().sum::<f64>() / n;
 
-    let sd = (diffs
-        .iter()
-        .map(|v| ((v - mean).abs().powf(2.)))
-        .sum::<f64>()
-        / n)
-        .sqrt();
+    let sd = (diffs.iter().map(|v| (v - mean).abs().powf(2.)).sum::<f64>() / n).sqrt();
 
     println!();
     println!("Mean diff percent: {mean:.0}");
@@ -243,12 +242,7 @@ pub async fn run_ramoen() -> Result<()> {
     let n = diffs.len() as f64;
     let mean = diffs.iter().sum::<f64>() / n;
 
-    let sd = (diffs
-        .iter()
-        .map(|v| ((v - mean).abs().powf(2.)))
-        .sum::<f64>()
-        / n)
-        .sqrt();
+    let sd = (diffs.iter().map(|v| (v - mean).abs().powf(2.)).sum::<f64>() / n).sqrt();
 
     println!();
     println!("Mean diff percent: {mean:.0}");
@@ -301,12 +295,7 @@ pub async fn run_heroyfjord_eros(bytes: &[u8], vessel_id: i64, name: &str) -> Re
     let n = diffs.len() as f64;
     let mean = diffs.iter().sum::<f64>() / n;
 
-    let sd = (diffs
-        .iter()
-        .map(|v| ((v - mean).abs().powf(2.)))
-        .sum::<f64>()
-        / n)
-        .sqrt();
+    let sd = (diffs.iter().map(|v| (v - mean).abs().powf(2.)).sum::<f64>() / n).sqrt();
 
     println!();
     println!("Mean diff percent: {mean:.0}");
@@ -407,12 +396,7 @@ pub async fn run_nergard() -> Result<()> {
     let n = diffs.len() as f64;
     let mean = diffs.iter().sum::<f64>() / n;
 
-    let sd = (diffs
-        .iter()
-        .map(|v| ((v - mean).abs().powf(2.)))
-        .sum::<f64>()
-        / n)
-        .sqrt();
+    let sd = (diffs.iter().map(|v| (v - mean).abs().powf(2.)).sum::<f64>() / n).sqrt();
 
     println!();
     println!("Mean diff percent: {mean:.0}");
@@ -530,12 +514,8 @@ pub fn decode_ramoen() -> Result<Vec<Trip>> {
 
     let (_, range) = doc.worksheets().into_iter().next().unwrap();
 
-    let mut rows = range.rows();
-
     // year, current_date
     let mut current_trip_year_date: HashMap<usize, NaiveDate> = HashMap::new();
-
-    let mut row_idx = 0;
 
     struct YearIndex {
         year: usize,
@@ -563,10 +543,7 @@ pub fn decode_ramoen() -> Result<Vec<Trip>> {
 
     let mut trips = Vec::new();
 
-    loop {
-        let Some(row) = rows.next() else {
-            break;
-        };
+    for (row_idx, row) in range.rows().enumerate() {
         let is_data_row = !row.is_empty() && row[0].to_string().starts_with("Tur") && row_idx <= 14;
 
         if is_data_row {
@@ -604,7 +581,6 @@ pub fn decode_ramoen() -> Result<Vec<Trip>> {
                 current_trip_year_date.insert(y.year, end.succ_opt().unwrap());
             }
         }
-        row_idx += 1;
     }
 
     Ok(trips)
@@ -617,15 +593,10 @@ pub fn decode_heroyfjord_eros(input: impl AsRef<[u8]>, name: &str) -> Result<Vec
 
     let (_, range) = doc.worksheets().into_iter().next().unwrap();
 
-    let mut rows = range.rows();
     let mut year = 0;
     let mut col = 0;
 
-    loop {
-        let Some(row) = rows.next() else {
-            break;
-        };
-
+    for row in range.rows() {
         if let Some((i, _)) = row
             .iter()
             .enumerate()
