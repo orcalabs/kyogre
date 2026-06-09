@@ -81,6 +81,7 @@ impl From<kyogre_core::AisPosition> for AisPosition {
             speed_over_ground,
             true_heading,
             distance_to_shore,
+            active_gear: _,
         } = value;
 
         AisPosition {

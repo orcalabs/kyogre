@@ -149,7 +149,7 @@ impl PostgresAdapter {
         self.pool.close().await
     }
 
-    pub(crate) fn no_plan_cache_pool(&self) -> &PgPool {
+    pub fn no_plan_cache_pool(&self) -> &PgPool {
         match self.environment {
             Environment::Production
             | Environment::Development
@@ -646,13 +646,14 @@ impl LiveFuelInbound for PostgresAdapter {
     async fn live_fuel_vessels(&self) -> CoreResult<Vec<LiveFuelVessel>> {
         Ok(retry(|| self.live_fuel_vessels_impl()).await?)
     }
-    async fn ais_positions(&self, mmsi: Mmsi, range: &DateRange) -> CoreResult<Vec<AisPosition>> {
+    async fn ais_positions(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        mmsi: Mmsi,
+        range: &DateRange,
+    ) -> CoreResult<Vec<AisPosition>> {
         Ok(self
-            .all_ais_positions_impl(AisPositionsArg::Filter {
-                mmsi,
-                start: range.start(),
-                end: range.end(),
-            })
+            .ais_positions_with_inside_user_haul_impl(vessel_id, mmsi, range)
             .await?)
     }
 }
@@ -776,7 +777,7 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> PinBoxStream<'_, AisVmsPosition> {
         match params {
             AisVmsParams::Trip(trip_id) => self
-                .trip_positions_with_inside_haul_impl(trip_id, permission)
+                .trip_positions_impl(trip_id, permission)
                 .map_err(|e| e.into())
                 .boxed(),
             AisVmsParams::Range {
@@ -1164,7 +1165,7 @@ impl TripPrecisionOutboundPort for PostgresAdapter {
         &self,
         trip_id: TripId,
     ) -> CoreResult<Vec<AisVmsPosition>> {
-        self.trip_positions_with_inside_haul_impl(trip_id, AisPermission::All)
+        self.trip_positions_with_inside_haul_impl(trip_id)
             .convert_collect()
             .await
     }

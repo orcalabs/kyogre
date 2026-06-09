@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM user_hauls\nWHERE\n    call_sign = $1\n    AND user_haul_id = $2\nRETURNING\n    fiskeridir_vessel_id AS \"vessel_id: FiskeridirVesselId\",\n    start_ts,\n    end_ts\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "vessel_id: FiskeridirVesselId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "start_ts",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "end_ts",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "5758a9f6513575162226bcdf0fe320588f1fb9e4f9549def787b3d7515a94129"
+}

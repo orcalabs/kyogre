@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi AS \"mmsi!: Mmsi\",\n    TIMESTAMP AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore\nFROM\n    ais_positions\nWHERE\n    mmsi = $1\n    AND TIMESTAMP BETWEEN $2 AND $3\n    AND $1 IN (\n        SELECT\n            mmsi\n        FROM\n            all_vessels\n        WHERE\n            mmsi = $1\n            AND CASE\n                WHEN $4 = 0 THEN TRUE\n                WHEN $4 = 1 THEN (\n                    length >= $5\n                    AND (\n                        ship_type IS NOT NULL\n                        AND NOT (ship_type = ANY ($6::INT[]))\n                        OR length > $7\n                    )\n                )\n            END\n    )\nORDER BY\n    TIMESTAMP ASC\n            ",
+  "query": "\nSELECT\n    latitude,\n    longitude,\n    mmsi AS \"mmsi!: Mmsi\",\n    timestamp AS msgtime,\n    course_over_ground,\n    navigation_status_id AS \"navigational_status: NavigationStatus\",\n    rate_of_turn,\n    speed_over_ground,\n    true_heading,\n    distance_to_shore,\n    NULL AS \"active_gear: Gear\"\nFROM\n    ais_positions\nWHERE\n    (\n        $1::INT IS NULL\n        OR mmsi = $1\n    )\n    AND (\n        $2::TIMESTAMPTZ IS NULL\n        OR timestamp >= $2\n    )\n    AND (\n        $3::TIMESTAMPTZ IS NULL\n        OR timestamp <= $3\n    )\nORDER BY\n    timestamp ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -52,17 +52,18 @@
         "ordinal": 9,
         "name": "distance_to_shore",
         "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "active_gear: Gear",
+        "type_info": "Text"
       }
     ],
     "parameters": {
       "Left": [
         "Int4",
         "Timestamptz",
-        "Timestamptz",
-        "Int4",
-        "Float8",
-        "Int4Array",
-        "Float8"
+        "Timestamptz"
       ]
     },
     "nullable": [
@@ -75,8 +76,9 @@
       true,
       true,
       true,
-      false
+      false,
+      null
     ]
   },
-  "hash": "cc64bc91232e59d39f48fa0e917621d20982a8866a5666057ec91780817f5602"
+  "hash": "3155ae59e0db13db809fbf933eacf91cde058d32b3db521133cca63b6646c824"
 }

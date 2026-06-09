@@ -1,0 +1,57 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    user_hauls (\n        fiskeridir_vessel_id,\n        call_sign,\n        gear_id,\n        start_ts,\n        start_fuel_liter,\n        config,\n        barentswatch_user_id\n    )\nSELECT\n    a.fiskeridir_vessel_id,\n    $1,\n    $2,\n    $3,\n    $4,\n    $5,\n    $6\nFROM\n    active_vessels a\nWHERE\n    a.call_sign = $1\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    fiskeridir_vessel_id AS \"vessel_id: FiskeridirVesselId\",\n    gear_id AS \"gear: Gear\",\n    start_ts,\n    start_fuel_liter,\n    config\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: UserHaulId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "vessel_id: FiskeridirVesselId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "gear: Gear",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "start_ts",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "start_fuel_liter",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "config",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4",
+        "Timestamptz",
+        "Int4",
+        "Jsonb",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9762af5cd35304703ef9cce03c0d24a3aec6080b92f2c25fa8dbb0f0ee9cdcfb"
+}

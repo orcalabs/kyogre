@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM live_fuel\nWHERE\n    fiskeridir_vessel_id = $1\n    AND latest_position_timestamp >= $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7693ae082cd1743332bc4848d5627fc11619f4dd6785dd509bded001339ec7e3"
+}

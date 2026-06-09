@@ -803,14 +803,14 @@ SELECT
         '{}'
     ) AS haul_ids,
     COALESCE(
-        ARRAY_AGG(h.gear_group_id) FILTER (
+        ARRAY_AGG(DISTINCT h.gear_group_id) FILTER (
             WHERE
                 h.haul_id IS NOT NULL
         ),
         '{}'
     ) AS haul_gear_group_ids,
     COALESCE(
-        ARRAY_AGG(h.gear_id) FILTER (
+        ARRAY_AGG(DISTINCT h.gear_id) FILTER (
             WHERE
                 h.haul_id IS NOT NULL
         ),

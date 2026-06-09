@@ -36,6 +36,7 @@ pub struct DailyFuelEstimationPosition {
     pub position_type_id: PositionType,
     pub cumulative_cargo_weight: f64,
     pub cumulative_fuel_consumption_liter: f64,
+    pub active_gear: Option<Gear>,
 }
 
 #[derive(Debug, Clone)]

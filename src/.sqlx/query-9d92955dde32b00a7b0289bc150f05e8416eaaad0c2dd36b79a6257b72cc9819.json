@@ -1,0 +1,78 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE user_hauls\nSET\n    config = $1,\n    start_ts = $2,\n    end_ts = $3,\n    start_fuel_liter = $4,\n    end_fuel_liter = $5,\n    total_living_weight_kg = $6,\n    gear_id = $7\nWHERE\n    user_haul_id = $8\n    AND call_sign = $9\nRETURNING\n    user_haul_id AS \"id: UserHaulId\",\n    fiskeridir_vessel_id AS \"vessel_id: FiskeridirVesselId\",\n    gear_id AS \"gear: Gear\",\n    start_ts,\n    end_ts AS \"end_ts!\",\n    start_fuel_liter,\n    end_fuel_liter AS \"end_fuel_liter!\",\n    config,\n    total_living_weight_kg\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: UserHaulId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "vessel_id: FiskeridirVesselId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "gear: Gear",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "start_ts",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "end_ts!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "start_fuel_liter",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
+        "name": "end_fuel_liter!",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "config",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 8,
+        "name": "total_living_weight_kg",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Jsonb",
+        "Timestamptz",
+        "Timestamptz",
+        "Int4",
+        "Int4",
+        "Float8",
+        "Int4",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "9d92955dde32b00a7b0289bc150f05e8416eaaad0c2dd36b79a6257b72cc9819"
+}

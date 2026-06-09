@@ -1,7 +1,7 @@
 use std::{fmt::Display, num::ParseIntError, str::FromStr};
 
 use chrono::{DateTime, Duration, Utc};
-use fiskeridir_rs::CallSign;
+use fiskeridir_rs::{CallSign, Gear};
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -123,6 +123,9 @@ pub struct AisPosition {
     pub speed_over_ground: Option<f64>,
     pub true_heading: Option<i32>,
     pub distance_to_shore: f64,
+
+    // This field should only be populated when fetching positions for live fuel processing
+    pub active_gear: Option<Gear>,
 }
 
 #[derive(Debug, Clone)]

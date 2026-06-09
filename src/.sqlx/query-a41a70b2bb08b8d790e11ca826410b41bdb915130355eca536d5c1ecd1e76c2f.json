@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fuel_estimates\nSET\n    status = $1\nWHERE\n    fiskeridir_vessel_id = $2\n    AND day_range && $3\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8",
+        "TstzRange"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a41a70b2bb08b8d790e11ca826410b41bdb915130355eca536d5c1ecd1e76c2f"
+}
