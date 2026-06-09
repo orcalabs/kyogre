@@ -4,8 +4,9 @@ use fuel_validation::*;
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
 enum Vessels {
-    Ramoen,
     #[default]
+    Hera,
+    Ramoen,
     Nergaard,
     Heroyfjord,
     Eros,
@@ -25,6 +26,7 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     match args.vessel {
+        Vessels::Hera => run_hera().await,
         Vessels::Ramoen => run_ramoen().await,
         Vessels::Nergaard => run_nergard().await,
         Vessels::Heroyfjord => {
