@@ -672,8 +672,25 @@ WHERE
     }
 
     pub(crate) async fn hauls_matrix_vs_ers_dca_living_weight(&self) -> Result<i64> {
-        let row = sqlx::query!(
+        let mut stream = sqlx::query!(
             r#"
+SELECT
+    message_id
+FROM
+    ers_dca_bodies
+            "#
+        )
+        .fetch(&self.pool)
+        .map_ok(|r| r.message_id)
+        .chunks(*HAULS_VERIFY_CHUNK_SIZE.get_or_init(|| 50_000));
+
+        let mut sum = 0;
+
+        while let Some(chunk) = stream.next().await {
+            let message_ids: Vec<i64> = chunk.into_iter().collect::<std::result::Result<_, _>>()?;
+
+            sum += sqlx::query!(
+                r#"
 SELECT
     COALESCE(
         (
@@ -681,6 +698,8 @@ SELECT
                 SUM(living_weight)
             FROM
                 ers_dca_bodies
+            WHERE
+                message_id = ANY ($1)
         ) - (
             SELECT
                 SUM(b.living_weight)
@@ -698,21 +717,28 @@ SELECT
                 AND h.gear_id = b.gear_id
                 LEFT JOIN hauls_matrix m ON h.haul_id = m.haul_id
             WHERE
-                m.haul_id IS NULL
+                b.message_id = ANY ($1)
+                AND m.haul_id IS NULL
         ) - (
             SELECT
-                SUM(living_weight)
+                SUM(m.living_weight)
             FROM
-                hauls_matrix
+                hauls_matrix m
+                LEFT JOIN hauls h ON h.haul_id = m.haul_id
+            WHERE
+                h.message_id = ANY ($1)
         ),
         0
     )::BIGINT AS "sum!"
-            "#
-        )
-        .fetch_one(&self.pool)
-        .await?;
+                "#,
+                &message_ids,
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .sum;
+        }
 
-        Ok(row.sum)
+        Ok(sum)
     }
 
     pub(crate) async fn add_hauls<'a>(
