@@ -16,6 +16,7 @@ pub use outbound::*;
 pub trait TestStorage:
     ScraperInboundPort
     + WebApiOutboundPort
+    + WebApiInboundPort
     + AisConsumeLoop
     + TripAssemblerOutboundPort
     + TestHelperOutbound

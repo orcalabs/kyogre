@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    user_hauls_refresh_boundary (\n        refresh_boundary,\n        current_trip_refresh_boundary,\n        fiskeridir_vessel_id\n    )\nVALUES\n    ($1, $2, $3)\nON CONFLICT (fiskeridir_vessel_id) DO UPDATE\nSET\n    refresh_boundary = LEAST(\n        user_hauls_refresh_boundary.refresh_boundary,\n        excluded.refresh_boundary\n    ),\n    current_trip_refresh_boundary = GREATEST(\n        user_hauls_refresh_boundary.current_trip_refresh_boundary,\n        excluded.current_trip_refresh_boundary\n    )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d8acaf155cdd2b6eab6217c36cd1847609e9138c36b13f6a08f85bd8f0d8b74c"
+}

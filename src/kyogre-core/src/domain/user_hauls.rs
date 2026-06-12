@@ -81,3 +81,137 @@ impl Display for UserHaulId {
         self.0.fmt(f)
     }
 }
+
+impl PartialEq<UpdateUserHaul> for UserHaul {
+    fn eq(&self, other: &UpdateUserHaul) -> bool {
+        let UpdateUserHaul {
+            start_ts,
+            end_ts,
+            start_fuel_liter,
+            end_fuel_liter,
+            total_living_weight_kg,
+            config,
+            gear,
+        } = other;
+
+        start_ts.timestamp_millis() == self.start_ts.timestamp_millis()
+            && end_ts.timestamp_millis() == self.end_ts.timestamp_millis()
+            && *start_fuel_liter == self.start_fuel_liter
+            && *end_fuel_liter == self.end_fuel_liter
+            && *total_living_weight_kg == self.total_living_weight_kg
+            && *config == self.config
+            && *gear == self.gear
+    }
+}
+
+impl PartialEq<UserHaul> for UpdateUserHaul {
+    fn eq(&self, other: &UserHaul) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialEq<HaulEnd> for UserHaul {
+    fn eq(&self, other: &HaulEnd) -> bool {
+        let HaulEnd {
+            fuel_liter_end,
+            total_living_weight_kg,
+        } = other;
+
+        *fuel_liter_end == self.end_fuel_liter
+            && *total_living_weight_kg == self.total_living_weight_kg
+    }
+}
+
+impl PartialEq<UserHaul> for HaulEnd {
+    fn eq(&self, other: &UserHaul) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialEq<HaulStart> for UserHaul {
+    fn eq(&self, other: &HaulStart) -> bool {
+        let HaulStart {
+            fuel_liter_start,
+            config,
+            gear,
+        } = other;
+
+        *fuel_liter_start == self.start_fuel_liter && *config == self.config && *gear == self.gear
+    }
+}
+
+impl PartialEq<UserHaul> for HaulStart {
+    fn eq(&self, other: &UserHaul) -> bool {
+        other.eq(self)
+    }
+}
+
+impl PartialEq<StartedUserHaul> for HaulStart {
+    fn eq(&self, other: &StartedUserHaul) -> bool {
+        let StartedUserHaul {
+            id: _,
+            start_ts: _,
+            start_fuel_liter,
+            config,
+            gear,
+        } = other;
+
+        *start_fuel_liter == self.fuel_liter_start && *config == self.config && *gear == self.gear
+    }
+}
+
+impl PartialEq<HaulStart> for StartedUserHaul {
+    fn eq(&self, other: &HaulStart) -> bool {
+        other.eq(self)
+    }
+}
+
+#[cfg(feature = "test")]
+mod test {
+    use super::*;
+    use crate::UserHaulId;
+    use chrono::Duration;
+    use serde_json::json;
+
+    impl UserHaulId {
+        pub fn test_new() -> Self {
+            Self(rand::random())
+        }
+    }
+
+    impl UpdateUserHaul {
+        pub fn test_default() -> Self {
+            let start_ts = Utc::now();
+            Self {
+                start_ts,
+                end_ts: start_ts + Duration::seconds(10),
+                start_fuel_liter: 20,
+                end_fuel_liter: 10,
+                total_living_weight_kg: Some(42.0),
+                config: json!("kule: 28"),
+                gear: Gear::TripleTrawl,
+            }
+        }
+    }
+
+    impl HaulStart {
+        pub fn test_default() -> Self {
+            use serde_json::json;
+
+            Self {
+                fuel_liter_start: 1000,
+                config: json!("bobbins: 23"),
+                gear: Gear::TripleTrawl,
+            }
+        }
+    }
+
+    impl HaulEnd {
+        pub fn test_default() -> Self {
+            Self {
+                fuel_liter_end: 500,
+                total_living_weight_kg: Some(20.0),
+            }
+        }
+    }
+}

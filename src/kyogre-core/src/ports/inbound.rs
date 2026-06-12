@@ -60,6 +60,11 @@ pub trait AisMigratorDestination {
 }
 
 #[async_trait]
+pub trait UserHaulsRefresher: Send + Sync {
+    async fn refresh_user_haul_mappings(&self) -> CoreResult<()>;
+}
+
+#[async_trait]
 pub trait WebApiInboundPort {
     async fn start_user_haul(
         &self,

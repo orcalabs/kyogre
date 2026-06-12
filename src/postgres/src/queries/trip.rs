@@ -46,6 +46,99 @@ SELECT
         Ok(id)
     }
 
+    pub(crate) async fn refresh_current_trip_user_hauls(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        departure_timestamp: DateTime<Utc>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+WITH
+    new_hauls AS (
+        SELECT
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'haul_id',
+                        h.haul_id,
+                        'catch_locations',
+                        COALESCE(h.catch_locations, '{}'),
+                        'gear_group_id',
+                        h.gear_group_id,
+                        'gear_id',
+                        COALESCE(h.gear_id, u.gear_id),
+                        'species_group_ids',
+                        COALESCE(h.species_group_ids, '{}'),
+                        'fiskeridir_vessel_id',
+                        h.fiskeridir_vessel_id,
+                        'haul_distance',
+                        h.haul_distance,
+                        'start_latitude',
+                        h.start_latitude,
+                        'start_longitude',
+                        h.start_longitude,
+                        'stop_latitude',
+                        h.stop_latitude,
+                        'stop_longitude',
+                        h.stop_longitude,
+                        'start_timestamp',
+                        COALESCE(LOWER(h.period), u.start_ts),
+                        'stop_timestamp',
+                        COALESCE(UPPER(h.period), u.end_ts),
+                        'vessel_length_group',
+                        h.vessel_length_group,
+                        'catches',
+                        COALESCE(h.catches, '[]'),
+                        'vessel_name',
+                        COALESCE(h.vessel_name, h.vessel_name_ers),
+                        'call_sign',
+                        COALESCE(
+                            h.vessel_call_sign,
+                            h.vessel_call_sign_ers,
+                            u.call_sign
+                        ),
+                        'config',
+                        u.config,
+                        'start_fuel_liter',
+                        u.start_fuel_liter,
+                        'end_fuel_liter',
+                        u.end_fuel_liter
+                    )
+                ),
+                '[]'
+            ) AS hauls,
+            $1::BIGINT AS fiskeridir_vessel_id
+        FROM
+            hauls h
+            FULL OUTER JOIN user_hauls u ON h.haul_id = u.haul_id
+        WHERE
+            (
+                h.fiskeridir_vessel_id = $1
+                AND h.start_timestamp >= $2
+            )
+            OR (
+                u.fiskeridir_vessel_id = $1
+                AND u.start_ts >= $2
+            )
+    )
+UPDATE current_trips c
+SET
+    ers_and_user_hauls = q.hauls
+FROM
+    new_hauls q
+WHERE
+    q.fiskeridir_vessel_id = c.fiskeridir_vessel_id
+            "#,
+            vessel_id as FiskeridirVesselId,
+            departure_timestamp
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
     pub(crate) async fn set_current_trip_impl(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -58,7 +151,8 @@ INSERT INTO
         fiskeridir_vessel_id,
         departure_timestamp,
         target_species_fiskeridir_id,
-        hauls,
+        ers_and_user_hauls,
+        ers_hauls,
         fishing_facilities
     )
 SELECT
@@ -73,13 +167,79 @@ SELECT
                         'haul_id',
                         h.haul_id,
                         'catch_locations',
-                        h.catch_locations,
+                        COALESCE(h.catch_locations, '{}'),
+                        'gear_group_id',
+                        h.gear_group_id,
+                        'gear_id',
+                        COALESCE(h.gear_id, u.gear_id),
+                        'species_group_ids',
+                        COALESCE(h.species_group_ids, '{}'),
+                        'fiskeridir_vessel_id',
+                        h.fiskeridir_vessel_id,
+                        'haul_distance',
+                        h.haul_distance,
+                        'start_latitude',
+                        h.start_latitude,
+                        'start_longitude',
+                        h.start_longitude,
+                        'stop_latitude',
+                        h.stop_latitude,
+                        'stop_longitude',
+                        h.stop_longitude,
+                        'start_timestamp',
+                        COALESCE(LOWER(h.period), u.start_ts),
+                        'stop_timestamp',
+                        COALESCE(UPPER(h.period), u.end_ts),
+                        'vessel_length_group',
+                        h.vessel_length_group,
+                        'catches',
+                        COALESCE(h.catches, '[]'),
+                        'vessel_name',
+                        COALESCE(h.vessel_name, h.vessel_name_ers),
+                        'call_sign',
+                        COALESCE(
+                            h.vessel_call_sign,
+                            h.vessel_call_sign_ers,
+                            u.call_sign
+                        ),
+                        'config',
+                        u.config,
+                        'start_fuel_liter',
+                        u.start_fuel_liter,
+                        'end_fuel_liter',
+                        u.end_fuel_liter
+                    )
+                ),
+                '[]'
+            )
+        FROM
+            hauls h
+            FULL OUTER JOIN user_hauls u ON h.haul_id = u.haul_id
+        WHERE
+            (
+                h.fiskeridir_vessel_id = $1
+                AND h.start_timestamp >= d.departure_timestamp
+            )
+            OR (
+                u.fiskeridir_vessel_id = $1
+                AND u.start_ts >= d.departure_timestamp
+            )
+    ) AS "ers_and_user_hauls!",
+    (
+        SELECT
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'haul_id',
+                        h.haul_id,
+                        'catch_locations',
+                        COALESCE(h.catch_locations, '{}'),
                         'gear_group_id',
                         h.gear_group_id,
                         'gear_id',
                         h.gear_id,
                         'species_group_ids',
-                        h.species_group_ids,
+                        COALESCE(h.species_group_ids, '{}'),
                         'fiskeridir_vessel_id',
                         h.fiskeridir_vessel_id,
                         'haul_distance',
@@ -99,11 +259,17 @@ SELECT
                         'vessel_length_group',
                         h.vessel_length_group,
                         'catches',
-                        h.catches,
+                        COALESCE(h.catches, '[]'),
                         'vessel_name',
                         COALESCE(h.vessel_name, h.vessel_name_ers),
                         'call_sign',
-                        COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers)
+                        COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers),
+                        'config',
+                        NULL,
+                        'start_fuel_liter',
+                        NULL,
+                        'end_fuel_liter',
+                        NULL
                     )
                 ),
                 '[]'
@@ -112,8 +278,8 @@ SELECT
             hauls h
         WHERE
             h.fiskeridir_vessel_id = $1
-            AND h.start_timestamp > d.departure_timestamp
-    ) AS "hauls!",
+            AND h.start_timestamp >= d.departure_timestamp
+    ) AS "ers_hauls!",
     (
         SELECT
             COALESCE(
@@ -206,7 +372,8 @@ ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
 SET
     departure_timestamp = EXCLUDED.departure_timestamp,
     target_species_fiskeridir_id = EXCLUDED.target_species_fiskeridir_id,
-    hauls = EXCLUDED.hauls,
+    ers_and_user_hauls = EXCLUDED.ers_and_user_hauls,
+    ers_hauls = EXCLUDED.ers_hauls,
     fishing_facilities = EXCLUDED.fishing_facilities
             "#,
             vessel_id.into_inner(),
@@ -649,7 +816,7 @@ INSERT INTO
         landing_gear_group_ids,
         vessel_events,
         landing_ids,
-        hauls,
+        ers_and_user_hauls,
         haul_total_weight,
         haul_duration,
         haul_ids,
@@ -742,50 +909,58 @@ SELECT
         '{}'
     ) AS landing_ids,
     COALESCE(
-        JSONB_AGG(
-            JSONB_BUILD_OBJECT(
-                'haul_id',
-                h.haul_id,
-                'trip_id',
-                t.trip_id,
-                'catch_locations',
-                h.catch_locations,
-                'gear_group_id',
-                h.gear_group_id,
-                'gear_id',
-                h.gear_id,
-                'species_group_ids',
-                h.species_group_ids,
-                'fiskeridir_vessel_id',
-                h.fiskeridir_vessel_id,
-                'haul_distance',
-                h.haul_distance,
-                'start_latitude',
-                h.start_latitude,
-                'start_longitude',
-                h.start_longitude,
-                'stop_latitude',
-                h.stop_latitude,
-                'stop_longitude',
-                h.stop_longitude,
-                'start_timestamp',
-                LOWER(h.period),
-                'stop_timestamp',
-                UPPER(h.period),
-                'vessel_length_group',
-                h.vessel_length_group,
-                'catches',
-                h.catches,
-                'vessel_name',
-                COALESCE(h.vessel_name, h.vessel_name_ers),
-                'call_sign',
-                COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers)
+        (
+            JSONB_AGG(
+                JSONB_BUILD_OBJECT(
+                    'haul_id',
+                    h.haul_id,
+                    'trip_id',
+                    t.trip_id,
+                    'catch_locations',
+                    h.catch_locations,
+                    'gear_group_id',
+                    h.gear_group_id,
+                    'gear_id',
+                    h.gear_id,
+                    'species_group_ids',
+                    h.species_group_ids,
+                    'fiskeridir_vessel_id',
+                    h.fiskeridir_vessel_id,
+                    'haul_distance',
+                    h.haul_distance,
+                    'start_latitude',
+                    h.start_latitude,
+                    'start_longitude',
+                    h.start_longitude,
+                    'stop_latitude',
+                    h.stop_latitude,
+                    'stop_longitude',
+                    h.stop_longitude,
+                    'start_timestamp',
+                    LOWER(h.period),
+                    'stop_timestamp',
+                    UPPER(h.period),
+                    'vessel_length_group',
+                    h.vessel_length_group,
+                    'catches',
+                    h.catches,
+                    'vessel_name',
+                    COALESCE(h.vessel_name, h.vessel_name_ers),
+                    'call_sign',
+                    COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers),
+                    'config',
+                    u.config,
+                    'start_fuel_liter',
+                    u.start_fuel_liter,
+                    'end_fuel_liter',
+                    u.end_fuel_liter
+                )
+                ORDER BY
+                    h.start_timestamp
+            ) FILTER (
+                WHERE
+                    h.haul_id IS NOT NULL
             )
-            ORDER BY
-                h.start_timestamp
-        ) FILTER (
-            WHERE
-                h.haul_id IS NOT NULL
         ),
         '[]'
     ) AS hauls,
@@ -877,6 +1052,7 @@ FROM
     LEFT JOIN vessel_events v ON t.trip_id = v.trip_id
     LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
     LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
+    LEFT JOIN user_hauls u ON u.haul_id = h.haul_id
     LEFT JOIN ers_tra_reloads tra ON tra.vessel_event_id = v.vessel_event_id
 WHERE
     t.trip_id = ANY ($3::BIGINT[])
@@ -901,7 +1077,7 @@ SET
     vessel_events = excluded.vessel_events,
     fishing_facilities = excluded.fishing_facilities,
     landing_ids = excluded.landing_ids,
-    hauls = excluded.hauls,
+    ers_and_user_hauls = excluded.ers_and_user_hauls,
     haul_total_weight = excluded.haul_total_weight,
     haul_duration = excluded.haul_duration,
     haul_ids = excluded.haul_ids,
@@ -913,6 +1089,173 @@ SET
             "#,
             VesselLengthGroup::ElevenToFifteen as i32,
             ProcessingStatus::Unprocessed as i32,
+            &trip_ids as &[TripId],
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+WITH
+    new_user_hauls AS (
+        SELECT
+            uh.trip_id AS trip_id,
+            JSONB_AGG(
+                JSONB_BUILD_OBJECT(
+                    'haul_id',
+                    NULL,
+                    'trip_id',
+                    uh.trip_id,
+                    'catch_locations',
+                    '[]'::JSONB,
+                    'gear_group_id',
+                    NULL,
+                    'gear_id',
+                    uh.gear_id,
+                    'species_group_ids',
+                    '[]'::JSONB,
+                    'fiskeridir_vessel_id',
+                    uh.fiskeridir_vessel_id,
+                    'haul_distance',
+                    NULL,
+                    'start_latitude',
+                    NULL,
+                    'start_longitude',
+                    NULL,
+                    'stop_latitude',
+                    NULL,
+                    'stop_longitude',
+                    NULL,
+                    'start_timestamp',
+                    uh.start_ts,
+                    'stop_timestamp',
+                    uh.end_ts,
+                    'vessel_length_group',
+                    NULL,
+                    'catches',
+                    '[]'::JSONB,
+                    'vessel_name',
+                    NULL,
+                    'call_sign',
+                    uh.call_sign,
+                    'config',
+                    uh.config,
+                    'start_fuel_liter',
+                    uh.start_fuel_liter,
+                    'end_fuel_liter',
+                    uh.end_fuel_liter
+                )
+            ) AS new_hauls
+        FROM
+            user_hauls uh
+        WHERE
+            uh.trip_id = ANY ($1::BIGINT[])
+        GROUP BY
+            uh.trip_id
+    ),
+    merged AS (
+        SELECT
+            t.trip_id,
+            JSONB_AGG(
+                e.elem
+                ORDER BY
+                    (e.elem ->> 'start_timestamp')::TIMESTAMPTZ
+            ) AS hauls
+        FROM
+            new_user_hauls u
+            INNER JOIN trips_detailed t ON u.trip_id = t.trip_id
+            CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(t.ers_and_user_hauls || u.new_hauls) AS e (elem)
+        GROUP BY
+            t.trip_id
+    )
+UPDATE trips_detailed t
+SET
+    ers_and_user_hauls = m.hauls
+FROM
+    merged m
+WHERE
+    m.trip_id = t.trip_id;
+            "#,
+            &trip_ids as &[TripId],
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+UPDATE trips_detailed td
+SET
+    ers_hauls = q.hauls
+FROM
+    (
+        SELECT
+            t.trip_id,
+            COALESCE(
+                (
+                    JSONB_AGG(
+                        JSONB_BUILD_OBJECT(
+                            'haul_id',
+                            h.haul_id,
+                            'trip_id',
+                            t.trip_id,
+                            'catch_locations',
+                            h.catch_locations,
+                            'gear_group_id',
+                            h.gear_group_id,
+                            'gear_id',
+                            h.gear_id,
+                            'species_group_ids',
+                            h.species_group_ids,
+                            'fiskeridir_vessel_id',
+                            h.fiskeridir_vessel_id,
+                            'haul_distance',
+                            h.haul_distance,
+                            'start_latitude',
+                            h.start_latitude,
+                            'start_longitude',
+                            h.start_longitude,
+                            'stop_latitude',
+                            h.stop_latitude,
+                            'stop_longitude',
+                            h.stop_longitude,
+                            'start_timestamp',
+                            LOWER(h.period),
+                            'stop_timestamp',
+                            UPPER(h.period),
+                            'vessel_length_group',
+                            h.vessel_length_group,
+                            'catches',
+                            h.catches,
+                            'vessel_name',
+                            COALESCE(h.vessel_name, h.vessel_name_ers),
+                            'call_sign',
+                            COALESCE(h.vessel_call_sign, h.vessel_call_sign_ers),
+                            'config',
+                            NULL,
+                            'start_fuel_liter',
+                            NULL,
+                            'end_fuel_liter',
+                            NULL
+                        )
+                        ORDER BY
+                            h.start_timestamp
+                    )
+                ),
+                '[]'
+            ) AS hauls
+        FROM
+            trips t
+            INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            INNER JOIN vessel_events v ON t.trip_id = v.trip_id
+            INNER JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
+        WHERE
+            t.trip_id = ANY ($1::BIGINT[])
+        GROUP BY
+            t.trip_id
+    ) q
+WHERE
+    q.trip_id = td.trip_id
+            "#,
             &trip_ids as &[TripId],
         )
         .execute(&mut **tx)
@@ -1137,6 +1480,17 @@ WHERE
         sqlx::query_as!(
             TripDetailed,
             r#"
+WITH
+    fishery_id_of_logged_in_user AS (
+        SELECT
+            fh.fishery_id
+        FROM
+            all_vessels a
+            INNER JOIN fiskeridir_vessels f ON a.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+            INNER JOIN fisheries fh ON fh.fishery_id = f.fishery_id
+        WHERE
+            a.call_sign = $2
+    )
 SELECT
     t.trip_id AS "trip_id!: TripId",
     t.fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
@@ -1161,7 +1515,11 @@ SELECT
     t.end_port_id,
     t.trip_assembler_id AS "trip_assembler_id!: TripAssemblerId",
     t.vessel_events::TEXT AS "vessel_events!",
-    t.hauls::TEXT AS "hauls!",
+    CASE
+        WHEN v.fiskeridir_vessel_id IS NOT NULL
+        OR fh.fishery_id IS NOT NULL THEN t.ers_and_user_hauls
+        ELSE t.ers_hauls
+    END::TEXT AS "hauls!",
     t.tra::TEXT AS "tra!",
     t.landing_ids AS "landing_ids: Vec<LandingId>",
     CASE
@@ -1172,7 +1530,8 @@ SELECT
     t.target_species_fiskeridir_id,
     t.target_species_fao_id,
     CASE
-        WHEN v.fiskeridir_vessel_id IS NOT NULL THEN t.benchmark_fuel_consumption_liter
+        WHEN v.fiskeridir_vessel_id IS NOT NULL
+        OR fh.fishery_id IS NOT NULL THEN t.benchmark_fuel_consumption_liter
         ELSE NULL
     END AS fuel_consumption_liter,
     t.benchmark_fuel_consumption_liter_estimated_only AS fuel_consumption_liter_estimated_only,
@@ -1181,8 +1540,10 @@ SELECT
     t.first_arrival
 FROM
     trips_detailed AS t
+    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     LEFT JOIN all_vessels v ON t.fiskeridir_vessel_id = v.fiskeridir_vessel_id
     AND v.call_sign = $2
+    LEFT JOIN fishery_id_of_logged_in_user fh ON fh.fishery_id = f.fishery_id
 WHERE
     (
         $3::BIGINT[] IS NULL
@@ -1266,23 +1627,44 @@ LIMIT
         &self,
         vessel_id: FiskeridirVesselId,
         read_fishing_facility: bool,
+        logged_in_user_call_sign: Option<&CallSign>,
     ) -> Result<Option<CurrentTrip>> {
         let trip = sqlx::query_as!(
             CurrentTrip,
             r#"
+WITH
+    fishery_id_of_logged_in_user AS (
+        SELECT
+            fh.fishery_id
+        FROM
+            all_vessels a
+            INNER JOIN fiskeridir_vessels f ON a.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+            INNER JOIN fisheries fh ON fh.fishery_id = f.fishery_id
+        WHERE
+            a.call_sign = $1
+    )
 SELECT
     departure_timestamp,
-    hauls::TEXT AS "hauls!",
     CASE
-        WHEN $1 THEN fishing_facilities::TEXT
+        WHEN v.fiskeridir_vessel_id IS NOT NULL
+        OR fh.fishery_id IS NOT NULL THEN t.ers_and_user_hauls
+        ELSE t.ers_hauls
+    END::TEXT AS "hauls!",
+    CASE
+        WHEN $2 THEN fishing_facilities::TEXT
         ELSE '[]'
     END AS "fishing_facilities!",
     target_species_fiskeridir_id
 FROM
-    current_trips
+    current_trips t
+    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    LEFT JOIN all_vessels v ON t.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+    AND v.call_sign = $1
+    LEFT JOIN fishery_id_of_logged_in_user fh ON fh.fishery_id = f.fishery_id
 WHERE
-    fiskeridir_vessel_id = $2
+    t.fiskeridir_vessel_id = $3
             "#,
+            logged_in_user_call_sign as Option<&CallSign>,
             read_fishing_facility,
             vessel_id.into_inner(),
         )
@@ -1603,6 +1985,8 @@ WHERE
 
         let trips_to_update = inserted_trip_ids.into_iter().collect::<Vec<_>>();
 
+        self.add_user_haul_trip_mappings(&trips_to_update, &mut tx)
+            .await?;
         self.add_trips_detailed(&trips_to_update, &mut tx).await?;
 
         self.reset_trips_refresh_boundary(vessel_id, &mut tx)
@@ -1642,6 +2026,34 @@ WHERE
         Ok(())
     }
 
+    pub(crate) async fn set_trips_refresh_boundary(
+        &self,
+        vessel_id: FiskeridirVesselId,
+        timestamp: DateTime<Utc>,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        sqlx::query!(
+            r#"
+INSERT INTO
+    trips_refresh_boundary (refresh_boundary, fiskeridir_vessel_id)
+VALUES
+    ($1, $2)
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+SET
+    refresh_boundary = LEAST(
+        trips_refresh_boundary.refresh_boundary,
+        excluded.refresh_boundary
+    )
+                "#,
+            timestamp,
+            vessel_id as FiskeridirVesselId,
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        Ok(())
+    }
+
     pub(crate) async fn refresh_detailed_trips_impl(
         &self,
         vessel_id: FiskeridirVesselId,
@@ -1659,6 +2071,8 @@ FROM
     trips t
 WHERE
     t.fiskeridir_vessel_id = $1
+    --! This refreshes all trips that has started prior to the refresh boundary.
+    --! Using 'LOWER' would skip the trip if the boundary was in the middle of it.
     AND UPPER(t.period) >= $2
                 "#,
                 vessel_id.into_inner(),

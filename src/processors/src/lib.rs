@@ -10,6 +10,7 @@ pub mod live_fuel;
 pub mod settings;
 pub mod startup;
 pub mod unrealistic_speed;
+pub mod user_haul_refresher;
 
 pub use ais_vms_conflict::*;
 pub use benchmarks::*;
@@ -19,3 +20,4 @@ pub use live_fuel::*;
 pub use settings::*;
 pub use startup::*;
 pub use unrealistic_speed::*;
+pub use user_haul_refresher::*;

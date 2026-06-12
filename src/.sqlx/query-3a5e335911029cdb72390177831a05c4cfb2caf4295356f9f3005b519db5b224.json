@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    new_user_hauls AS (\n        SELECT\n            uh.trip_id AS trip_id,\n            JSONB_AGG(\n                JSONB_BUILD_OBJECT(\n                    'haul_id',\n                    NULL,\n                    'trip_id',\n                    uh.trip_id,\n                    'catch_locations',\n                    '[]'::JSONB,\n                    'gear_group_id',\n                    NULL,\n                    'gear_id',\n                    uh.gear_id,\n                    'species_group_ids',\n                    '[]'::JSONB,\n                    'fiskeridir_vessel_id',\n                    uh.fiskeridir_vessel_id,\n                    'haul_distance',\n                    NULL,\n                    'start_latitude',\n                    NULL,\n                    'start_longitude',\n                    NULL,\n                    'stop_latitude',\n                    NULL,\n                    'stop_longitude',\n                    NULL,\n                    'start_timestamp',\n                    uh.start_ts,\n                    'stop_timestamp',\n                    uh.end_ts,\n                    'vessel_length_group',\n                    NULL,\n                    'catches',\n                    '[]'::JSONB,\n                    'vessel_name',\n                    NULL,\n                    'call_sign',\n                    uh.call_sign,\n                    'config',\n                    uh.config,\n                    'start_fuel_liter',\n                    uh.start_fuel_liter,\n                    'end_fuel_liter',\n                    uh.end_fuel_liter\n                )\n            ) AS new_hauls\n        FROM\n            user_hauls uh\n        WHERE\n            uh.trip_id = ANY ($1::BIGINT[])\n        GROUP BY\n            uh.trip_id\n    ),\n    merged AS (\n        SELECT\n            t.trip_id,\n            JSONB_AGG(\n                e.elem\n                ORDER BY\n                    (e.elem ->> 'start_timestamp')::TIMESTAMPTZ\n            ) AS hauls\n        FROM\n            new_user_hauls u\n            INNER JOIN trips_detailed t ON u.trip_id = t.trip_id\n            CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(t.ers_and_user_hauls || u.new_hauls) AS e (elem)\n        GROUP BY\n            t.trip_id\n    )\nUPDATE trips_detailed t\nSET\n    ers_and_user_hauls = m.hauls\nFROM\n    merged m\nWHERE\n    m.trip_id = t.trip_id;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "3a5e335911029cdb72390177831a05c4cfb2caf4295356f9f3005b519db5b224"
+}

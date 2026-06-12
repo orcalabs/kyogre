@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    refresh_boundary AS \"refresh_boundary!\",\n    current_trip_refresh_boundary AS \"current_trip_refresh_boundary!\",\n    fiskeridir_vessel_id AS \"vessel_id: FiskeridirVesselId\"\nFROM\n    user_hauls_refresh_boundary\nWHERE\n    refresh_boundary IS NOT NULL\n    AND current_trip_refresh_boundary IS NOT NULL\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "refresh_boundary!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "current_trip_refresh_boundary!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "vessel_id: FiskeridirVesselId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "857acffc06f3bd44bdd7b9b2b382aa20e6b74cd75b0a16679f4ad80ca333fe05"
+}

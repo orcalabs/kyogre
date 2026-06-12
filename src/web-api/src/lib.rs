@@ -3,7 +3,6 @@
 
 use kyogre_core::{MatrixCacheOutbound, WebApiInboundPort, WebApiOutboundPort};
 use postgres::PostgresAdapter;
-use routes::v1;
 
 pub mod error;
 pub mod excel;

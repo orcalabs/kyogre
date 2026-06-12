@@ -46,6 +46,11 @@ pub enum Error {
         location: Location,
         object: Object,
     },
+    #[snafu(display("The currently active user haul cannot be fully updated"))]
+    CannotModifyActiveUserHaul {
+        #[snafu(implicit)]
+        location: Location,
+    },
     #[snafu(display("No current active UserHaul for call_sign '{call_sign}'"))]
     NoActiveUserHaul {
         #[snafu(implicit)]
@@ -208,6 +213,7 @@ impl ResponseError for Error {
             | Base64Decode
             | InvalidExcel
             | CallSignDoesNotExist
+            | CannotModifyActiveUserHaul
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
             NoActiveUserHaul => StatusCode::CONFLICT,
@@ -259,6 +265,9 @@ impl From<WebApiError> for Error {
             },
             WebApiError::ObjectNotFound { location, object } => {
                 Error::ObjectNotFound { location, object }
+            }
+            WebApiError::CannotModifyActiveUserHaul { location } => {
+                Error::CannotModifyActiveUserHaul { location }
             }
         }
     }

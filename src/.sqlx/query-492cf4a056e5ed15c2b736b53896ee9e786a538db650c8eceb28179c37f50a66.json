@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    per_vessel AS (\n        SELECT\n            MIN(occurence_timestamp) AS min_timestamp,\n            MAX(occurence_timestamp) AS max_timestamp,\n            fiskeridir_vessel_id\n        FROM\n            vessel_events\n        WHERE\n            vessel_event_id = ANY ($1::BIGINT[])\n        GROUP BY\n            fiskeridir_vessel_id\n    )\nINSERT INTO\n    user_hauls_refresh_boundary (\n        refresh_boundary,\n        current_trip_refresh_boundary,\n        fiskeridir_vessel_id\n    )\nSELECT\n    q.max_timestamp,\n    q.min_timestamp,\n    q.fiskeridir_vessel_id\nFROM\n    per_vessel q\nON CONFLICT (fiskeridir_vessel_id) DO UPDATE\nSET\n    refresh_boundary = LEAST(\n        user_hauls_refresh_boundary.refresh_boundary,\n        excluded.refresh_boundary\n    ),\n    current_trip_refresh_boundary = GREATEST(\n        user_hauls_refresh_boundary.current_trip_refresh_boundary,\n        excluded.current_trip_refresh_boundary\n    )\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "492cf4a056e5ed15c2b736b53896ee9e786a538db650c8eceb28179c37f50a66"
+}

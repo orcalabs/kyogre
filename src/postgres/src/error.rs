@@ -23,6 +23,11 @@ pub enum Error {
         location: Location,
         object: Object,
     },
+    #[snafu(display("The currently active user haul cannot be fully modified"))]
+    CannotModifyActiveUserHaul {
+        #[snafu(implicit)]
+        location: Location,
+    },
     #[snafu(display("No current active UserHaul for call_sign '{call_sign}'"))]
     NoActiveUserHaul {
         #[snafu(implicit)]
@@ -239,6 +244,7 @@ impl From<Error> for kyogre_core::Error {
             | Error::InvalidIsoWeek { .. }
             | Error::CallSignDoesNotExist { .. }
             | Error::ObjectNotFound { .. }
+            | Error::CannotModifyActiveUserHaul { .. }
             | Error::Migrate { .. } => kyogre_core::Error::Unexpected {
                 location,
                 opaque: OpaqueError::Stack(Box::new(value)),
@@ -279,6 +285,9 @@ impl From<Error> for kyogre_core::WebApiError {
             },
             Error::ObjectNotFound { location, object } => {
                 kyogre_core::WebApiError::ObjectNotFound { location, object }
+            }
+            Error::CannotModifyActiveUserHaul { location } => {
+                kyogre_core::WebApiError::CannotModifyActiveUserHaul { location }
             }
             Error::Conversion { .. }
             | Error::MissingValue { .. }

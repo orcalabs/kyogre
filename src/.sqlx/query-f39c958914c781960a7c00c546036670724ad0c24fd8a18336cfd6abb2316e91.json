@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    departure_timestamp\nFROM\n    current_trips\nWHERE\n    fiskeridir_vessel_id = $1\n    AND departure_timestamp <= $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "departure_timestamp",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f39c958914c781960a7c00c546036670724ad0c24fd8a18336cfd6abb2316e91"
+}
