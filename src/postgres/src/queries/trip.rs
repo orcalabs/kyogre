@@ -120,6 +120,7 @@ SET
             OR (
                 u.fiskeridir_vessel_id = $1
                 AND u.start_ts >= $2
+                AND u.end_ts IS NOT NULL
             )
     ),
     ers_hauls = (
@@ -271,6 +272,7 @@ SELECT
             OR (
                 u.fiskeridir_vessel_id = $1
                 AND u.start_ts >= d.departure_timestamp
+                AND u.end_ts IS NOT NULL
             )
     ) AS "ers_and_user_hauls!",
     (

@@ -950,3 +950,48 @@ async fn test_adding_new_ers_data_connects_to_user_hauls() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_current_trip_works_with_current_active_haul() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .dep(1)
+            .user_hauls(2)
+            .build()
+            .await;
+
+        helper.app.login_user_with_id(state.user_id);
+
+        // We create another haul to force a refresh, starting a haul does not trigger a current
+        // trip refresh.
+        helper
+            .app
+            .start_user_haul(&HaulStart::test_default())
+            .await
+            .unwrap();
+        helper
+            .app
+            .stop_user_haul(&HaulEnd::test_default())
+            .await
+            .unwrap();
+
+        helper
+            .app
+            .start_user_haul(&HaulStart::test_default())
+            .await
+            .unwrap();
+
+        helper.run_processors().await;
+
+        let trip = helper
+            .app
+            .get_current_trip(state.vessels[0].id())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(trip.hauls.len(), 3);
+    })
+    .await;
+}
