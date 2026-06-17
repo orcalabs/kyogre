@@ -995,3 +995,197 @@ async fn test_current_trip_works_with_current_active_haul() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_current_trip_dont_contain_user_hauls_when_logged_in_as_another_user() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .dep(1)
+            .hauls(2)
+            .user_hauls(2)
+            .build()
+            .await;
+
+        helper.run_processors().await;
+
+        helper.app.set_call_sign_override("test123");
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_current_trip(state.vessels[0].id())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert!(!trip.hauls.iter().any(|t| t.is_user_haul()));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_dont_contain_user_hauls_when_logged_in_as_another_user() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .trips(1)
+            .hauls(2)
+            .user_hauls()
+            .build()
+            .await;
+
+        helper.run_processors().await;
+
+        helper.app.set_call_sign_override("test123");
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+
+        assert!(!trip.hauls.iter().any(|t| t.is_user_haul()));
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_current_trip_sorts_ers_hauls_ascendingly() {
+    test(|helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .dep(1)
+            .hauls(2)
+            .user_hauls(2)
+            .build()
+            .await;
+
+        helper.run_processors().await;
+
+        let trip = helper
+            .app
+            .get_current_trip(state.vessels[0].id())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let mut sorted = trip.hauls.clone();
+        sorted.sort_by_key(|h| h.start_timestamp);
+
+        assert_eq!(trip.hauls.len(), 2);
+        assert_eq!(sorted, trip.hauls);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_current_trip_sorts_user_and_ers_hauls_ascendingly() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .dep(1)
+            .hauls(2)
+            .user_hauls(2)
+            .build()
+            .await;
+
+        helper.run_processors().await;
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_current_trip(state.vessels[0].id())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let mut sorted = trip.hauls.clone();
+        sorted.sort_by_key(|h| h.start_timestamp);
+
+        assert_eq!(trip.hauls.len(), 4);
+        assert_eq!(sorted, trip.hauls);
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_current_trip_contain_user_hauls_when_logged_in_as_vessel_in_the_same_fishery() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .modify(|v| v.fishery_id = Some(1))
+            .dep(1)
+            .hauls(2)
+            .user_hauls(2)
+            .up()
+            .vessels(1)
+            .modify(|v| v.fishery_id = Some(1))
+            .build()
+            .await;
+
+        helper.run_processors().await;
+
+        helper
+            .app
+            .set_call_sign_override(state.vessels[1].fiskeridir_call_sign().unwrap().clone());
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_current_trip(state.vessels[0].id())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert!(!trip.hauls[0].is_user_haul());
+        assert!(!trip.hauls[1].is_user_haul());
+        assert!(trip.hauls[2].is_user_haul());
+        assert!(trip.hauls[3].is_user_haul());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_contain_user_hauls_when_logged_in_as_vessel_in_same_fishery() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .modify(|v| v.fishery_id = Some(1))
+            .trips(1)
+            .hauls(2)
+            .user_hauls()
+            .up()
+            .up()
+            .vessels(1)
+            .modify(|v| v.fishery_id = Some(1))
+            .build()
+            .await;
+
+        helper.run_processors().await;
+        helper.run_engine_cycle().await;
+
+        helper
+            .app
+            .set_call_sign_override(state.vessels[1].fiskeridir_call_sign().unwrap().clone());
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+
+        assert!(!trip.hauls.iter().any(|t| !t.is_user_haul()));
+    })
+    .await;
+}
