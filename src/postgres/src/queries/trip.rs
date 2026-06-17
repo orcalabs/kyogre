@@ -106,6 +106,8 @@ SET
                         'end_fuel_liter',
                         u.end_fuel_liter
                     )
+                    ORDER BY
+                        COALESCE(LOWER(h.period), u.start_ts)
                 ),
                 '[]'
             )
@@ -169,6 +171,8 @@ SET
                         'end_fuel_liter',
                         NULL
                     )
+                    ORDER BY
+                        LOWER(h.period)
                 ),
                 '[]'
             )
@@ -258,6 +262,8 @@ SELECT
                         'end_fuel_liter',
                         u.end_fuel_liter
                     )
+                    ORDER BY
+                        COALESCE(LOWER(h.period), u.start_ts)
                 ),
                 '[]'
             )
@@ -321,6 +327,8 @@ SELECT
                         'end_fuel_liter',
                         NULL
                     )
+                    ORDER BY
+                        LOWER(h.period)
                 ),
                 '[]'
             )

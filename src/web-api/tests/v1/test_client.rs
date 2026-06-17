@@ -8,6 +8,7 @@ use kyogre_core::{
     UpdateUser, UpdateUserHaul, UpdateVessel, UserHaul, UserHaulId, VesselBenchmarks,
 };
 use serde::{Serialize, de::DeserializeOwned};
+use std::{convert::TryInto, fmt::Debug};
 use web_api::{
     error::{ErrorDiscriminants, ErrorResponse},
     extractors::{BwPolicy, BwRole},
@@ -49,6 +50,7 @@ pub struct ApiClient {
     client: HttpClient,
     current_token: Option<String>,
     bw_helper: &'static BarentswatchHelper,
+    call_sign_override: Option<CallSign>,
 }
 
 impl ApiClient {
@@ -58,9 +60,17 @@ impl ApiClient {
             client: HttpClient::builder().max_retries(0).build(),
             current_token: None,
             bw_helper,
+            call_sign_override: None,
         }
     }
 
+    pub fn set_call_sign_override<T>(&mut self, cs: T)
+    where
+        T: TryInto<CallSign> + Debug,
+        <T as TryInto<fiskeridir_rs::CallSign>>::Error: std::fmt::Debug,
+    {
+        self.call_sign_override = Some(cs.try_into().unwrap());
+    }
     pub fn login_user_with_id(&mut self, id: BarentswatchUserId) {
         self.current_token = Some(self.bw_helper.get_bw_token(Some(id)));
     }
@@ -105,6 +115,16 @@ impl ApiClient {
 
         if let Some(token) = &self.current_token {
             request = request.header("Authorization", format!("Bearer {token}"));
+        }
+
+        if let Some(cs) = &self.call_sign_override {
+            #[derive(Serialize)]
+            struct Cs {
+                call_sign_override: CallSign,
+            }
+            request = request.query(&Cs {
+                call_sign_override: cs.clone(),
+            });
         }
 
         request.send().await
