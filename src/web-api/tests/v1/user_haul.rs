@@ -1189,3 +1189,43 @@ async fn test_trips_contain_user_hauls_when_logged_in_as_vessel_in_same_fishery(
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_current_trip_user_hauls_are_set_correctly_when_there_are_multiple_vessels_with_current_trips()
+ {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .dep(1)
+            .hauls(2)
+            .user_hauls(2)
+            .up()
+            .vessels(1)
+            .dep(1)
+            .hauls(1)
+            .build()
+            .await;
+
+        helper.run_processors().await;
+
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_current_trip(state.vessels[0].id())
+            .await
+            .unwrap()
+            .unwrap();
+
+        let trip2 = helper
+            .app
+            .get_current_trip(state.vessels[1].id())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(trip.hauls.len(), 4);
+        assert_eq!(trip2.hauls.len(), 1);
+    })
+    .await;
+}

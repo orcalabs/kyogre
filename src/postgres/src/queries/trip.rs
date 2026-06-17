@@ -182,6 +182,8 @@ SET
             h.fiskeridir_vessel_id = $1
             AND h.start_timestamp >= $2
     )
+WHERE
+    c.fiskeridir_vessel_id = $1
             "#,
             vessel_id as FiskeridirVesselId,
             departure_timestamp
