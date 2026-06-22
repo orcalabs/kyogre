@@ -1,5 +1,6 @@
 use crate::Result;
-use kyogre_core::UserHaulsRefresher;
+use geoutils::Location;
+use kyogre_core::{UserHaulDistanceUpdate, UserHaulsRefresher};
 use std::{sync::Arc, time::Duration};
 use tracing::{error, instrument};
 
@@ -74,6 +75,47 @@ impl UserHaulRefresher {
     }
 
     pub async fn run_single(&self) -> Result<()> {
+        self.adapter.set_user_hauls_start_stop_positions().await?;
+
+        let hauls = self.adapter.user_hauls_without_distance().await?;
+
+        let mut updates = Vec::with_capacity(hauls.len());
+
+        for h in hauls {
+            if h.ais_positions.len() < 2 {
+                updates.push(UserHaulDistanceUpdate {
+                    id: h.id,
+                    distance_meters: None,
+                });
+                continue;
+            }
+            let mut iter = h.ais_positions.into_iter();
+            let pos = iter.next().unwrap();
+            let mut prev = Location::new(pos.latitude, pos.longitude);
+
+            let mut distance = 0.0;
+            for pos in iter {
+                let current = Location::new(pos.latitude, pos.longitude);
+
+                match prev.distance_to(&current) {
+                    Ok(d) => {
+                        distance += d.meters();
+                        prev = current
+                    }
+                    Err(e) => {
+                        error!(
+                            "failed to compute distance from {prev:?} to {current:?},  err: {e:?}",
+                        );
+                    }
+                }
+            }
+            updates.push(UserHaulDistanceUpdate {
+                id: h.id,
+                distance_meters: Some(distance as u32),
+            });
+        }
+
+        self.adapter.update_user_haul_distances(updates).await?;
         self.adapter.refresh_user_haul_mappings().await?;
 
         Ok(())

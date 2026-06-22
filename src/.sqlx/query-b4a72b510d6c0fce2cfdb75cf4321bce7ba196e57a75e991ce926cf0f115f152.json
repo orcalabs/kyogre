@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    user_haul_id AS \"id!: UserHaulId\",\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT('longitude', p.longitude, 'latitude', p.latitude)\n            ORDER BY\n                p.timestamp\n        ),\n        '[]'\n    )::TEXT AS \"ais_positions!\"\nFROM\n    user_hauls u\n    INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id\n    INNER JOIN ais_vessels a ON a.mmsi = v.mmsi\n    INNER JOIN ais_positions p ON p.mmsi = a.mmsi\n    AND p.timestamp BETWEEN u.start_ts AND u.end_ts\nWHERE\n    u.distance_processing_status = $1\n    --! We want to ensure that all ais positions have been added before attempting to compute\n    --! distance, which we ballpark to 10 minutes into the future\n    AND NOW() - u.end_ts >= Interval '10 minutes'\nGROUP BY\n    u.user_haul_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: UserHaulId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "ais_positions!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "b4a72b510d6c0fce2cfdb75cf4321bce7ba196e57a75e991ce926cf0f115f152"
+}

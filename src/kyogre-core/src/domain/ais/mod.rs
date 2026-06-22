@@ -111,6 +111,12 @@ pub struct NewAisStatic {
     pub report_class: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct AisPositionMinimal {
+    pub latitude: f64,
+    pub longitude: f64,
+}
+
 #[derive(Debug, Clone)]
 pub struct AisPosition {
     pub latitude: f64,

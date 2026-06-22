@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    hauls_to_update AS (\n        SELECT\n            UNNEST($1::INT[]) id,\n            UNNEST($2::INT[]) distance\n    ),\n    updated_user_hauls AS (\n        UPDATE user_hauls u\n        SET\n            distance = q.distance,\n            distance_processing_status = $3\n        FROM\n            hauls_to_update q\n        WHERE\n            u.user_haul_id = q.id\n        RETURNING\n            u.start_ts,\n            u.end_ts,\n            u.fiskeridir_vessel_id\n    )\nINSERT INTO\n    user_hauls_refresh_boundary (\n        refresh_boundary,\n        current_trip_refresh_boundary,\n        fiskeridir_vessel_id\n    )\nSELECT\n    MIN(start_ts),\n    MAX(start_ts),\n    fiskeridir_vessel_id\nFROM\n    updated_user_hauls\nGROUP BY\n    fiskeridir_vessel_id\nON CONFLICT (fiskeridir_vessel_id) DO UPDATE\nSET\n    refresh_boundary = LEAST(\n        user_hauls_refresh_boundary.refresh_boundary,\n        excluded.refresh_boundary\n    ),\n    current_trip_refresh_boundary = GREATEST(\n        user_hauls_refresh_boundary.current_trip_refresh_boundary,\n        excluded.current_trip_refresh_boundary\n    )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int4Array",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d20fac80b52aa23ce1157d60a42162dd77085a2b9178ea11c8237cf499f24fe6"
+}

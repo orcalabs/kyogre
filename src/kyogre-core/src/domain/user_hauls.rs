@@ -8,6 +8,8 @@ use serde_with::{DisplayFromStr, serde_as};
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
 
+use crate::AisPositionMinimal;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -27,6 +29,18 @@ pub struct UserHaul {
     pub end_fuel_liter: u32,
     pub total_living_weight_kg: Option<f64>,
     pub config: serde_json::Value,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserHaulDistanceUpdate {
+    pub id: UserHaulId,
+    pub distance_meters: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserHaulWithAisPositions {
+    pub id: UserHaulId,
+    pub ais_positions: Vec<AisPositionMinimal>,
 }
 
 #[serde_as]

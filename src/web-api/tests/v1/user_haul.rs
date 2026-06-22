@@ -1229,3 +1229,111 @@ async fn test_current_trip_user_hauls_are_set_correctly_when_there_are_multiple_
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_current_trip_contains_user_haul_distances_and_start_longitude_and_latitude() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .dep(1)
+            .user_hauls(1)
+            .ais_positions(4)
+            .build()
+            .await;
+
+        helper.run_processors().await;
+
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_current_trip(state.vessels[0].id())
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(trip.hauls.len(), 1);
+        let haul = &trip.hauls[0];
+        assert!(haul.haul_distance.is_some());
+        assert!(haul.start_latitude.is_some());
+        assert!(haul.start_longitude.is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_contain_user_hauls_distances_and_start_longitude_and_latitude_on_non_connected_user_hauls()
+ {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .trips(1)
+            .user_hauls(1)
+            .ais_positions(4)
+            .build()
+            .await;
+
+        helper.run_processors().await;
+        helper.run_engine_cycle().await;
+
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+
+        assert_eq!(trip.hauls.len(), 1);
+        let haul = &trip.hauls[0];
+        assert!(haul.haul_distance.is_some());
+        assert!(haul.start_latitude.is_some());
+        assert!(haul.start_longitude.is_some());
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn test_trips_prioritizes_ers_distance_longitude_and_latitude() {
+    test(|mut helper, builder| async move {
+        let state = builder
+            .vessel_with_test_call_sign()
+            .trips(1)
+            .hauls(1)
+            .modify(|h| {
+                h.dca.start_longitude = Some(10.0);
+                h.dca.start_latitude = Some(11.0);
+                h.dca.haul_distance = Some(15);
+            })
+            .user_hauls()
+            .ais_positions(4)
+            .build()
+            .await;
+
+        helper.run_processors().await;
+        helper.run_engine_cycle().await;
+
+        helper.app.login_user_with_id(state.user_id);
+
+        let trip = helper
+            .app
+            .get_trips(TripsParameters {
+                ..Default::default()
+            })
+            .await
+            .unwrap()
+            .pop()
+            .unwrap();
+
+        assert_eq!(trip.hauls.len(), 1);
+        let haul = &trip.hauls[0];
+        assert_eq!(haul.haul_distance, Some(15));
+        assert_eq!(haul.start_longitude, Some(10.0));
+        assert_eq!(haul.start_latitude, Some(11.0));
+    })
+    .await;
+}

@@ -688,3 +688,93 @@ macro_rules! impl_haul_trip_level {
 }
 
 impl_haul_trip_level!(UserHaulHaulTripBuilder);
+
+#[async_trait]
+pub trait UserHaulVesselLevel
+where
+    Self: Sized,
+{
+    fn base(self) -> TestStateBuilder;
+    fn up(self) -> UserHaulVesselBuilder;
+    async fn build(self) -> TestState {
+        self.base().build().await
+    }
+    fn ais_positions(self, amount: usize) -> AisPositionUserHaulVesselBuilder {
+        self.up().ais_positions(amount)
+    }
+}
+
+macro_rules! impl_user_haul_vessel_level {
+    ($type: ty) => {
+        impl UserHaulVesselLevel for $type {
+            fn base(self) -> TestStateBuilder {
+                self.state.state.state
+            }
+            fn up(self) -> UserHaulVesselBuilder {
+                self.state
+            }
+        }
+    };
+}
+
+impl_user_haul_vessel_level!(AisPositionUserHaulVesselBuilder);
+
+#[async_trait]
+pub trait UserHaulTripLevel
+where
+    Self: Sized,
+{
+    fn base(self) -> TestStateBuilder;
+    fn up(self) -> UserHaulTripBuilder;
+    async fn build(self) -> TestState {
+        self.base().build().await
+    }
+    fn ais_positions(self, amount: usize) -> AisPositionUserHaulTripBuilder {
+        self.up().ais_positions(amount)
+    }
+}
+
+macro_rules! impl_user_haul_trip_level {
+    ($type: ty) => {
+        impl UserHaulTripLevel for $type {
+            fn base(self) -> TestStateBuilder {
+                self.state.state.state.state
+            }
+            fn up(self) -> UserHaulTripBuilder {
+                self.state
+            }
+        }
+    };
+}
+
+impl_user_haul_trip_level!(AisPositionUserHaulTripBuilder);
+
+#[async_trait]
+pub trait UserHaulHaulTripLevel
+where
+    Self: Sized,
+{
+    fn base(self) -> TestStateBuilder;
+    fn up(self) -> UserHaulHaulTripBuilder;
+    async fn build(self) -> TestState {
+        self.base().build().await
+    }
+    fn ais_positions(self, amount: usize) -> AisPositionUserHaulHaulTripBuilder {
+        self.up().ais_positions(amount)
+    }
+}
+
+macro_rules! impl_user_haul_haul_trip_level {
+    ($type: ty) => {
+        impl UserHaulHaulTripLevel for $type {
+            fn base(self) -> TestStateBuilder {
+                self.state.state.state.state.state
+            }
+            fn up(self) -> UserHaulHaulTripBuilder {
+                self.state
+            }
+        }
+    };
+}
+
+impl_user_haul_haul_trip_level!(AisPositionUserHaulHaulTripBuilder);

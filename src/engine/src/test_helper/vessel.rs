@@ -193,13 +193,15 @@ impl VesselBuilder {
             let start_ts = base.global_data_timestamp_counter;
             let end_ts = start_ts + DEFAULT_HAUL_DURATION;
 
-            base.user_hauls.push(UserHaulConstructor::new(
+            let mut constructor = UserHaulConstructor::new(
                 base.cycle,
                 start_ts,
                 end_ts,
                 &base.call_sign,
                 base.user_id,
-            ));
+            );
+            constructor.mmsi = Some(base.vessels[self.current_index].ais.mmsi);
+            base.user_hauls.push(constructor);
 
             base.global_data_timestamp_counter = end_ts + base.data_timestamp_gap;
         }

@@ -254,13 +254,16 @@ impl TripBuilder {
                     start_ts + DEFAULT_HAUL_DURATION
                 };
 
-                base.user_hauls.push(UserHaulConstructor::new(
+                let mut constructor = UserHaulConstructor::new(
                     base.cycle,
                     start_ts,
                     end_ts,
                     &base.call_sign,
                     base.user_id,
-                ));
+                );
+                constructor.mmsi = Some(trip.mmsi.unwrap());
+
+                base.user_hauls.push(constructor);
 
                 trip.current_data_timestamp = end_ts + base.trip_data_timestamp_gap;
 
