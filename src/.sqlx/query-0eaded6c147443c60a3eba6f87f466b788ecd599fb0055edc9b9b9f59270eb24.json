@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    hauls_to_update AS (\n        SELECT DISTINCT\n            ON (u.user_haul_id) u.user_haul_id,\n            u.start_ts,\n            u.end_ts,\n            u.fiskeridir_vessel_id,\n            p.latitude,\n            p.longitude\n        FROM\n            user_hauls u\n            INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id\n            INNER JOIN ais_vessels a ON a.mmsi = v.mmsi\n            INNER JOIN ais_positions p ON p.mmsi = a.mmsi\n            AND p.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts  + INTERVAL '5 minutes'\n        WHERE\n            u.start_latitude IS NULL\n        ORDER BY\n            u.user_haul_id,\n            ABS(\n                EXTRACT(\n                    EPOCH\n                    FROM\n                        p.timestamp\n                ) - EXTRACT(\n                    EPOCH\n                    FROM\n                        u.start_ts\n                )\n            )\n    ),\n    update_boundaries AS (\n        INSERT INTO\n            user_hauls_refresh_boundary (\n                refresh_boundary,\n                current_trip_refresh_boundary,\n                fiskeridir_vessel_id\n            )\n        SELECT\n            MIN(start_ts),\n            MAX(start_ts),\n            fiskeridir_vessel_id\n        FROM\n            hauls_to_update\n        GROUP BY\n            fiskeridir_vessel_id\n        ON CONFLICT (fiskeridir_vessel_id) DO UPDATE\n        SET\n            refresh_boundary = LEAST(\n                user_hauls_refresh_boundary.refresh_boundary,\n                excluded.refresh_boundary\n            ),\n            current_trip_refresh_boundary = GREATEST(\n                user_hauls_refresh_boundary.current_trip_refresh_boundary,\n                excluded.current_trip_refresh_boundary\n            )\n    )\nUPDATE user_hauls u\nSET\n    start_longitude = q.longitude,\n    start_latitude = q.latitude\nFROM\n    hauls_to_update q\nWHERE\n    q.user_haul_id = u.user_haul_id\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "0eaded6c147443c60a3eba6f87f466b788ecd599fb0055edc9b9b9f59270eb24"
+}

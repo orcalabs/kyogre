@@ -61,19 +61,23 @@ impl HaulTripBuilder {
 
     // Creates a single user_haul for each haul in the current selection by 'current_index' matching
     // the start/stop timestamp of the ers haul.
+    //
+    // NOTE: we assign the mmsi of the 'UserHaulHaulTripBuilder' to be the first constructed vessel.
     pub fn user_hauls(mut self) -> UserHaulHaulTripBuilder {
         let base = &mut self.state.state.state;
 
         let num_hauls = base.hauls[self.current_index..].len();
 
         for haul in base.hauls[self.current_index..].iter_mut() {
-            base.user_hauls.push(UserHaulConstructor::new(
+            let mut constructor = UserHaulConstructor::new(
                 base.cycle,
                 haul.dca.start_timestamp().unwrap(),
                 haul.dca.stop_timestamp().unwrap(),
                 &base.call_sign,
                 base.user_id,
-            ));
+            );
+            constructor.mmsi = Some(base.vessels[0].ais.mmsi);
+            base.user_hauls.push(constructor);
         }
 
         UserHaulHaulTripBuilder {

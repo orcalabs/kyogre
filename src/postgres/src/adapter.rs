@@ -1357,6 +1357,30 @@ impl UserHaulsRefresher for PostgresAdapter {
         self.refresh_user_haul_mappings_impl().await?;
         Ok(())
     }
+
+    async fn set_user_hauls_start_stop_positions(&self) -> CoreResult<()> {
+        self.set_user_hauls_start_positions_impl().await?;
+        Ok(())
+    }
+
+    async fn user_hauls_without_distance(&self) -> CoreResult<Vec<UserHaulWithAisPositions>> {
+        let hauls = self
+            .user_hauls_without_distance_impl()
+            .await?
+            .into_iter()
+            .map(kyogre_core::UserHaulWithAisPositions::try_from)
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(hauls)
+    }
+
+    async fn update_user_haul_distances(
+        &self,
+        update: Vec<UserHaulDistanceUpdate>,
+    ) -> CoreResult<()> {
+        self.update_user_haul_distances_impl(update).await?;
+        Ok(())
+    }
 }
 
 #[async_trait]

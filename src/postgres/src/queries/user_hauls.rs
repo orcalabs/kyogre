@@ -1,14 +1,14 @@
 use crate::{
     PostgresAdapter,
     error::{ObjectNotFoundSnafu, Result},
-    models::{StartedUserHaul, UserHaul},
+    models::{StartedUserHaul, UserHaul, UserHaulWithAisPositions},
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear};
 use futures::TryStreamExt;
 use kyogre_core::{
     BarentswatchUserId, FiskeridirVesselId, HaulStart, Object, ProcessingStatus, TripId,
-    UpdateUserHaul, UserHaulId,
+    UpdateUserHaul, UserHaulDistanceUpdate, UserHaulId,
 };
 use sqlx::{PgTransaction, postgres::types::PgRange};
 use std::ops::Bound;
@@ -334,6 +334,211 @@ RETURNING
         Ok(haul.into())
     }
 
+    pub(crate) async fn update_user_haul_distances_impl(
+        &self,
+        update: Vec<UserHaulDistanceUpdate>,
+    ) -> Result<()> {
+        let mut id = Vec::with_capacity(update.len());
+        let mut distance = Vec::with_capacity(update.len());
+
+        let mut set_to_attempted = Vec::new();
+
+        for u in update {
+            if let Some(dist) = u.distance_meters {
+                id.push(u.id);
+                distance.push(dist as i32);
+            } else {
+                set_to_attempted.push(u.id);
+            }
+        }
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query!(
+            r#"
+UPDATE user_hauls
+SET
+    distance_processing_status = $1
+WHERE
+    user_haul_id = ANY ($2)
+        "#,
+            ProcessingStatus::Attempted as i32,
+            &set_to_attempted as &[UserHaulId]
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        sqlx::query!(
+            r#"
+WITH
+    hauls_to_update AS (
+        SELECT
+            UNNEST($1::INT[]) id,
+            UNNEST($2::INT[]) distance
+    ),
+    updated_user_hauls AS (
+        UPDATE user_hauls u
+        SET
+            distance = q.distance,
+            distance_processing_status = $3
+        FROM
+            hauls_to_update q
+        WHERE
+            u.user_haul_id = q.id
+        RETURNING
+            u.start_ts,
+            u.end_ts,
+            u.fiskeridir_vessel_id
+    )
+INSERT INTO
+    user_hauls_refresh_boundary (
+        refresh_boundary,
+        current_trip_refresh_boundary,
+        fiskeridir_vessel_id
+    )
+SELECT
+    MIN(start_ts),
+    MAX(start_ts),
+    fiskeridir_vessel_id
+FROM
+    updated_user_hauls
+GROUP BY
+    fiskeridir_vessel_id
+ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+SET
+    refresh_boundary = LEAST(
+        user_hauls_refresh_boundary.refresh_boundary,
+        excluded.refresh_boundary
+    ),
+    current_trip_refresh_boundary = GREATEST(
+        user_hauls_refresh_boundary.current_trip_refresh_boundary,
+        excluded.current_trip_refresh_boundary
+    )
+        "#,
+            &id as &[UserHaulId],
+            &distance,
+            ProcessingStatus::Successful as i32
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        tx.commit().await?;
+
+        Ok(())
+    }
+
+    pub(crate) async fn user_hauls_without_distance_impl(
+        &self,
+    ) -> Result<Vec<UserHaulWithAisPositions>> {
+        let hauls = sqlx::query_as!(
+            UserHaulWithAisPositions,
+            r#"
+SELECT
+    user_haul_id AS "id!: UserHaulId",
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT('longitude', p.longitude, 'latitude', p.latitude)
+            ORDER BY
+                p.timestamp
+        ),
+        '[]'
+    )::TEXT AS "ais_positions!"
+FROM
+    user_hauls u
+    INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+    INNER JOIN ais_vessels a ON a.mmsi = v.mmsi
+    INNER JOIN ais_positions p ON p.mmsi = a.mmsi
+    AND p.timestamp BETWEEN u.start_ts AND u.end_ts
+WHERE
+    u.distance_processing_status = $1
+    --! We want to ensure that all ais positions have been added before attempting to compute
+    --! distance, which we ballpark to 10 minutes into the future
+    AND NOW() - u.end_ts >= Interval '10 minutes'
+GROUP BY
+    u.user_haul_id
+            "#,
+            ProcessingStatus::Unprocessed as i32
+        )
+        .fetch_all(self.no_plan_cache_pool())
+        .await?;
+
+        Ok(hauls)
+    }
+
+    pub(crate) async fn set_user_hauls_start_positions_impl(&self) -> Result<()> {
+        sqlx::query!(
+            r#"
+WITH
+    hauls_to_update AS (
+        SELECT DISTINCT
+            ON (u.user_haul_id) u.user_haul_id,
+            u.start_ts,
+            u.end_ts,
+            u.fiskeridir_vessel_id,
+            p.latitude,
+            p.longitude
+        FROM
+            user_hauls u
+            INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+            INNER JOIN ais_vessels a ON a.mmsi = v.mmsi
+            INNER JOIN ais_positions p ON p.mmsi = a.mmsi
+            AND p.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts  + INTERVAL '5 minutes'
+        WHERE
+            u.start_latitude IS NULL
+        ORDER BY
+            u.user_haul_id,
+            ABS(
+                EXTRACT(
+                    EPOCH
+                    FROM
+                        p.timestamp
+                ) - EXTRACT(
+                    EPOCH
+                    FROM
+                        u.start_ts
+                )
+            )
+    ),
+    update_boundaries AS (
+        INSERT INTO
+            user_hauls_refresh_boundary (
+                refresh_boundary,
+                current_trip_refresh_boundary,
+                fiskeridir_vessel_id
+            )
+        SELECT
+            MIN(start_ts),
+            MAX(start_ts),
+            fiskeridir_vessel_id
+        FROM
+            hauls_to_update
+        GROUP BY
+            fiskeridir_vessel_id
+        ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
+        SET
+            refresh_boundary = LEAST(
+                user_hauls_refresh_boundary.refresh_boundary,
+                excluded.refresh_boundary
+            ),
+            current_trip_refresh_boundary = GREATEST(
+                user_hauls_refresh_boundary.current_trip_refresh_boundary,
+                excluded.current_trip_refresh_boundary
+            )
+    )
+UPDATE user_hauls u
+SET
+    start_longitude = q.longitude,
+    start_latitude = q.latitude
+FROM
+    hauls_to_update q
+WHERE
+    q.user_haul_id = u.user_haul_id
+        "#,
+        )
+        .execute(self.no_plan_cache_pool())
+        .await?;
+
+        Ok(())
+    }
     pub(crate) async fn delete_user_haul_impl(
         &self,
         call_sign: &CallSign,

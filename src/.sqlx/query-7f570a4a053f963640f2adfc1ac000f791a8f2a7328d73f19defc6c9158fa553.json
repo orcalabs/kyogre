@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE user_hauls\nSET\n    distance_processing_status = $1\nWHERE\n    user_haul_id = ANY ($2)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7f570a4a053f963640f2adfc1ac000f791a8f2a7328d73f19defc6c9158fa553"
+}

@@ -62,6 +62,12 @@ pub trait AisMigratorDestination {
 #[async_trait]
 pub trait UserHaulsRefresher: Send + Sync {
     async fn refresh_user_haul_mappings(&self) -> CoreResult<()>;
+    async fn set_user_hauls_start_stop_positions(&self) -> CoreResult<()>;
+    async fn user_hauls_without_distance(&self) -> CoreResult<Vec<UserHaulWithAisPositions>>;
+    async fn update_user_haul_distances(
+        &self,
+        update: Vec<UserHaulDistanceUpdate>,
+    ) -> CoreResult<()>;
 }
 
 #[async_trait]
