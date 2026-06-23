@@ -1,14 +1,15 @@
 use crate::{
     PostgresAdapter,
     error::{ObjectNotFoundSnafu, Result},
-    models::{StartedUserHaul, UserHaul, UserHaulWithAisPositions},
+    models::{StartedUserHaul, UserHaul},
 };
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, Gear};
 use futures::TryStreamExt;
 use kyogre_core::{
-    BarentswatchUserId, FiskeridirVesselId, HaulStart, Object, ProcessingStatus, TripId,
-    UpdateUserHaul, UserHaulDistanceUpdate, UserHaulId,
+    AisPositionMinimal, BarentswatchUserId, FiskeridirVesselId, HaulStart, Mmsi, Object,
+    ProcessingStatus, TripId, UpdateUserHaul, UserHaulDistanceUpdate, UserHaulId,
+    UserHaulWithoutDistance,
 };
 use sqlx::{PgTransaction, postgres::types::PgRange};
 use std::ops::Bound;
@@ -191,7 +192,7 @@ SET
             config,
         } = update;
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.no_plan_cache_pool().begin().await?;
 
         self.assert_user_haul_is_in_progress(call_sign, &mut tx)
             .await?;
@@ -329,6 +330,8 @@ RETURNING
         )
         .await?;
 
+        self.set_user_haul_start_position(haul.id, &mut tx).await?;
+
         tx.commit().await?;
 
         Ok(haul.into())
@@ -428,117 +431,34 @@ SET
 
     pub(crate) async fn user_hauls_without_distance_impl(
         &self,
-    ) -> Result<Vec<UserHaulWithAisPositions>> {
+    ) -> Result<Vec<UserHaulWithoutDistance>> {
         let hauls = sqlx::query_as!(
-            UserHaulWithAisPositions,
+            UserHaulWithoutDistance,
             r#"
 SELECT
     user_haul_id AS "id!: UserHaulId",
-    COALESCE(
-        JSONB_AGG(
-            JSONB_BUILD_OBJECT('longitude', p.longitude, 'latitude', p.latitude)
-            ORDER BY
-                p.timestamp
-        ),
-        '[]'
-    )::TEXT AS "ais_positions!"
+    v.mmsi AS "mmsi!: Mmsi",
+    u.start_ts,
+    u.end_ts AS "end_ts!"
 FROM
     user_hauls u
     INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id
-    INNER JOIN ais_vessels a ON a.mmsi = v.mmsi
-    INNER JOIN ais_positions p ON p.mmsi = a.mmsi
-    AND p.timestamp BETWEEN u.start_ts AND u.end_ts
 WHERE
     u.distance_processing_status = $1
+    AND v.mmsi IS NOT NULL
+    AND u.end_ts IS NOT NULL
     --! We want to ensure that all ais positions have been added before attempting to compute
     --! distance, which we ballpark to 10 minutes into the future
     AND NOW() - u.end_ts >= Interval '10 minutes'
-GROUP BY
-    u.user_haul_id
             "#,
             ProcessingStatus::Unprocessed as i32
         )
-        .fetch_all(self.no_plan_cache_pool())
+        .fetch_all(&self.pool)
         .await?;
 
         Ok(hauls)
     }
 
-    pub(crate) async fn set_user_hauls_start_positions_impl(&self) -> Result<()> {
-        sqlx::query!(
-            r#"
-WITH
-    hauls_to_update AS (
-        SELECT DISTINCT
-            ON (u.user_haul_id) u.user_haul_id,
-            u.start_ts,
-            u.end_ts,
-            u.fiskeridir_vessel_id,
-            p.latitude,
-            p.longitude
-        FROM
-            user_hauls u
-            INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id
-            INNER JOIN ais_vessels a ON a.mmsi = v.mmsi
-            INNER JOIN ais_positions p ON p.mmsi = a.mmsi
-            AND p.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts  + INTERVAL '5 minutes'
-        WHERE
-            u.start_latitude IS NULL
-        ORDER BY
-            u.user_haul_id,
-            ABS(
-                EXTRACT(
-                    EPOCH
-                    FROM
-                        p.timestamp
-                ) - EXTRACT(
-                    EPOCH
-                    FROM
-                        u.start_ts
-                )
-            )
-    ),
-    update_boundaries AS (
-        INSERT INTO
-            user_hauls_refresh_boundary (
-                refresh_boundary,
-                current_trip_refresh_boundary,
-                fiskeridir_vessel_id
-            )
-        SELECT
-            MIN(start_ts),
-            MAX(start_ts),
-            fiskeridir_vessel_id
-        FROM
-            hauls_to_update
-        GROUP BY
-            fiskeridir_vessel_id
-        ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
-        SET
-            refresh_boundary = LEAST(
-                user_hauls_refresh_boundary.refresh_boundary,
-                excluded.refresh_boundary
-            ),
-            current_trip_refresh_boundary = GREATEST(
-                user_hauls_refresh_boundary.current_trip_refresh_boundary,
-                excluded.current_trip_refresh_boundary
-            )
-    )
-UPDATE user_hauls u
-SET
-    start_longitude = q.longitude,
-    start_latitude = q.latitude
-FROM
-    hauls_to_update q
-WHERE
-    q.user_haul_id = u.user_haul_id
-        "#,
-        )
-        .execute(self.no_plan_cache_pool())
-        .await?;
-
-        Ok(())
-    }
     pub(crate) async fn delete_user_haul_impl(
         &self,
         call_sign: &CallSign,
@@ -760,7 +680,7 @@ RETURNING
             total_living_weight_kg,
         } = end;
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.no_plan_cache_pool().begin().await?;
 
         self.assert_user_haul_is_in_progress(call_sign, &mut tx)
             .await?;
@@ -819,6 +739,8 @@ RETURNING
             &mut tx,
         )
         .await?;
+
+        self.set_user_haul_start_position(haul.id, &mut tx).await?;
 
         tx.commit().await?;
 
@@ -1037,5 +959,102 @@ WHERE
         .await?;
 
         Ok(())
+    }
+
+    pub(crate) async fn set_user_haul_start_position(
+        &self,
+        id: UserHaulId,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    ) -> Result<()> {
+        let record = sqlx::query!(
+            r#"
+SELECT
+    v.mmsi
+FROM
+    user_hauls u
+    INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+WHERE
+    u.user_haul_id = $1
+            "#,
+            id as UserHaulId,
+        )
+        .fetch_optional(&mut **tx)
+        .await?;
+
+        if let Some(mmsi) = record.and_then(|v| v.mmsi) {
+            sqlx::query!(
+                r#"
+WITH
+    position AS (
+        SELECT
+            p.latitude,
+            p.longitude
+        FROM
+            user_hauls u
+            INNER JOIN ais_positions p ON (
+                p.mmsi = $1
+                AND p.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts  + INTERVAL '5 minutes'
+            )
+        WHERE
+            u.user_haul_id = $2
+        ORDER BY
+            ABS(
+                EXTRACT(
+                    EPOCH
+                    FROM
+                        p.timestamp
+                ) - EXTRACT(
+                    EPOCH
+                    FROM
+                        u.start_ts
+                )
+            )
+        LIMIT
+            1
+    )
+UPDATE user_hauls h
+SET
+    start_longitude = p.longitude,
+    start_latitude = p.latitude
+FROM
+    position p
+WHERE
+    h.user_haul_id = $2
+                "#,
+                mmsi,
+                id as UserHaulId,
+            )
+            .execute(&mut **tx)
+            .await?;
+        }
+
+        Ok(())
+    }
+
+    pub(crate) async fn user_haul_positions_impl(
+        &self,
+        haul: &UserHaulWithoutDistance,
+    ) -> Result<Vec<AisPositionMinimal>> {
+        sqlx::query_as!(
+            AisPositionMinimal,
+            r#"
+SELECT
+    latitude,
+    longitude
+FROM
+    ais_positions
+WHERE
+    mmsi = $1
+    AND timestamp BETWEEN $2 AND $3
+ORDER BY
+    timestamp
+            "#,
+            haul.mmsi as Mmsi,
+            haul.start_ts,
+            haul.end_ts,
+        )
+        .fetch_all(self.no_plan_cache_pool())
+        .await
+        .map_err(|e| e.into())
     }
 }

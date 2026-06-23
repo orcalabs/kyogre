@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    v.mmsi\nFROM\n    user_hauls u\n    INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id\nWHERE\n    u.user_haul_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mmsi",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "ffb712491e180c4e572cd724adf03017b890d07bc9b914d6726db846effe663b"
+}

@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    user_haul_id AS \"id!: UserHaulId\",\n    v.mmsi AS \"mmsi!: Mmsi\",\n    u.start_ts,\n    u.end_ts AS \"end_ts!\"\nFROM\n    user_hauls u\n    INNER JOIN all_vessels v ON u.fiskeridir_vessel_id = v.fiskeridir_vessel_id\nWHERE\n    u.distance_processing_status = $1\n    AND v.mmsi IS NOT NULL\n    AND u.end_ts IS NOT NULL\n    --! We want to ensure that all ais positions have been added before attempting to compute\n    --! distance, which we ballpark to 10 minutes into the future\n    AND NOW() - u.end_ts >= Interval '10 minutes'\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!: UserHaulId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "mmsi!: Mmsi",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "start_ts",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "end_ts!",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "915f60b2b4ac94edf3bbcf823bfcf33707e3385a4bb0766ec6dc6a7ef9397e0d"
+}

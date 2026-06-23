@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    latitude,\n    longitude\nFROM\n    ais_positions\nWHERE\n    mmsi = $1\n    AND timestamp BETWEEN $2 AND $3\nORDER BY\n    timestamp\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "latitude",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "longitude",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "fbeca397e008372a5228e2c78bbbceac961d2f0e4cf829ea21bf3c8b58b0413f"
+}

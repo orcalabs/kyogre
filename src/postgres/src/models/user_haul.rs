@@ -1,4 +1,3 @@
-use crate::error::Error;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::Gear;
 use kyogre_core::{FiskeridirVesselId, UserHaulId};
@@ -11,12 +10,6 @@ pub struct StartedUserHaul {
     pub start_ts: DateTime<Utc>,
     pub start_fuel_liter: i32,
     pub config: serde_json::Value,
-}
-
-#[derive(Debug, Clone)]
-pub struct UserHaulWithAisPositions {
-    pub id: UserHaulId,
-    pub ais_positions: String,
 }
 
 #[derive(Debug, Clone)]
@@ -77,17 +70,5 @@ impl From<StartedUserHaul> for kyogre_core::StartedUserHaul {
             start_fuel_liter: start_fuel_liter as u32,
             config,
         }
-    }
-}
-
-impl TryFrom<UserHaulWithAisPositions> for kyogre_core::UserHaulWithAisPositions {
-    type Error = Error;
-
-    fn try_from(value: UserHaulWithAisPositions) -> Result<Self, Self::Error> {
-        let UserHaulWithAisPositions { id, ais_positions } = value;
-        Ok(Self {
-            id,
-            ais_positions: serde_json::from_str(&ais_positions)?,
-        })
     }
 }

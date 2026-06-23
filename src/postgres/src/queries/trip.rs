@@ -54,6 +54,26 @@ SELECT
     ) -> Result<()> {
         sqlx::query!(
             r#"
+WITH
+    trip_hauls AS (
+        SELECT
+            *
+        FROM
+            hauls h
+        WHERE
+            h.fiskeridir_vessel_id = $1
+            AND h.start_timestamp >= $2
+    ),
+    trip_user_hauls AS (
+        SELECT
+            *
+        FROM
+            user_hauls u
+        WHERE
+            u.fiskeridir_vessel_id = $1
+            AND u.start_ts >= $2
+            AND u.end_ts IS NOT NULL
+    )
 UPDATE current_trips c
 SET
     ers_and_user_hauls = (
@@ -112,18 +132,8 @@ SET
                 '[]'
             )
         FROM
-            hauls h
-            FULL OUTER JOIN user_hauls u ON h.haul_id = u.haul_id
-        WHERE
-            (
-                h.fiskeridir_vessel_id = $1
-                AND h.start_timestamp >= $2
-            )
-            OR (
-                u.fiskeridir_vessel_id = $1
-                AND u.start_ts >= $2
-                AND u.end_ts IS NOT NULL
-            )
+            trip_hauls h
+            FULL OUTER JOIN trip_user_hauls u ON h.haul_id = u.haul_id
     ),
     ers_hauls = (
         SELECT
@@ -177,16 +187,13 @@ SET
                 '[]'
             )
         FROM
-            hauls h
-        WHERE
-            h.fiskeridir_vessel_id = $1
-            AND h.start_timestamp >= $2
+            trip_hauls h
     )
 WHERE
     c.fiskeridir_vessel_id = $1
             "#,
             vessel_id as FiskeridirVesselId,
-            departure_timestamp
+            departure_timestamp,
         )
         .execute(&mut **tx)
         .await?;
