@@ -246,7 +246,7 @@ FROM
                 .or_insert_with(|| p.into());
         }
 
-        let mut tx = self.pool.begin().await?;
+        let mut tx = self.no_plan_cache_pool().begin().await?;
 
         self.unnest_insert(mmsis, &mut *tx).await?;
         self.unnest_insert(ais_positions, &mut *tx).await?;
