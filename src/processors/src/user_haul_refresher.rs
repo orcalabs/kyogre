@@ -75,21 +75,22 @@ impl UserHaulRefresher {
     }
 
     pub async fn run_single(&self) -> Result<()> {
-        self.adapter.set_user_hauls_start_stop_positions().await?;
-
         let hauls = self.adapter.user_hauls_without_distance().await?;
 
         let mut updates = Vec::with_capacity(hauls.len());
 
         for h in hauls {
-            if h.ais_positions.len() < 2 {
+            let positions = self.adapter.user_haul_positions(&h).await?;
+
+            if positions.len() < 2 {
                 updates.push(UserHaulDistanceUpdate {
                     id: h.id,
                     distance_meters: None,
                 });
                 continue;
             }
-            let mut iter = h.ais_positions.into_iter();
+
+            let mut iter = positions.into_iter();
             let pos = iter.next().unwrap();
             let mut prev = Location::new(pos.latitude, pos.longitude);
 

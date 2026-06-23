@@ -8,7 +8,7 @@ use serde_with::{DisplayFromStr, serde_as};
 #[cfg(feature = "oasgen")]
 use oasgen::OaSchema;
 
-use crate::AisPositionMinimal;
+use crate::Mmsi;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
 #[cfg_attr(feature = "sqlx", derive(sqlx::Type), sqlx(transparent))]
@@ -38,9 +38,11 @@ pub struct UserHaulDistanceUpdate {
 }
 
 #[derive(Debug, Clone)]
-pub struct UserHaulWithAisPositions {
+pub struct UserHaulWithoutDistance {
     pub id: UserHaulId,
-    pub ais_positions: Vec<AisPositionMinimal>,
+    pub mmsi: Mmsi,
+    pub start_ts: DateTime<Utc>,
+    pub end_ts: DateTime<Utc>,
 }
 
 #[serde_as]
