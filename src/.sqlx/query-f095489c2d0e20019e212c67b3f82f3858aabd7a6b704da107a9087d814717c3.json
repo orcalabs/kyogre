@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE trips_detailed t\nSET\n    benchmark_weight_per_hour = q.benchmark_weight_per_hour,benchmark_weight_per_distance = q.benchmark_weight_per_distance,benchmark_fuel_consumption_liter = q.benchmark_fuel_consumption_liter,benchmark_fuel_consumption_liter_estimated_only = q.benchmark_fuel_consumption_liter_estimated_only,benchmark_percentage_of_trip_covered_by_measurements = q.benchmark_percentage_of_trip_covered_by_measurements,benchmark_weight_per_fuel_liter = q.benchmark_weight_per_fuel_liter,benchmark_catch_value_per_fuel_liter = q.benchmark_catch_value_per_fuel_liter,benchmark_eeoi = q.benchmark_eeoi,benchmark_status = q.benchmark_status,benchmark_state_counter = q.benchmark_state_counter\nFROM (\n    SELECT\n        *\n    FROM\n        UNNEST (\n            $1::BIGINT[],$2::DOUBLE PRECISION[],$3::DOUBLE PRECISION[],$4::DOUBLE PRECISION[],$5::DOUBLE PRECISION[],$6::DOUBLE PRECISION[],$7::DOUBLE PRECISION[],$8::DOUBLE PRECISION[],$9::DOUBLE PRECISION[],$10::INT[],$11::INT[]\n        ) u (trip_id,benchmark_weight_per_hour,benchmark_weight_per_distance,benchmark_fuel_consumption_liter,benchmark_fuel_consumption_liter_estimated_only,benchmark_percentage_of_trip_covered_by_measurements,benchmark_weight_per_fuel_liter,benchmark_catch_value_per_fuel_liter,benchmark_eeoi,benchmark_status,benchmark_state_counter)\n) q\nWHERE\n    t.trip_id = q.trip_id AND (t.benchmark_state_counter = q.benchmark_state_counter)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Float8Array",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f095489c2d0e20019e212c67b3f82f3858aabd7a6b704da107a9087d814717c3"
+}

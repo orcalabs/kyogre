@@ -155,6 +155,7 @@ pub struct Trip {
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
     pub fuel_consumption_estimated_only: Option<f64>,
+    pub percentage_of_trip_covered_by_measurements: Option<f64>,
     pub track_coverage: f64,
     pub distance: Option<f64>,
     pub has_track: HasTrack,
@@ -312,6 +313,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             has_track,
             first_arrival: _,
             fuel_consumption_liter_estimated_only,
+            percentage_of_trip_covered_by_measurements,
         } = value;
 
         let period = period_precision.unwrap_or(period);
@@ -346,6 +348,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             tra,
             has_track,
             fuel_consumption_estimated_only: fuel_consumption_liter_estimated_only,
+            percentage_of_trip_covered_by_measurements,
         }
     }
 }

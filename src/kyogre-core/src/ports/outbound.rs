@@ -196,7 +196,7 @@ pub trait TripBenchmarkOutbound: Send + Sync {
         &self,
         vessel_id: FiskeridirVesselId,
         range: &DateRange,
-    ) -> CoreResult<f64>;
+    ) -> CoreResult<TripOverlappingFuelMeasurement>;
 }
 
 #[async_trait]

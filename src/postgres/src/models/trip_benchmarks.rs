@@ -14,6 +14,7 @@ pub struct TripBenchmarkOutput {
     pub benchmark_weight_per_distance: Option<f64>,
     pub benchmark_fuel_consumption_liter: Option<f64>,
     pub benchmark_fuel_consumption_liter_estimated_only: Option<f64>,
+    pub benchmark_percentage_of_trip_covered_by_measurements: Option<f64>,
     pub benchmark_weight_per_fuel_liter: Option<f64>,
     pub benchmark_catch_value_per_fuel_liter: Option<f64>,
     pub benchmark_eeoi: Option<f64>,
@@ -37,6 +38,7 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
             status,
             benchmark_state_counter,
             fuel_consumption_liter_estimated_only,
+            percentage_of_trip_covered_by_measurements,
         } = v;
 
         Self {
@@ -50,6 +52,8 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
             benchmark_status: *status,
             benchmark_state_counter: *benchmark_state_counter,
             benchmark_fuel_consumption_liter_estimated_only: *fuel_consumption_liter_estimated_only,
+            benchmark_percentage_of_trip_covered_by_measurements:
+                *percentage_of_trip_covered_by_measurements,
         }
     }
 }
