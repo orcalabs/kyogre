@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(\n        SUM(\n            COMPUTE_TS_RANGE_PERCENT_OVERLAP (fuel_range, $1) * fuel_used_liter\n        ),\n        0.0\n    ) AS \"fuel_used_liter!\",\n    COALESCE(\n        COMPUTE_TS_RANGE_MUTLIRANGE_PERCENT_OVERLAP ($1, RANGE_AGG(fuel_range)),\n        0.0\n    ) * 100 AS \"percentage_of_trip_covered_by_measurements!\"\nFROM\n    fuel_measurement_ranges\nWHERE\n    fuel_range && $1\n    AND fiskeridir_vessel_id = $2\n    AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (fuel_range, $1) >= 0.5\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fuel_used_liter!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "percentage_of_trip_covered_by_measurements!",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TstzRange",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null
+    ]
+  },
+  "hash": "d12c94e66a132f384ee16a86c40f34c070e10f7e2a02975de9df9ea6b40f00bf"
+}

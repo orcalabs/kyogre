@@ -1247,7 +1247,7 @@ impl TripBenchmarkOutbound for PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
         range: &DateRange,
-    ) -> CoreResult<f64> {
+    ) -> CoreResult<TripOverlappingFuelMeasurement> {
         Ok(retry(|| self.overlapping_measurment_fuel_impl(vessel_id, range)).await?)
     }
 

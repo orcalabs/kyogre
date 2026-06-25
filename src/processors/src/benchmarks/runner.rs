@@ -154,6 +154,7 @@ impl Worker {
             eeoi: None,
             status: ProcessingStatus::Successful,
             benchmark_state_counter: trip.benchmark_state_counter,
+            percentage_of_trip_covered_by_measurements: None,
         };
 
         for b in benchmarks {

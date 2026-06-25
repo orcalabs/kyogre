@@ -1580,6 +1580,11 @@ SELECT
         ELSE NULL
     END AS fuel_consumption_liter,
     t.benchmark_fuel_consumption_liter_estimated_only AS fuel_consumption_liter_estimated_only,
+    CASE
+        WHEN l.fiskeridir_vessel_id IS NOT NULL
+        OR l.fishery_id IS NOT NULL THEN t.benchmark_percentage_of_trip_covered_by_measurements
+        ELSE NULL
+    END AS percentage_of_trip_covered_by_measurements,
     t.track_coverage,
     t.has_track AS "has_track: HasTrack",
     t.first_arrival

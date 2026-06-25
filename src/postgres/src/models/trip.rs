@@ -407,6 +407,7 @@ pub struct TripDetailed {
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption_liter: Option<f64>,
     pub fuel_consumption_liter_estimated_only: Option<f64>,
+    pub percentage_of_trip_covered_by_measurements: Option<f64>,
     pub track_coverage: f64,
     pub has_track: HasTrack,
 }
@@ -550,6 +551,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             has_track,
             first_arrival,
             fuel_consumption_liter_estimated_only,
+            percentage_of_trip_covered_by_measurements,
         } = value;
 
         Ok(kyogre_core::TripDetailed {
@@ -596,6 +598,7 @@ impl TryFrom<TripDetailed> for kyogre_core::TripDetailed {
             has_track,
             first_arrival,
             fuel_consumption_liter_estimated_only,
+            percentage_of_trip_covered_by_measurements,
         })
     }
 }

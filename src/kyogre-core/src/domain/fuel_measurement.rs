@@ -48,6 +48,12 @@ pub struct FuelMeasurementRange {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct TripOverlappingFuelMeasurement {
+    pub fuel_used_liter: f64,
+    pub percentage_of_trip_covered_by_measurements: f64,
+}
+
 impl From<FuelMeasurementId> for i64 {
     fn from(value: FuelMeasurementId) -> Self {
         value.0

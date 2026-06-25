@@ -5,7 +5,7 @@ use futures::{Stream, TryStreamExt};
 use itertools::MultiUnzip;
 use kyogre_core::{
     BarentswatchUserId, DateRange, FiskeridirVesselId, FuelMeasurement, FuelMeasurementId,
-    FuelMeasurementsQuery, ProcessingStatus,
+    FuelMeasurementsQuery, ProcessingStatus, TripOverlappingFuelMeasurement,
 };
 use sqlx::postgres::types::PgRange;
 
@@ -14,9 +14,10 @@ impl PostgresAdapter {
         &self,
         vessel_id: FiskeridirVesselId,
         range: &DateRange,
-    ) -> Result<f64> {
+    ) -> Result<TripOverlappingFuelMeasurement> {
         let pg_range: PgRange<DateTime<Utc>> = range.into();
-        Ok(sqlx::query!(
+        Ok(sqlx::query_as!(
+            TripOverlappingFuelMeasurement,
             r#"
 SELECT
     COALESCE(
@@ -24,7 +25,11 @@ SELECT
             COMPUTE_TS_RANGE_PERCENT_OVERLAP (fuel_range, $1) * fuel_used_liter
         ),
         0.0
-    ) AS "estimate!"
+    ) AS "fuel_used_liter!",
+    COALESCE(
+        COMPUTE_TS_RANGE_MUTLIRANGE_PERCENT_OVERLAP ($1, RANGE_AGG(fuel_range)),
+        0.0
+    ) * 100 AS "percentage_of_trip_covered_by_measurements!"
 FROM
     fuel_measurement_ranges
 WHERE
@@ -36,8 +41,7 @@ WHERE
             vessel_id.into_inner()
         )
         .fetch_one(&self.pool)
-        .await?
-        .estimate)
+        .await?)
     }
 
     pub(crate) fn fuel_measurements_impl(
