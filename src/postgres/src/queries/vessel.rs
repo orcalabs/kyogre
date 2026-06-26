@@ -1,4 +1,3 @@
-use crate::chunk::Chunks;
 use crate::{
     PostgresAdapter,
     error::Result,
@@ -700,13 +699,18 @@ WHERE
 
     pub(crate) async fn add_vessel_gear_and_species_groups<'a>(
         &'a self,
-        vessel_ids: HashSet<FiskeridirVesselId>,
+        vessels_with_replaced_landings: HashSet<FiskeridirVesselId>,
+        mut species_and_gear_per_vessel: HashMap<
+            FiskeridirVesselId,
+            (HashSet<SpeciesGroup>, HashSet<GearGroup>),
+        >,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
-        let mut iter = vessel_ids.chunks(100);
-        while let Some(chunk) = iter.next() {
-            sqlx::query!(
-                r#"
+        species_and_gear_per_vessel.retain(|e, _| !vessels_with_replaced_landings.contains(e));
+
+        let ids: Vec<_> = vessels_with_replaced_landings.into_iter().collect();
+        sqlx::query!(
+            r#"
 UPDATE fiskeridir_vessels v
 SET
     gear_group_ids = q.gear_group_ids,
@@ -728,7 +732,37 @@ FROM
 WHERE
     v.fiskeridir_vessel_id = q.fiskeridir_vessel_id
             "#,
-                &chunk as &[FiskeridirVesselId],
+            &ids as &[FiskeridirVesselId],
+        )
+        .execute(&mut **tx)
+        .await?;
+
+        for (id, vals) in species_and_gear_per_vessel {
+            let species: Vec<_> = vals.0.into_iter().collect();
+            let gear: Vec<_> = vals.1.into_iter().collect();
+
+            sqlx::query!(
+                r#"
+UPDATE fiskeridir_vessels v
+SET
+    gear_group_ids = (
+        SELECT
+            ARRAY_AGG(DISTINCT g)
+        FROM
+            UNNEST($1::INT[] || v.gear_group_ids) AS t (g)
+    ),
+    species_group_ids = (
+        SELECT
+            ARRAY_AGG(DISTINCT s)
+        FROM
+            UNNEST($2::INT[] || v.species_group_ids) AS t (s)
+    )
+WHERE
+    v.fiskeridir_vessel_id = $3
+            "#,
+                &gear as &[GearGroup],
+                &species as &[SpeciesGroup],
+                id as FiskeridirVesselId
             )
             .execute(&mut **tx)
             .await?;
