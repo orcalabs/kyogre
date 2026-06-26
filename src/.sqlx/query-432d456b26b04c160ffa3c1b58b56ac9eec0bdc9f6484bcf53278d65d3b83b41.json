@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fiskeridir_vessels v\nSET\n    gear_group_ids = (\n        SELECT\n            ARRAY_AGG(DISTINCT g)\n        FROM\n            UNNEST($1::INT[] || v.gear_group_ids) AS t (g)\n    ),\n    species_group_ids = (\n        SELECT\n            ARRAY_AGG(DISTINCT s)\n        FROM\n            UNNEST($2::INT[] || v.species_group_ids) AS t (s)\n    )\nWHERE\n    v.fiskeridir_vessel_id = $3\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int4Array",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "432d456b26b04c160ffa3c1b58b56ac9eec0bdc9f6484bcf53278d65d3b83b41"
+}
