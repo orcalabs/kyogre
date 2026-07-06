@@ -173,12 +173,21 @@ LIMIT
 
         let existing_landings = self.existing_landings(data_year, &mut tx).await?;
 
-        let mut all_vessel_ids = HashSet::new();
         let mut existing_landing_ids = HashSet::new();
         let mut inserted_landing_ids = HashSet::new();
         let mut vessel_event_ids = Vec::new();
         let mut trip_assembler_conflicts =
             HashMap::<FiskeridirVesselId, NewTripAssemblerConflict>::new();
+
+        // Scheme: We add species_groups and gear_groups from landings to the existing arrays
+        // in the 'fiskeridir_vessels' table. If a landing is replaced by a new version or deleted we
+        // fully recompute the arrays 'species_group_ids' and 'gear_group_ids' for that vessel.
+        // This is required as deleting or replacing a landing might delete/modify the last landing
+        // containing a particular gear_group_id or species_group_id. See the method 'add_vessel_gear_and_species_groups'
+        // for the implementation.
+        let mut species_and_gear_per_vessel: HashMap<FiskeridirVesselId, (HashSet<_>, HashSet<_>)> =
+            HashMap::new();
+        let mut vessels_with_replaced_landings = HashSet::new();
 
         let mut num_landings = 0;
 
@@ -197,7 +206,16 @@ LIMIT
                     num_landings += 1;
                     existing_landing_ids.insert(v.id.clone());
                     if let Some(vessel_id) = v.vessel.id {
-                        all_vessel_ids.insert(vessel_id);
+                        if let Some(e) = species_and_gear_per_vessel.get_mut(&vessel_id) {
+                            e.0.insert(v.product.species.group_code);
+                            e.1.insert(v.gear.group);
+                        } else {
+                            let mut species = HashSet::with_capacity(1);
+                            let mut gear = HashSet::with_capacity(1);
+                            species.insert(v.product.species.group_code);
+                            gear.insert(v.gear.group);
+                            species_and_gear_per_vessel.insert(vessel_id, (species, gear));
+                        }
                     }
 
                     if existing_landings
@@ -220,6 +238,7 @@ LIMIT
                 &mut inserted_landing_ids,
                 &mut vessel_event_ids,
                 &mut trip_assembler_conflicts,
+                &mut vessels_with_replaced_landings,
                 &mut tx,
             )
             .await?;
@@ -233,6 +252,7 @@ LIMIT
         self.delete_removed_landings(
             &existing_landing_ids,
             &mut trip_assembler_conflicts,
+            &mut vessels_with_replaced_landings,
             data_year,
             &mut tx,
         )
@@ -249,10 +269,15 @@ LIMIT
         .await?;
         self.connect_trip_to_events(&vessel_event_ids, VesselEventType::Landing, &mut tx)
             .await?;
-        self.add_vessel_gear_and_species_groups(all_vessel_ids, &mut tx)
-            .await?;
 
+        self.add_vessel_gear_and_species_groups(
+            vessels_with_replaced_landings,
+            species_and_gear_per_vessel,
+            &mut tx,
+        )
+        .await?;
         self.set_landing_vessels_call_signs(&mut tx).await?;
+
         self.refresh_vessel_mappings(&mut tx).await?;
 
         tx.commit().await?;
@@ -266,6 +291,7 @@ LIMIT
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
+        vessels_with_replaced_landings: &mut HashSet<FiskeridirVesselId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         self.unnest_insert(set.delivery_points(), &mut **tx).await?;
@@ -288,6 +314,7 @@ LIMIT
             inserted_landing_ids,
             vessel_event_ids,
             trip_assembler_conflicts,
+            vessels_with_replaced_landings,
             tx,
         )
         .await?;
@@ -303,6 +330,7 @@ LIMIT
         inserted_landing_ids: &mut HashSet<String>,
         vessel_event_ids: &mut Vec<i64>,
         trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
+        vessels_with_replaced_landings: &mut HashSet<FiskeridirVesselId>,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
         landings.retain(|l| !inserted_landing_ids.contains(l.landing_id));
@@ -386,6 +414,7 @@ FROM
 
         for d in deleted {
             if let Some(id) = d.fiskeridir_vessel_id {
+                vessels_with_replaced_landings.insert(id);
                 let conflict_ts = Utc.from_utc_datetime(&NaiveDateTime::new(
                     d.landing_timestamp.date_naive(),
                     NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
@@ -435,6 +464,7 @@ WHERE
         &'a self,
         existing_landing_ids: &[LandingId],
         trip_assembler_conflicts: &mut HashMap<FiskeridirVesselId, NewTripAssemblerConflict>,
+        vessels_with_replaced_landings: &mut HashSet<FiskeridirVesselId>,
         data_year: u32,
         tx: &mut sqlx::Transaction<'a, sqlx::Postgres>,
     ) -> Result<()> {
@@ -584,6 +614,7 @@ WHERE
             .await?;
         }
 
+        vessels_with_replaced_landings.extend(vessel_ids);
         Ok(())
     }
 
