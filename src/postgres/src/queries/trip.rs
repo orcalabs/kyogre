@@ -208,6 +208,53 @@ WHERE
     ) -> Result<()> {
         let affected = sqlx::query!(
             r#"
+WITH
+    departure AS (
+        SELECT
+            *
+        FROM
+            ers_departures d
+        WHERE
+            d.fiskeridir_vessel_id = $1
+            AND d.departure_timestamp > COALESCE(
+                (
+                    SELECT
+                        MAX(UPPER(COALESCE(t.period_precision, t.period)))
+                    FROM
+                        trips t
+                    WHERE
+                        t.fiskeridir_vessel_id = $1
+                        AND t.trip_assembler_id = $2
+                ),
+                TO_TIMESTAMP(0)
+            )
+        GROUP BY
+            d.message_id
+        ORDER BY
+            d.departure_timestamp ASC
+        LIMIT
+            1
+    ),
+    trip_hauls AS (
+        SELECT
+            h.*
+        FROM
+            hauls h
+            INNER JOIN departure d ON h.start_timestamp >= d.departure_timestamp
+        WHERE
+            --! We use a 'where' statement instead of join departures on vessel_id to ensure the planner does not do a seq scan on hauls.
+            h.fiskeridir_vessel_id = $1
+    ),
+    trip_user_hauls AS (
+        SELECT
+            u.*
+        FROM
+            user_hauls u
+            INNER JOIN departure d ON u.start_ts >= d.departure_timestamp
+        WHERE
+            u.end_ts IS NOT NULL
+            AND u.fiskeridir_vessel_id = $1
+    )
 INSERT INTO
     current_trips (
         fiskeridir_vessel_id,
@@ -277,18 +324,8 @@ SELECT
                 '[]'
             )
         FROM
-            hauls h
-            FULL OUTER JOIN user_hauls u ON h.haul_id = u.haul_id
-        WHERE
-            (
-                h.fiskeridir_vessel_id = $1
-                AND h.start_timestamp >= d.departure_timestamp
-            )
-            OR (
-                u.fiskeridir_vessel_id = $1
-                AND u.start_ts >= d.departure_timestamp
-                AND u.end_ts IS NOT NULL
-            )
+            trip_hauls h
+            FULL OUTER JOIN trip_user_hauls u ON h.haul_id = u.haul_id
     ) AS "ers_and_user_hauls!",
     (
         SELECT
@@ -342,10 +379,7 @@ SELECT
                 '[]'
             )
         FROM
-            hauls h
-        WHERE
-            h.fiskeridir_vessel_id = $1
-            AND h.start_timestamp >= d.departure_timestamp
+            trip_hauls h
     ) AS "ers_hauls!",
     (
         SELECT
@@ -414,27 +448,7 @@ SELECT
             )
     ) AS "fishing_facilities!"
 FROM
-    ers_departures d
-WHERE
-    d.fiskeridir_vessel_id = $1
-    AND d.departure_timestamp > COALESCE(
-        (
-            SELECT
-                MAX(UPPER(COALESCE(t.period_precision, t.period)))
-            FROM
-                trips t
-            WHERE
-                t.fiskeridir_vessel_id = $1
-                AND t.trip_assembler_id = $2
-        ),
-        TO_TIMESTAMP(0)
-    )
-GROUP BY
-    d.message_id
-ORDER BY
-    d.departure_timestamp ASC
-LIMIT
-    1
+    departure d
 ON CONFLICT (fiskeridir_vessel_id) DO UPDATE
 SET
     departure_timestamp = EXCLUDED.departure_timestamp,
