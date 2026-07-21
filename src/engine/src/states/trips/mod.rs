@@ -206,10 +206,6 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
         });
     }
 
-    if vessels.is_empty() {
-        return Ok(TripsReport::default());
-    }
-
     for v in vessels {
         worker_tx.try_send(WorkerTask::New(v)).unwrap();
     }
