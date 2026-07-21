@@ -35,6 +35,7 @@ pub(crate) enum FishingFacilityToolType {
     Seismic,
     Mooring,
     PlannedCableLaying,
+    Fishpot,
 }
 
 impl From<FishingFacilityToolType> for kyogre_core::FishingFacilityToolType {
@@ -52,6 +53,7 @@ impl From<FishingFacilityToolType> for kyogre_core::FishingFacilityToolType {
             FishingFacilityToolType::Seismic => Self::Seismic,
             FishingFacilityToolType::Mooring => Self::Mooring,
             FishingFacilityToolType::PlannedCableLaying => Self::PlannedCableLaying,
+            FishingFacilityToolType::Fishpot => Self::Fishpot,
         }
     }
 }

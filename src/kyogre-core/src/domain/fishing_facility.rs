@@ -42,6 +42,7 @@ pub enum FishingFacilityToolType {
     Seismic = 10,
     Mooring = 11,
     PlannedCableLaying = 12,
+    Fishpot = 13,
 }
 
 #[derive(
