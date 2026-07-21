@@ -206,6 +206,10 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
         });
     }
 
+    if vessels.is_empty() {
+        return Ok(TripsReport::default());
+    }
+
     for v in vessels {
         worker_tx.try_send(WorkerTask::New(v)).unwrap();
     }
@@ -273,7 +277,8 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
                     MasterTask::Unprocessed(vessel, result) => {
                         match result {
                             Ok(updates) => {
-                                let more_updates_to_process = !updates.is_empty();
+                                let more_updates_to_process = updates.len() == UNPROCESSED_TRIPS_BATCH_SIZE as usize;
+
                                 for update in updates {
                                     let trip_id = update.trip_id;
                                     if let Err(e) =
@@ -296,18 +301,19 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
 
                                 // Processing unprocessed trips occurs in batches and should stop
                                 // once there are no more updates to be processed which is
-                                // indicated by the update vec being empty.
+                                // indicated by the update vec being of less length than the batch
+                                // size.
                                 if more_updates_to_process {
                                     worker_tx.try_send(WorkerTask::Unprocessed(vessel)).unwrap();
+                                } else {
+                                    completed += 1;
                                 }
                             }
-                            Err(e) => error!(
-                                "failed to process unprocessed trips for vessel: {}, err: {e:?}",
-                                vessel.fiskeridir.id,
-                            ),
+                            Err(e) => {
+                                completed += 1;
+                                error!("failed to process unprocessed trips for vessel: {}, err: {e:?}", vessel.fiskeridir.id)
+                           },
                         }
-
-                        completed += 1;
                         if completed % 1_000 == 0 {
                             info!("processed {completed}/{num_vessels} vessels");
                         }
