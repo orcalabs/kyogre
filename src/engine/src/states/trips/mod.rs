@@ -1,6 +1,6 @@
 use std::{cmp::min, collections::HashMap, sync::Arc};
 
-use async_channel::bounded;
+use async_channel::{Receiver, Sender, bounded};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use machine::Schedule;
@@ -45,10 +45,369 @@ pub struct TripAssembly {
     pub processed_event_ids: Vec<i64>,
 }
 
-impl std::ops::Add<TripProcessingOutcome> for TripsReport {
-    type Output = TripsReport;
+struct Worker {
+    state: Arc<SharedState>,
+    ports: Arc<HashMap<String, Port>>,
+    dock_points: Arc<HashMap<String, Vec<PortDockPoint>>>,
+    master_tx: tokio::sync::mpsc::Sender<MasterTask>,
+    worker_rx: Receiver<WorkerTask>,
+}
 
-    fn add(mut self, rhs: TripProcessingOutcome) -> Self::Output {
+struct Master {
+    state: Arc<SharedState>,
+    report: TripsReport,
+    completed: usize,
+    num_vessels: usize,
+    processing_id: TripAssemblerProcessingId,
+    worker_tx: Sender<WorkerTask>,
+}
+impl Worker {
+    async fn run(&self) {
+        while let Ok(task) = self.worker_rx.recv().await {
+            let result = match task {
+                WorkerTask::New(vessel) => {
+                    let result = self.process_vessel(&vessel).await;
+                    MasterTask::New(vessel, result)
+                }
+                WorkerTask::Unprocessed(vessel) => {
+                    let result = self.process_unprocessed_trips(&vessel).await;
+                    MasterTask::Unprocessed(vessel, result)
+                }
+            };
+            self.master_tx.send(result).await.unwrap()
+        }
+    }
+
+    async fn process_vessel(
+        &self,
+        vessel: &Vessel,
+    ) -> Result<(TripProcessingOutcome, Option<TripSet>)> {
+        let assembler_impl = self
+            .state
+            .assembler_id_to_impl(vessel.preferred_trip_assembler);
+        let (outcome, trips) = run_trip_assembler(
+            vessel,
+            self.state.trip_assembler_outbound_port.as_ref(),
+            assembler_impl,
+        )
+        .await?;
+
+        if let Some(trips) = trips {
+            let mut output = TripSet {
+                fiskeridir_vessel_id: vessel.fiskeridir.id,
+                conflict_strategy: trips.conflict_strategy,
+                trip_assembler_id: assembler_impl.assembler_id(),
+                values: vec![],
+                conflict: trips.conflict,
+                new_trip_events: trips.new_trip_events,
+                prior_trip_events: trips.prior_trip_events,
+                prior_trip_calculation_time: trips.prior_trip_calculation_time,
+                queued_reset: outcome.state == AssemblerState::QueuedReset,
+                processed_event_ids: trips.processed_event_ids,
+            };
+            for t in trips.trips {
+                let trip_id = self.state.trip_pipeline_inbound.reserve_trip_id().await?;
+                let mut unit = TripProcessingUnit {
+                    precision_outcome: None,
+                    distance_output: None,
+                    start_port: t
+                        .start_port_code
+                        .as_ref()
+                        .and_then(|v| self.ports.get(v).cloned()),
+                    end_port: t
+                        .end_port_code
+                        .as_ref()
+                        .and_then(|v| self.ports.get(v).cloned()),
+                    start_dock_points: t
+                        .start_port_code
+                        .as_ref()
+                        .and_then(|v| self.dock_points.get(v).cloned())
+                        .unwrap_or_default(),
+                    end_dock_points: t
+                        .end_port_code
+                        .as_ref()
+                        .and_then(|v| self.dock_points.get(v).cloned())
+                        .unwrap_or_default(),
+                    positions: self
+                        .state
+                        .trips_precision_outbound_port
+                        .ais_vms_positions_with_inside_haul(
+                            vessel.id(),
+                            vessel.mmsi(),
+                            vessel.fiskeridir_call_sign(),
+                            &t.period_extended,
+                        )
+                        .await?,
+                    vessel_id: vessel.fiskeridir.id,
+                    trip_assembler_id: output.trip_assembler_id,
+                    position_layers_output: None,
+                    trip: t,
+                    trip_id,
+                };
+
+                for step in TRIP_COMPUTATION_STEPS.iter() {
+                    unit = step.run(&self.state, vessel, unit).await?;
+                }
+
+                let pruned_positions = unit.position_layers_output.take();
+                let track_coverage = pruned_positions
+                    .as_ref()
+                    .map(|p| p.track_coverage)
+                    .unwrap_or(0.);
+
+                self.state
+                    .trip_pipeline_inbound
+                    .add_trip_positions(unit.trip_id, &unit.positions, pruned_positions)
+                    .await?;
+
+                let TripProcessingUnit {
+                    vessel_id,
+                    trip,
+                    trip_id,
+                    trip_assembler_id,
+                    start_port,
+                    end_port,
+                    start_dock_points,
+                    end_dock_points,
+                    positions: _,
+                    precision_outcome,
+                    distance_output,
+                    position_layers_output: _,
+                } = unit;
+
+                output.values.push(TripToInsert {
+                    vessel_id,
+                    trip,
+                    trip_id,
+                    trip_assembler_id,
+                    start_port,
+                    end_port,
+                    start_dock_points,
+                    end_dock_points,
+                    precision_outcome,
+                    distance_output,
+                    track_coverage,
+                });
+            }
+
+            Ok((outcome, Some(output)))
+        } else {
+            Ok((outcome, None))
+        }
+    }
+
+    async fn process_unprocessed_trips(&self, vessel: &Vessel) -> Result<Vec<TripUpdate>> {
+        let mut trips = HashMap::new();
+
+        for (i, step) in TRIP_COMPUTATION_STEPS.iter().enumerate() {
+            for trip in step
+                .fetch_missing(&self.state, vessel, UNPROCESSED_TRIPS_BATCH_SIZE)
+                .await?
+            {
+                trips
+                    .entry(trip.trip_id)
+                    .and_modify(|(_, idx)| *idx = min(*idx, i))
+                    .or_insert((trip, i));
+            }
+        }
+
+        let mut updates = Vec::with_capacity(trips.len());
+
+        for (t, computation_step_idx) in trips.into_values() {
+            let mut unit = TripProcessingUnit {
+                precision_outcome: None,
+                distance_output: None,
+                start_port: t
+                    .start_port_code
+                    .as_ref()
+                    .and_then(|v| self.ports.get(v).cloned()),
+                end_port: t
+                    .end_port_code
+                    .as_ref()
+                    .and_then(|v| self.ports.get(v).cloned()),
+                start_dock_points: t
+                    .start_port_code
+                    .as_ref()
+                    .and_then(|v| self.dock_points.get(v).cloned())
+                    .unwrap_or_default(),
+                end_dock_points: t
+                    .end_port_code
+                    .as_ref()
+                    .and_then(|v| self.dock_points.get(v).cloned())
+                    .unwrap_or_default(),
+                positions: vec![],
+                vessel_id: vessel.fiskeridir.id,
+                trip_assembler_id: vessel.preferred_trip_assembler,
+                trip: NewTrip {
+                    period: t.period.clone(),
+                    period_extended: t.period_extended.clone(),
+                    landing_coverage: t.landing_coverage.clone(),
+                    start_port_code: t.start_port_code.clone(),
+                    end_port_code: t.end_port_code.clone(),
+                    first_arrival: t.first_arrival,
+                    start_vessel_event_id: None,
+                    end_vessel_event_id: None,
+                },
+                position_layers_output: None,
+                trip_id: t.trip_id,
+            };
+
+            TRIP_COMPUTATION_STEPS[computation_step_idx]
+                .set_state(&self.state, &mut unit, vessel, &t)
+                .await?;
+
+            for step in &TRIP_COMPUTATION_STEPS[computation_step_idx..] {
+                unit = step.run(&self.state, vessel, unit).await?;
+            }
+
+            updates.push(TripUpdate {
+                trip_id: t.trip_id,
+                precision: unit.precision_outcome,
+                distance: unit.distance_output,
+                positions: unit.positions,
+                position_layers_output: unit.position_layers_output,
+            });
+        }
+
+        Ok(updates)
+    }
+}
+
+impl Master {
+    async fn handle_new_vessel(
+        &mut self,
+        vessel: Vessel,
+        result: Result<(TripProcessingOutcome, Option<TripSet>)>,
+    ) {
+        match result {
+            Ok((
+                TripProcessingOutcome {
+                    num_trips: 0,
+                    state: AssemblerState::QueuedReset,
+                },
+                None,
+            )) => {
+                if let Err(e) = self
+                    .state
+                    .trip_pipeline_inbound
+                    .nuke_trips(vessel.fiskeridir.id)
+                    .await
+                {
+                    error!(
+                        "failed to nuke trips for vessel: {}, err: {e:?}",
+                        vessel.fiskeridir.id,
+                    );
+                }
+            }
+            Ok((report, trips)) => {
+                self.report += report;
+
+                if let Some(trips) = trips {
+                    if let Err(e) = self
+                        .state
+                        .trip_pipeline_inbound
+                        .add_trip_set(trips, self.processing_id)
+                        .await
+                    {
+                        error!(
+                            "failed to store trips for vessel: {}, err: {e:?}",
+                            vessel.fiskeridir.id,
+                        );
+                    }
+                } else {
+                    // Regardless if we had no trips to add we need to set the current
+                    // trip to add any new hauls or fishing facilites that might have
+                    // been added.
+                    match vessel.preferred_trip_assembler {
+                        TripAssemblerId::Landings => (),
+                        TripAssemblerId::Ers => {
+                            if let Err(e) = self
+                                .state
+                                .trip_pipeline_inbound
+                                .set_current_trip(vessel.fiskeridir.id)
+                                .await
+                            {
+                                error!(
+                                    "failed to set current trip for vessel: {}, err: {e:?}",
+                                    vessel.fiskeridir.id,
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            Err(e) => error!(
+                "failed to run trips pipeline for vessel: {}, err: {e:?}",
+                vessel.fiskeridir.id,
+            ),
+        }
+
+        self.worker_tx
+            .try_send(WorkerTask::Unprocessed(vessel))
+            .unwrap();
+    }
+
+    async fn handle_unprocessed_vessel(&mut self, vessel: Vessel, result: Result<Vec<TripUpdate>>) {
+        match result {
+            Ok(updates) => {
+                let more_updates_to_process =
+                    updates.len() == UNPROCESSED_TRIPS_BATCH_SIZE as usize;
+
+                for update in updates {
+                    let trip_id = update.trip_id;
+                    if let Err(e) = self.state.trip_pipeline_inbound.update_trip(update).await {
+                        error!("failed to update trip_id: {trip_id}, err: {e:?}");
+                    }
+                }
+
+                if let Err(e) = self
+                    .state
+                    .trip_pipeline_inbound
+                    .refresh_detailed_trips(vessel.fiskeridir.id)
+                    .await
+                {
+                    error!(
+                        "failed to refresh detailed trips for vessel: {}, err: {e:?}",
+                        vessel.fiskeridir.id,
+                    );
+                }
+
+                // Processing unprocessed trips occurs in batches and should stop
+                // once there are no more updates to be processed which is
+                // indicated by the update vec being of less length than the batch
+                // size.
+                if more_updates_to_process {
+                    self.worker_tx
+                        .try_send(WorkerTask::Unprocessed(vessel))
+                        .unwrap();
+                } else {
+                    self.completed += 1;
+                }
+            }
+            Err(e) => {
+                self.completed += 1;
+                error!(
+                    "failed to process unprocessed trips for vessel: {}, err: {e:?}",
+                    vessel.fiskeridir.id
+                )
+            }
+        }
+        if self.completed.is_multiple_of(1_000) {
+            info!("processed {}/{} vessels", self.completed, self.num_vessels);
+        }
+    }
+    async fn process_task(&mut self, task: MasterTask) {
+        match task {
+            MasterTask::New(vessel, result) => self.handle_new_vessel(vessel, result).await,
+            MasterTask::Unprocessed(vessel, result) => {
+                self.handle_unprocessed_vessel(vessel, result).await
+            }
+        }
+    }
+}
+
+impl std::ops::AddAssign<TripProcessingOutcome> for TripsReport {
+    fn add_assign(&mut self, rhs: TripProcessingOutcome) {
         self.num_trips += rhs.num_trips;
         self.num_vessels += 1;
         match rhs.state {
@@ -57,7 +416,6 @@ impl std::ops::Add<TripProcessingOutcome> for TripsReport {
             AssemblerState::TripCalculationTimer(_) => (),
             AssemblerState::QueuedReset => self.num_reset += 1,
         }
-        self
     }
 }
 
@@ -180,273 +538,75 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
     let mut workers = JoinSet::new();
 
     for _ in 0..num_workers {
-        let master_tx = master_tx.clone();
-        let worker_rx = worker_rx.clone();
-        let shared_state = shared_state.clone();
-        let ports = ports.clone();
-        let dock_points = dock_points.clone();
+        let worker = Worker {
+            master_tx: master_tx.clone(),
+            worker_rx: worker_rx.clone(),
+            state: shared_state.clone(),
+            ports: ports.clone(),
+            dock_points: dock_points.clone(),
+        };
 
-        workers.spawn(async move {
-            while let Ok(task) = worker_rx.recv().await {
-                let result = match task {
-                    WorkerTask::New(vessel) => {
-                        let result =
-                            process_vessel(&shared_state, &vessel, &ports, &dock_points).await;
-                        MasterTask::New(vessel, result)
-                    }
-                    WorkerTask::Unprocessed(vessel) => {
-                        let result =
-                            process_unprocessed_trips(&shared_state, &vessel, &ports, &dock_points)
-                                .await;
-                        MasterTask::Unprocessed(vessel, result)
-                    }
-                };
-                master_tx.send(result).await.unwrap()
-            }
-        });
+        workers.spawn(async move { worker.run().await });
     }
 
     for v in vessels {
         worker_tx.try_send(WorkerTask::New(v)).unwrap();
     }
 
-    let mut trips_report = TripsReport::default();
-
     let mut exit = false;
-    let mut completed = 0;
-    let mut errored = 0;
+    let mut exited_workers = 0;
 
-    while !exit && completed + errored < num_vessels && errored < num_workers {
+    let mut master = Master {
+        state: shared_state,
+        report: Default::default(),
+        completed: 0,
+        processing_id,
+        worker_tx,
+        num_vessels,
+    };
+
+    while !exit && master.completed + exited_workers < master.num_vessels {
         select! {
-            _ = workers.join_next() => {
-                errored += 1;
-            }
-            Some(task) = master_rx.recv() => {
-                match task {
-                    MasterTask::New(vessel, result) => {
-                        match result {
-                            Ok((TripProcessingOutcome { num_trips: 0, state: AssemblerState::QueuedReset }, None)) => {
-                                    if let Err(e) =
-                                        shared_state.trip_pipeline_inbound.nuke_trips(vessel.fiskeridir.id).await
-                                    {
-                                        error!(
-                                            "failed to nuke trips for vessel: {}, err: {e:?}",
-                                            vessel.fiskeridir.id,
-                                        );
-                                    }
-                            }
-                            Ok((report, trips)) => {
-                                trips_report = trips_report + report;
-
-                                if let Some(trips) = trips {
-                                    if let Err(e) = shared_state.trip_pipeline_inbound.add_trip_set(trips, processing_id).await {
-                                        error!(
-                                            "failed to store trips for vessel: {}, err: {e:?}",
-                                            vessel.fiskeridir.id,
-                                        );
-                                    }
-                                } else {
-                                    // Regardless if we had no trips to add we need to set the current
-                                    // trip to add any new hauls or fishing facilites that might have
-                                    // been added.
-                                    match vessel.preferred_trip_assembler {
-                                        TripAssemblerId::Landings => (),
-                                        TripAssemblerId::Ers => {
-                                            if let Err(e) = shared_state.trip_pipeline_inbound.set_current_trip(vessel.fiskeridir.id).await {
-                                                error!(
-                                                    "failed to set current trip for vessel: {}, err: {e:?}",
-                                                    vessel.fiskeridir.id,
-                                                );
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            Err(e) => error!(
-                                "failed to run trips pipeline for vessel: {}, err: {e:?}",
-                                vessel.fiskeridir.id,
-                            ),
-                        }
-
-                        worker_tx.try_send(WorkerTask::Unprocessed(vessel)).unwrap();
+            out = workers.join_next() => {
+                match out {
+                    Some(_) => {
+                        exited_workers += 1;
                     }
-                    MasterTask::Unprocessed(vessel, result) => {
-                        match result {
-                            Ok(updates) => {
-                                let more_updates_to_process = updates.len() == UNPROCESSED_TRIPS_BATCH_SIZE as usize;
-
-                                for update in updates {
-                                    let trip_id = update.trip_id;
-                                    if let Err(e) =
-                                        shared_state.trip_pipeline_inbound.update_trip(update).await
-                                    {
-                                        error!("failed to update trip_id: {trip_id}, err: {e:?}");
-                                    }
-                                }
-
-                                if let Err(e) = shared_state
-                                    .trip_pipeline_inbound
-                                    .refresh_detailed_trips(vessel.fiskeridir.id)
-                                    .await
-                                {
-                                    error!(
-                                        "failed to refresh detailed trips for vessel: {}, err: {e:?}",
-                                        vessel.fiskeridir.id,
-                                    );
-                                }
-
-                                // Processing unprocessed trips occurs in batches and should stop
-                                // once there are no more updates to be processed which is
-                                // indicated by the update vec being of less length than the batch
-                                // size.
-                                if more_updates_to_process {
-                                    worker_tx.try_send(WorkerTask::Unprocessed(vessel)).unwrap();
-                                } else {
-                                    completed += 1;
-                                }
-                            }
-                            Err(e) => {
-                                completed += 1;
-                                error!("failed to process unprocessed trips for vessel: {}, err: {e:?}", vessel.fiskeridir.id)
-                           },
-                        }
-                        if completed % 1_000 == 0 {
-                            info!("processed {completed}/{num_vessels} vessels");
-                        }
+                    // This indicates that all workers have exited. If this occurs for whatever
+                    // reason we should exit as there is no more work to be done.
+                    // Some tasks might still be present in the 'master_rx' channel, however, this state
+                    // should never occur and indicates that something is wrong. Workers only return
+                    // if the worker channel closes which should never occur.
+                    None => {
+                        error!("all trips processing workers exited for an unexpected reason");
+                        exit = true;
                     }
                 }
             }
-            else => {
-                exit = true;
+            task = master_rx.recv() => {
+                match task {
+                    Some(task) => {
+                        master.process_task(task).await;
+                    }
+                    None => {
+                        error!("trips processing master channel closed for an unexpected reason");
+                        exit = true;
+                    }
+                }
             }
         }
     }
 
     workers.shutdown().await;
 
-    if exit {
-        error!("trips processing master channel exited for an unexpected reason");
-    } else {
+    if !exit {
         info!(
-            "vessels completed: {completed}/{num_vessels}, workers exited: {errored}/{num_workers}"
+            "vessels completed: {}/{}, workers exited: {}/{num_workers}",
+            master.completed, master.num_vessels, exited_workers
         );
     }
 
-    Ok(trips_report)
-}
-
-async fn process_vessel(
-    shared: &SharedState,
-    vessel: &Vessel,
-    ports: &HashMap<String, Port>,
-    dock_points: &HashMap<String, Vec<PortDockPoint>>,
-) -> Result<(TripProcessingOutcome, Option<TripSet>)> {
-    let assembler_impl = shared.assembler_id_to_impl(vessel.preferred_trip_assembler);
-    let (outcome, trips) = run_trip_assembler(
-        vessel,
-        shared.trip_assembler_outbound_port.as_ref(),
-        assembler_impl,
-    )
-    .await?;
-
-    if let Some(trips) = trips {
-        let mut output = TripSet {
-            fiskeridir_vessel_id: vessel.fiskeridir.id,
-            conflict_strategy: trips.conflict_strategy,
-            trip_assembler_id: assembler_impl.assembler_id(),
-            values: vec![],
-            conflict: trips.conflict,
-            new_trip_events: trips.new_trip_events,
-            prior_trip_events: trips.prior_trip_events,
-            prior_trip_calculation_time: trips.prior_trip_calculation_time,
-            queued_reset: outcome.state == AssemblerState::QueuedReset,
-            processed_event_ids: trips.processed_event_ids,
-        };
-        for t in trips.trips {
-            let trip_id = shared.trip_pipeline_inbound.reserve_trip_id().await?;
-            let mut unit = TripProcessingUnit {
-                precision_outcome: None,
-                distance_output: None,
-                start_port: t
-                    .start_port_code
-                    .as_ref()
-                    .and_then(|v| ports.get(v).cloned()),
-                end_port: t.end_port_code.as_ref().and_then(|v| ports.get(v).cloned()),
-                start_dock_points: t
-                    .start_port_code
-                    .as_ref()
-                    .and_then(|v| dock_points.get(v).cloned())
-                    .unwrap_or_default(),
-                end_dock_points: t
-                    .end_port_code
-                    .as_ref()
-                    .and_then(|v| dock_points.get(v).cloned())
-                    .unwrap_or_default(),
-                positions: shared
-                    .trips_precision_outbound_port
-                    .ais_vms_positions_with_inside_haul(
-                        vessel.id(),
-                        vessel.mmsi(),
-                        vessel.fiskeridir_call_sign(),
-                        &t.period_extended,
-                    )
-                    .await?,
-                vessel_id: vessel.fiskeridir.id,
-                trip_assembler_id: output.trip_assembler_id,
-                position_layers_output: None,
-                trip: t,
-                trip_id,
-            };
-
-            for step in TRIP_COMPUTATION_STEPS.iter() {
-                unit = step.run(shared, vessel, unit).await?;
-            }
-
-            let pruned_positions = unit.position_layers_output.take();
-            let track_coverage = pruned_positions
-                .as_ref()
-                .map(|p| p.track_coverage)
-                .unwrap_or(0.);
-
-            shared
-                .trip_pipeline_inbound
-                .add_trip_positions(unit.trip_id, &unit.positions, pruned_positions)
-                .await?;
-
-            let TripProcessingUnit {
-                vessel_id,
-                trip,
-                trip_id,
-                trip_assembler_id,
-                start_port,
-                end_port,
-                start_dock_points,
-                end_dock_points,
-                positions: _,
-                precision_outcome,
-                distance_output,
-                position_layers_output: _,
-            } = unit;
-
-            output.values.push(TripToInsert {
-                vessel_id,
-                trip,
-                trip_id,
-                trip_assembler_id,
-                start_port,
-                end_port,
-                start_dock_points,
-                end_dock_points,
-                precision_outcome,
-                distance_output,
-                track_coverage,
-            });
-        }
-
-        Ok((outcome, Some(output)))
-    } else {
-        Ok((outcome, None))
-    }
+    Ok(master.report)
 }
 
 async fn run_trip_assembler(
@@ -582,82 +742,4 @@ async fn new_vessel_events(
         let succeeding_events = adapter.all_vessel_events(vessel_id, trip_assembler).await?;
         Ok((vec![], succeeding_events))
     }
-}
-
-async fn process_unprocessed_trips(
-    shared_state: &SharedState,
-    vessel: &Vessel,
-    ports: &HashMap<String, Port>,
-    dock_points: &HashMap<String, Vec<PortDockPoint>>,
-) -> Result<Vec<TripUpdate>> {
-    let mut trips = HashMap::new();
-
-    for (i, step) in TRIP_COMPUTATION_STEPS.iter().enumerate() {
-        for trip in step
-            .fetch_missing(shared_state, vessel, UNPROCESSED_TRIPS_BATCH_SIZE)
-            .await?
-        {
-            trips
-                .entry(trip.trip_id)
-                .and_modify(|(_, idx)| *idx = min(*idx, i))
-                .or_insert((trip, i));
-        }
-    }
-
-    let mut updates = Vec::with_capacity(trips.len());
-
-    for (t, computation_step_idx) in trips.into_values() {
-        let mut unit = TripProcessingUnit {
-            precision_outcome: None,
-            distance_output: None,
-            start_port: t
-                .start_port_code
-                .as_ref()
-                .and_then(|v| ports.get(v).cloned()),
-            end_port: t.end_port_code.as_ref().and_then(|v| ports.get(v).cloned()),
-            start_dock_points: t
-                .start_port_code
-                .as_ref()
-                .and_then(|v| dock_points.get(v).cloned())
-                .unwrap_or_default(),
-            end_dock_points: t
-                .end_port_code
-                .as_ref()
-                .and_then(|v| dock_points.get(v).cloned())
-                .unwrap_or_default(),
-            positions: vec![],
-            vessel_id: vessel.fiskeridir.id,
-            trip_assembler_id: vessel.preferred_trip_assembler,
-            trip: NewTrip {
-                period: t.period.clone(),
-                period_extended: t.period_extended.clone(),
-                landing_coverage: t.landing_coverage.clone(),
-                start_port_code: t.start_port_code.clone(),
-                end_port_code: t.end_port_code.clone(),
-                first_arrival: t.first_arrival,
-                start_vessel_event_id: None,
-                end_vessel_event_id: None,
-            },
-            position_layers_output: None,
-            trip_id: t.trip_id,
-        };
-
-        TRIP_COMPUTATION_STEPS[computation_step_idx]
-            .set_state(shared_state, &mut unit, vessel, &t)
-            .await?;
-
-        for step in &TRIP_COMPUTATION_STEPS[computation_step_idx..] {
-            unit = step.run(shared_state, vessel, unit).await?;
-        }
-
-        updates.push(TripUpdate {
-            trip_id: t.trip_id,
-            precision: unit.precision_outcome,
-            distance: unit.distance_output,
-            positions: unit.positions,
-            position_layers_output: unit.position_layers_output,
-        });
-    }
-
-    Ok(updates)
 }
