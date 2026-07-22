@@ -17,6 +17,8 @@ impl TripComputationStep for TripPrecisionStep {
         mut unit: TripProcessingUnit,
     ) -> Result<TripProcessingUnit> {
         if vessel.mmsi().is_none() && vessel.fiskeridir.call_sign.is_none() {
+            // We will loop process all trips from vessels without mmsi/call_sign if we do not set this to failed
+            unit.precision_outcome = Some(PrecisionOutcome::Failed);
             return Ok(unit);
         }
 
