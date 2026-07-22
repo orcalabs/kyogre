@@ -1389,7 +1389,10 @@ FROM
         FROM
             trips t
             INNER JOIN fishing_facilities f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-            AND f.period && t.period
+            AND (
+                t.period @> f.setup_timestamp
+                OR t.period @> f.removed_timestamp
+            )
         WHERE
             t.trip_id = ANY ($1::BIGINT[])
         GROUP BY
