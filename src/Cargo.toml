@@ -55,18 +55,18 @@ enum_index = "0.2"
 enum_index_derive = "0.2"
 uuid = { version = "1.12", features = ["serde"] }
 wkt = { version = "0.14", features = ["serde"] }
-geo = "0.32"
+geo = "0.33"
 rand = "0.10"
 num-traits = "0.2"
-num-derive = "0.4"
-pyo3 = { version = "0.28", features = ["chrono", "auto-initialize"] }
+num-derive = "0.5.1"
+pyo3 = { version = "0.29", features = ["chrono", "auto-initialize"] }
 csv = "1.3"
 jurisdiction = "0.1"
 http = "1.2"
 geozero = { version = "0.15", features = ["with-postgis-sqlx"] }
 geoutils = "0.5"
 async-channel = "2.3.1"
-itertools = "0.14.0"
+itertools = "0.15.0"
 
 # dev-dependencies
 wiremock = "0.6"
