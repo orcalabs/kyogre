@@ -160,7 +160,16 @@ ORDER BY
         sqlx::query!(
             r#"
 SELECT
-    add_vms_position_partitions ($1)
+    add_vms_position_partitions (COALESCE(ARRAY_AGG(call_sign), '{}'))
+FROM
+    UNNEST($1::TEXT[]) AS call_sign
+WHERE
+    EXISTS (
+        SELECT
+            TRUE
+        WHERE
+            TO_REGCLASS(FORMAT('vms_positions_%s', call_sign)) IS NULL
+    )
             "#,
             &call_signs_unique as &[&str],
         )

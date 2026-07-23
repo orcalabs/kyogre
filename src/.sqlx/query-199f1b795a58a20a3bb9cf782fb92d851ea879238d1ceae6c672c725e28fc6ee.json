@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    add_vms_position_partitions (COALESCE(ARRAY_AGG(call_sign), '{}'))\nFROM\n    UNNEST($1::TEXT[]) AS call_sign\nWHERE\n    EXISTS (\n        SELECT\n            TRUE\n        WHERE\n            TO_REGCLASS(FORMAT('vms_positions_%s', call_sign)) IS NULL\n    )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "add_vms_position_partitions",
+        "type_info": "Void"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "199f1b795a58a20a3bb9cf782fb92d851ea879238d1ceae6c672c725e28fc6ee"
+}
