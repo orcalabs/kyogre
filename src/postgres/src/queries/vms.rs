@@ -75,7 +75,6 @@ ORDER BY
     pub(crate) async fn add_vms_impl(&self, vms: Vec<fiskeridir_rs::Vms>) -> Result<()> {
         let mut call_signs_unique = HashSet::new();
         let mut vms_unique: HashMap<(&str, DateTime<Utc>), NewVmsPosition<'_>> = HashMap::new();
-        let mut vms_earliest: HashMap<&str, DateTime<Utc>> = HashMap::new();
         let mut current_positions: HashMap<&str, NewVmsCurrentPosition<'_>> = HashMap::new();
 
         let speed_threshold = 0.001;
@@ -85,15 +84,6 @@ ORDER BY
             }
 
             let call_sign = v.call_sign.as_ref();
-
-            vms_earliest
-                .entry(call_sign)
-                .and_modify(|e| {
-                    if *e > v.timestamp {
-                        *e = v.timestamp;
-                    }
-                })
-                .or_insert(v.timestamp);
 
             call_signs_unique.insert(call_sign);
 
@@ -143,17 +133,9 @@ ORDER BY
         }
 
         let call_signs_unique = call_signs_unique.into_iter().collect::<Vec<_>>();
-        let vms_earliest = vms_earliest.into_iter().flat_map(|(call_sign, timestamp)| {
-            EarliestVmsUsedBy::iter().map(move |used_by| EarliestVms {
-                call_sign,
-                timestamp,
-                used_by,
-            })
-        });
 
         let mut tx = self.pool.begin().await?;
 
-        self.unnest_insert(vms_earliest, &mut *tx).await?;
         self.unnest_insert(current_positions.into_values(), &mut *tx)
             .await?;
 
@@ -176,13 +158,38 @@ WHERE
         .execute(&mut *tx)
         .await?;
 
-        let inserted = self
-            .unnest_insert_returning(vms_unique.into_values(), &mut *tx)
-            .map_ok(|v| (v.call_sign, v.timestamp.date_naive()))
-            .try_collect::<HashSet<_>>()
+        let mut vms_earliest = HashMap::<String, DateTime<Utc>>::new();
+        let mut call_sign_dates = HashSet::new();
+
+        self.unnest_insert_returning(vms_unique.into_values(), &mut *tx)
+            .try_for_each(|v| {
+                match vms_earliest.get_mut(&v.call_sign) {
+                    Some(t) => {
+                        *t = (*t).min(v.timestamp);
+                    }
+                    None => {
+                        vms_earliest.insert(v.call_sign.clone(), v.timestamp);
+                    }
+                };
+
+                call_sign_dates.insert((v.call_sign, v.timestamp.date_naive()));
+
+                futures::future::ready(Ok(()))
+            })
             .await?;
 
-        let (call_signs, dates): (Vec<String>, Vec<NaiveDate>) = inserted.into_iter().unzip();
+        let vms_earliest = vms_earliest.iter().flat_map(|(call_sign, &timestamp)| {
+            EarliestVmsUsedBy::iter().map(move |used_by| EarliestVms {
+                call_sign,
+                timestamp,
+                used_by,
+            })
+        });
+
+        self.unnest_insert(vms_earliest, &mut *tx).await?;
+
+        let (call_signs, dates): (Vec<String>, Vec<NaiveDate>) =
+            call_sign_dates.into_iter().unzip();
 
         sqlx::query!(
             r#"
