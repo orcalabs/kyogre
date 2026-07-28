@@ -443,7 +443,7 @@ SELECT
         WHERE
             f.fiskeridir_vessel_id = $1
             AND (
-                f.removed_timestamp IS NULL
+                f.setup_timestamp > d.departure_timestamp
                 OR f.removed_timestamp > d.departure_timestamp
             )
     ) AS "fishing_facilities!"
