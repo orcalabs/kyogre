@@ -882,35 +882,47 @@ RETURNING
 WITH
     overlapping AS (
         SELECT
-            ANY_VALUE (q.haul_id) AS haul_id,
-            q.user_haul_id
+            h.haul_id,
+            u.user_haul_id
         FROM
             (
                 SELECT
-                    h.haul_id,
-                    ANY_VALUE (u.user_haul_id) AS user_haul_id,
-                    EXTRACT(
-                        EPOCH
-                        FROM
-                            (
-                                UPPER(h.period * ANY_VALUE (u.period)) - LOWER(h.period * ANY_VALUE (u.period))
-                            )
-                    ) AS overlap
+                    u.user_haul_id,
+                    u.period,
+                    u.fiskeridir_vessel_id
                 FROM
                     user_hauls u
-                    INNER JOIN hauls h ON h.period && u.period
-                    AND u.fiskeridir_vessel_id = h.fiskeridir_vessel_id
+                    INNER JOIN hauls h ON (
+                        h.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+                        AND u.period && h.period
+                    )
                 WHERE
-                    u.user_haul_id = ANY ($1::INT[])
+                    u.fiskeridir_vessel_id = $1
+                    AND u.end_ts >= $2
+                GROUP BY
+                    u.user_haul_id
+                HAVING
+                    COUNT(h.haul_id) = 1
+            ) u
+            INNER JOIN (
+                SELECT
+                    h.haul_id,
+                    h.period,
+                    h.fiskeridir_vessel_id
+                FROM
+                    hauls h
+                    INNER JOIN user_hauls u ON (
+                        h.fiskeridir_vessel_id = u.fiskeridir_vessel_id
+                        AND u.period && h.period
+                    )
+                WHERE
+                    h.fiskeridir_vessel_id = $1
+                    AND h.stop_timestamp >= $2
                 GROUP BY
                     h.haul_id
                 HAVING
-                    COUNT(DISTINCT u.user_haul_id) = 1
-            ) q
-        GROUP BY
-            q.user_haul_id
-        HAVING
-            COUNT(DISTINCT q.haul_id) = 1
+                    COUNT(u.user_haul_id) = 1
+            ) h ON h.period && u.period
     )
 UPDATE user_hauls u
 SET
@@ -920,8 +932,9 @@ FROM
     overlapping o
 WHERE
     o.user_haul_id = u.user_haul_id
-        "#,
-            &user_haul_ids
+            "#,
+            vessel_id as FiskeridirVesselId,
+            timestamp,
         )
         .execute(&mut **tx)
         .await?;
@@ -952,7 +965,7 @@ FROM
     overlapping o
 WHERE
     o.user_haul_id = u.user_haul_id
-        "#,
+            "#,
             &user_haul_ids
         )
         .execute(&mut **tx)
