@@ -16,6 +16,8 @@ use std::ops::Bound;
 
 impl PostgresAdapter {
     pub(crate) async fn try_vms_for_user_hauls_without_start_coordinates(&self) -> Result<()> {
+        let mut tx = self.no_plan_cache_pool().begin().await?;
+
         let call_signs = sqlx::query!(
             r#"
 SELECT
@@ -28,7 +30,7 @@ WHERE
     AND start_longitude IS NULL
             "#
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&mut *tx)
         .await?
         .call_signs;
 
@@ -37,7 +39,7 @@ WHERE
         }
 
         for c in call_signs {
-            sqlx::query!(
+            let to_update = sqlx::query!(
                 r#"
 WITH
     to_update AS (
@@ -77,21 +79,47 @@ WITH
             AND start_latitude IS NULL
             AND start_longitude IS NULL
             AND u.call_sign = $1
+    ),
+    updated AS (
+        UPDATE user_hauls h
+        SET
+            start_longitude = q.longitude,
+            start_latitude = q.latitude
+        FROM
+            to_update q
+        WHERE
+            h.user_haul_id = q.user_haul_id
+        RETURNING
+            h.start_ts,
+            h.end_ts,
+            h.fiskeridir_vessel_id
     )
-UPDATE user_hauls h
-SET
-    start_longitude = q.longitude,
-    start_latitude = q.latitude
+SELECT
+    MAX(end_ts) AS "max_ts!",
+    MIN(start_ts) AS "min_ts!",
+    fiskeridir_vessel_id AS "vessel_id: FiskeridirVesselId"
 FROM
-    to_update q
-WHERE
-    h.user_haul_id = q.user_haul_id
+    updated
+GROUP BY
+    fiskeridir_vessel_id
             "#,
                 c
             )
-            .execute(self.no_plan_cache_pool())
+            .fetch_optional(&mut *tx)
             .await?;
+
+            if let Some(to_update) = to_update {
+                self.set_user_haul_refresh_boundary(
+                    to_update.vessel_id,
+                    to_update.min_ts,
+                    to_update.max_ts,
+                    &mut tx,
+                )
+                .await?;
+            }
         }
+
+        tx.commit().await?;
 
         Ok(())
     }

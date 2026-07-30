@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    to_update AS (\n        SELECT\n            u.user_haul_id,\n            q.latitude,\n            q.longitude\n        FROM\n            user_hauls u\n            INNER JOIN LATERAL (\n                SELECT\n                    latitude,\n                    longitude,\n                    call_sign\n                FROM\n                    vms_positions v\n                WHERE\n                    v.call_sign = $1\n                    AND v.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts  + INTERVAL '5 minutes'\n                ORDER BY\n                    ABS(\n                        EXTRACT(\n                            EPOCH\n                            FROM\n                                v.timestamp\n                        ) - EXTRACT(\n                            EPOCH\n                            FROM\n                                u.start_ts\n                        )\n                    )\n                LIMIT\n                    1\n            ) q ON TRUE\n        WHERE\n            end_ts IS NOT NULL\n            AND start_latitude IS NULL\n            AND start_longitude IS NULL\n            AND u.call_sign = $1\n    ),\n    updated AS (\n        UPDATE user_hauls h\n        SET\n            start_longitude = q.longitude,\n            start_latitude = q.latitude\n        FROM\n            to_update q\n        WHERE\n            h.user_haul_id = q.user_haul_id\n        RETURNING\n            h.start_ts,\n            h.end_ts,\n            h.fiskeridir_vessel_id\n    )\nSELECT\n    MAX(end_ts) AS \"max_ts!\",\n    MIN(start_ts) AS \"min_ts!\",\n    fiskeridir_vessel_id AS \"vessel_id: FiskeridirVesselId\"\nFROM\n    updated\nGROUP BY\n    fiskeridir_vessel_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "max_ts!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 1,
+        "name": "min_ts!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "vessel_id: FiskeridirVesselId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "e03016cd45602c4e576968702f321fb0ee83b4eaa483782cc4d78ce5a75f4944"
+}
