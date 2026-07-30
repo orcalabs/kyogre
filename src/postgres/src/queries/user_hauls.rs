@@ -15,6 +15,86 @@ use sqlx::{PgTransaction, postgres::types::PgRange};
 use std::ops::Bound;
 
 impl PostgresAdapter {
+    pub(crate) async fn try_vms_for_user_hauls_without_start_coordinates(&self) -> Result<()> {
+        let call_signs = sqlx::query!(
+            r#"
+SELECT
+    COALESCE(ARRAY_AGG(DISTINCT call_sign), '{}') AS "call_signs!"
+FROM
+    user_hauls
+WHERE
+    end_ts IS NOT NULL
+    AND start_latitude IS NULL
+    AND start_longitude IS NULL
+            "#
+        )
+        .fetch_one(&self.pool)
+        .await?
+        .call_signs;
+
+        if call_signs.is_empty() {
+            return Ok(());
+        }
+
+        for c in call_signs {
+            sqlx::query!(
+                r#"
+WITH
+    to_update AS (
+        SELECT
+            u.user_haul_id,
+            q.latitude,
+            q.longitude
+        FROM
+            user_hauls u
+            INNER JOIN LATERAL (
+                SELECT
+                    latitude,
+                    longitude,
+                    call_sign
+                FROM
+                    vms_positions v
+                WHERE
+                    v.call_sign = $1
+                    AND v.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts  + INTERVAL '5 minutes'
+                ORDER BY
+                    ABS(
+                        EXTRACT(
+                            EPOCH
+                            FROM
+                                v.timestamp
+                        ) - EXTRACT(
+                            EPOCH
+                            FROM
+                                u.start_ts
+                        )
+                    )
+                LIMIT
+                    1
+            ) q ON TRUE
+        WHERE
+            end_ts IS NOT NULL
+            AND start_latitude IS NULL
+            AND start_longitude IS NULL
+            AND u.call_sign = $1
+    )
+UPDATE user_hauls h
+SET
+    start_longitude = q.longitude,
+    start_latitude = q.latitude
+FROM
+    to_update q
+WHERE
+    h.user_haul_id = q.user_haul_id
+            "#,
+                c
+            )
+            .execute(self.no_plan_cache_pool())
+            .await?;
+        }
+
+        Ok(())
+    }
     pub(crate) async fn refresh_user_haul_mappings_impl(&self) -> Result<()> {
         let mut tx = self.pool.begin().await?;
 

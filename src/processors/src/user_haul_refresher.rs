@@ -49,6 +49,11 @@ static RUN_INTERVAL: Duration = Duration::from_secs(10);
 ///   The scraper has to scrape the DEP messages to create the current trip and the Trips state runs
 ///   after scrape, so the delay from scrape to the creation of the current trip is not that long
 ///   (and we could not create the current trip anyway as we lack the DEP message).
+///
+///   Start coordinates of user_hauls are set at creation (stop_user_haul) and during updates
+///   (update_user_haul). The closest AIS position within 5 minutes before or after is set as the
+///   start point. If no positions could be found (outside AIS range at the time of hauling) we will
+///   continuously try to find a VMS position that is within the same bounds
 
 #[derive(Clone)]
 pub struct UserHaulRefresher {
@@ -118,6 +123,9 @@ impl UserHaulRefresher {
 
         self.adapter.update_user_haul_distances(updates).await?;
         self.adapter.refresh_user_haul_mappings().await?;
+        self.adapter
+            .try_vms_for_user_hauls_without_start_coordinates()
+            .await?;
 
         Ok(())
     }

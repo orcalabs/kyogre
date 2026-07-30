@@ -1353,6 +1353,12 @@ impl TripPipelineOutbound for PostgresAdapter {
 
 #[async_trait]
 impl UserHaulsRefresher for PostgresAdapter {
+    async fn try_vms_for_user_hauls_without_start_coordinates(&self) -> CoreResult<()> {
+        self.try_vms_for_user_hauls_without_start_coordinates()
+            .await?;
+        Ok(())
+    }
+
     async fn refresh_user_haul_mappings(&self) -> CoreResult<()> {
         self.refresh_user_haul_mappings_impl().await?;
         Ok(())
