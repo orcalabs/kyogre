@@ -16,8 +16,10 @@ use sqlx::{
     types::chrono::NaiveDate,
 };
 
+mod statistics;
 mod user_haul;
 
+pub use statistics::*;
 pub use user_haul::*;
 
 #[derive(Debug, Clone)]

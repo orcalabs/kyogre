@@ -12,7 +12,7 @@ postgres = { path = "../../../src/postgres", features = ["test"] }
 
 chrono = "0.4"
 anyhow = "1.0.96"
-calamine = { version = "0.35.0", features = ["chrono", "dates"] }
+calamine = { version = "0.36.1", features = ["chrono", "dates"] }
 serde = { version = "1.0.218", features = ["derive"] }
 sqlx = { version = "0.8", features = [
     "runtime-tokio-rustls",
@@ -23,3 +23,6 @@ sqlx = { version = "0.8", features = [
 tokio = { version = "1.43.0", features = ["full"] }
 clap = { version = "4.5", features = ["derive"] }
 futures = "0.3.32"
+strum = { version = "0.28.0", features = ["derive"] }
+geoutils = "0.5"
+plotters = "0.3.7"
