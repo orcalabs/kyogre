@@ -204,12 +204,7 @@ impl Score {
 
         let n = diffs.len() as f64;
         let mean = diffs.iter().sum::<f64>() / n;
-        let sd = (diffs
-            .iter()
-            .map(|v| ((v - mean).abs().powf(2.)))
-            .sum::<f64>()
-            / n)
-            .sqrt();
+        let sd = (diffs.iter().map(|v| (v - mean).abs().powf(2.)).sum::<f64>() / n).sqrt();
 
         assert!(mean >= 0., "mean: {mean}");
         assert!(sd >= 0., "sd: {sd}");

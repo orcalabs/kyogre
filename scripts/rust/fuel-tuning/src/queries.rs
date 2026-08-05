@@ -32,7 +32,7 @@ SELECT
     f.boiler_engine_building_year AS boil_engine_building_year,
     f.engine_type_manual AS "engine_type: EngineType",
     f.engine_rpm_manual AS "engine_rpm",
-    av.ship_width as breadth,
+    av.ship_width AS breadth,
     av.draught AS "draught: Draught",
     COALESCE(f.length, av.ship_length) AS length
 FROM
@@ -218,7 +218,7 @@ ORDER BY
         vessel.id.into_inner(),
         range.start(),
         range.end(),
-        &GearGroup::active_int(),
+        GearGroup::active() as &[GearGroup],
         vessel.mmsi as Option<Mmsi>,
         vessel.call_sign.as_ref() as Option<&CallSign>,
     )
@@ -289,7 +289,7 @@ ORDER BY
         "#,
         vessel.id.into_inner(),
         PgRange::from(&range),
-        &GearGroup::active_int(),
+        GearGroup::active() as &[GearGroup],
     )
     .fetch_all(pool)
     .await

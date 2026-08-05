@@ -21,7 +21,7 @@ use tracing::{error, info, instrument, warn};
 
 static RUN_INTERVAL: Duration = Duration::hours(5);
 static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
-static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
+pub static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
 
 mod holtrop;
 mod normal;
@@ -104,19 +104,21 @@ pub trait FuelComputation: Send + Sync + 'static {
         (second.timestamp - first.timestamp).num_milliseconds()
     }
     fn speed_knots(&self, first: &FuelItem, second: &FuelItem, time_ms: u64) -> Option<f64> {
-        let time_secs = time_ms as f64 / 1000.0;
-        let first_loc = Location::new(first.latitude, first.longitude);
-        let second_loc = Location::new(second.latitude, second.longitude);
+        match (first.speed, second.speed) {
+            (Some(a), Some(b)) => Some((a + b) / 2.),
+            (Some(a), None) => Some(a),
+            (None, Some(b)) => Some(b),
+            (None, None) => {
+                let time_secs = time_ms as f64 / 1000.0;
+                let first_loc = Location::new(first.latitude, first.longitude);
+                let second_loc = Location::new(second.latitude, second.longitude);
 
-        match first_loc.distance_to(&second_loc) {
-            Ok(v) => Some((v.meters() / time_secs) * METER_PER_SECONDS_TO_KNOTS),
-            Err(e) => {
-                warn!("failed to calculate distance: {e:?}");
-                match (first.speed, second.speed) {
-                    (Some(a), Some(b)) => Some((a + b) / 2.),
-                    (Some(a), None) => Some(a),
-                    (None, Some(b)) => Some(b),
-                    (None, None) => None,
+                match first_loc.distance_to(&second_loc) {
+                    Ok(v) => Some((v.meters() / time_secs) * METER_PER_SECONDS_TO_KNOTS),
+                    Err(e) => {
+                        warn!("failed to calculate distance: {e:?}");
+                        None
+                    }
                 }
             }
         }

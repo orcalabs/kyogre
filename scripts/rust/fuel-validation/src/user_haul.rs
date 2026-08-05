@@ -2,13 +2,26 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::Gear;
 use futures::{StreamExt, TryStreamExt, future};
+use geoutils::Location;
 use kyogre_core::{
     AisPermission, AisVmsParams, AisVmsPosition, DateRange, FiskeridirVesselId, Vessel,
     WebApiOutboundPort,
 };
 use orca_core::{PsqlLogStatements, PsqlSettings};
+use plotters::{
+    backend::BitMapBackend,
+    chart::{ChartBuilder, LabelAreaPosition},
+    drawing::IntoDrawingArea,
+    element::Rectangle,
+    series::LineSeries,
+    style::{AsRelative, BLACK, Color, Palette, Palette99, WHITE},
+};
 use postgres::PostgresAdapter;
-use processors::{FuelImpl, FuelImplDiscriminants, VesselFuelInfo, estimate_fuel};
+use processors::{
+    FuelImpl, FuelImplDiscriminants, METER_PER_SECONDS_TO_KNOTS, VesselFuelInfo, estimate_fuel,
+};
+
+use crate::print_mean_and_sd;
 
 pub async fn run_hera() -> Result<()> {
     let vessel_id = FiskeridirVesselId::new(2001015304);
@@ -48,10 +61,66 @@ pub async fn run_hera_hauls(adapter: &PostgresAdapter, vessel: &Vessel) -> Resul
     let mmsi = vessel.mmsi().unwrap();
     let call_sign = vessel.fiskeridir_call_sign().unwrap();
 
-    let user_hauls = adapter.user_hauls(call_sign).await?;
+    // let user_hauls = adapter.user_hauls(call_sign).await?;
+
+    let user_hauls = sqlx::query!(
+        r#"
+SELECT
+    start_ts AS "start_ts!",
+    end_ts AS "end_ts!",
+    start_fuel_liter,
+    end_fuel_liter AS "end_fuel_liter!"
+FROM
+    (
+        SELECT
+            GREATEST(u.start_ts, h.start_timestamp) - LEAST(u.start_ts, h.start_timestamp) AS start_diff,
+            GREATEST(u.end_ts, h.stop_timestamp) - LEAST(u.end_ts, h.stop_timestamp) AS end_diff,
+            u.user_haul_id,
+            u.haul_id,
+            u.start_ts,
+            u.end_ts,
+            u.start_fuel_liter,
+            u.end_fuel_liter,
+            h.start_timestamp,
+            h.stop_timestamp
+        FROM
+            user_hauls u
+            LEFT JOIN hauls h ON h.haul_id = u.haul_id
+        WHERE
+            u.call_sign = $1
+            AND u.end_ts IS NOT NULL
+            AND h.haul_id IS NOT NULL
+    )
+WHERE
+    start_diff + end_diff < interval '10 minutes'
+    AND start_fuel_liter - end_fuel_liter > 500
+    AND start_fuel_liter - end_fuel_liter < 10000
+        "#,
+        call_sign,
+    )
+    .fetch_all(&adapter.pool)
+    .await?;
 
     let mut diffs = Vec::with_capacity(user_hauls.len());
     let mut diffs2 = Vec::with_capacity(user_hauls.len());
+    let mut res = Vec::with_capacity(user_hauls.len());
+
+    let root = BitMapBackend::new("./plot.png", (3840, 2160)).into_drawing_area();
+    root.fill(&WHITE)?;
+
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Haul Speeds", ("sans-serif", (5).percent_height()))
+        .set_label_area_size(LabelAreaPosition::Left, (8).percent())
+        .set_label_area_size(LabelAreaPosition::Bottom, (4).percent())
+        .margin((1).percent())
+        .build_cartesian_2d(0f64..1f64, 0f64..10f64)?;
+
+    chart
+        .configure_mesh()
+        .label_style(("sans-serif", (2).percent_height()))
+        .y_desc("Speed (knots)")
+        .x_desc("Time %")
+        .draw()?;
 
     for (i, haul) in user_hauls.into_iter().enumerate() {
         let mut track = adapter
@@ -70,6 +139,41 @@ pub async fn run_hera_hauls(adapter: &PostgresAdapter, vessel: &Vessel) -> Resul
             .try_collect::<Vec<_>>()
             .await?;
 
+        let mut speeds = Vec::with_capacity(track.len());
+        let mut speed_times = Vec::with_capacity(track.len());
+
+        let mut iter = track.iter();
+        let Some(mut prev) = iter.next() else {
+            continue;
+        };
+
+        for next in iter {
+            let secs = (next.timestamp - prev.timestamp).as_seconds_f64();
+            if secs <= 0. {
+                continue;
+            }
+
+            let prev_loc = Location::new(prev.latitude, prev.longitude);
+            let next_loc = Location::new(next.latitude, next.longitude);
+
+            let speed = match (prev.speed, next.speed) {
+                (Some(a), Some(b)) => (a + b) / 2.,
+                (Some(a), None) => a,
+                (None, Some(b)) => b,
+                (None, None) => match prev_loc.distance_to(&next_loc) {
+                    Ok(v) => (v.meters() / secs) * METER_PER_SECONDS_TO_KNOTS,
+                    Err(_) => continue,
+                },
+            };
+
+            speeds.push(speed);
+            speed_times.push((prev.timestamp, speed));
+            prev = next;
+        }
+
+        // println!("\nDiff Percent (knots)");
+        // print_mean_and_sd(&speeds);
+
         let vessel = VesselFuelInfo::from_core(vessel, None, FuelImplDiscriminants::Maru);
         let mut fuel_impl = FuelImpl::new(&vessel);
         let fuel_estimate = estimate_fuel(&mut fuel_impl, &mut track, &vessel);
@@ -83,7 +187,7 @@ pub async fn run_hera_hauls(adapter: &PostgresAdapter, vessel: &Vessel) -> Resul
         let ais = fuel_estimate.num_ais_positions;
         let vms = fuel_estimate.num_vms_positions;
 
-        let haul_usage_per_sec = 13_000. / (24. * 60. * 60.);
+        let haul_usage_per_sec = 12_000. / (24. * 60. * 60.);
         let haul_usage = haul_usage_per_sec * (haul.end_ts - haul.start_ts).as_seconds_f64();
         let haul_usage_diff = haul_usage - fuel;
         let haul_usage_diff_percent = haul_usage_diff * 100. / fuel;
@@ -91,33 +195,48 @@ pub async fn run_hera_hauls(adapter: &PostgresAdapter, vessel: &Vessel) -> Resul
         diffs.push(diff_percent.abs());
         diffs2.push(haul_usage_diff_percent.abs());
 
-        println!(
-            "Haul {id}, Duration: {duration:.1}H, Fuel: {fuel:.0}L, Estimate: {estimate:.0}L, Diff: {diff:.0}L ({diff_percent:.0}%), AIS: {ais}, VMS: {vms} -- {haul_usage:.1} {haul_usage_diff:.0}L ({haul_usage_diff_percent:.0}%)"
-        );
+        let color = Palette99::pick(i);
+        chart
+            .draw_series(LineSeries::new(
+                speed_times.iter().map(|(time, speed)| {
+                    (
+                        (*time - haul.start_ts).as_seconds_f64() / 3600. / duration,
+                        *speed,
+                    )
+                }),
+                color.stroke_width(3),
+            ))?
+            .label(format!("Haul {id}"))
+            .legend(move |(x, y)| Rectangle::new([(x, y - 5), (x + 10, y + 5)], color.filled()));
+
+        res.push((
+            diff_percent.abs(),
+            format!(
+                "Haul {id}, Duration: {duration:.1}H, Fuel: {fuel:.0}L, Estimate: {estimate:.0}L, Diff: {diff:.0}L ({diff_percent:.0}%), AIS: {ais}, VMS: {vms} -- {haul_usage:.1} {haul_usage_diff:.0}L ({haul_usage_diff_percent:.0}%)"
+            ),
+        ));
     }
 
-    let n = diffs.len() as f64;
-    let mean = diffs.iter().sum::<f64>() / n;
+    res.sort_by(|(a, _), (b, _)| b.total_cmp(a));
 
-    let sd = (diffs.iter().map(|v| (v - mean).abs().powf(2.)).sum::<f64>() / n).sqrt();
+    for (_, v) in res {
+        println!("{v}");
+    }
 
-    println!();
-    println!("Mean diff percent: {mean:.0}");
-    println!("SD:                {sd:.2}");
+    println!("\nDiff Percent (estimate)");
+    print_mean_and_sd(&diffs);
 
-    let n = diffs2.len() as f64;
-    let mean = diffs2.iter().sum::<f64>() / n;
+    println!("\nDiff Percent (liters/day)");
+    print_mean_and_sd(&diffs2);
 
-    let sd = (diffs2
-        .iter()
-        .map(|v| (v - mean).abs().powf(2.))
-        .sum::<f64>()
-        / n)
-        .sqrt();
+    chart
+        .configure_series_labels()
+        .border_style(BLACK)
+        .label_font(("sans-serif", (2).percent_height()))
+        .legend_area_size((5).percent_height())
+        .draw()?;
 
-    println!();
-    println!("Mean diff percent: {mean:.0}");
-    println!("SD:                {sd:.2}");
+    root.present()?;
 
     Ok(())
 }
@@ -127,7 +246,7 @@ pub async fn run_hera_steaming(adapter: &PostgresAdapter, vessel: &Vessel) -> Re
     let call_sign = vessel.fiskeridir_call_sign().unwrap();
 
     let speed = 10_f64;
-    let start = "2026-05-01T00:00:00Z".parse::<DateTime<Utc>>()?;
+    let start = "2026-01-01T00:00:00Z".parse::<DateTime<Utc>>()?;
 
     let mut ranges = sqlx::query!(
         r#"
@@ -204,21 +323,15 @@ WHERE
         diffs.push(diff_percent.abs());
 
         println!(
-            "Haul {id}, Duration: {duration:.1}H, Estimate: {estimate:.0}L, Ballpark: {steaming_usage:.1}L, Diff: {diff:.0}L ({diff_percent:.0}%), AIS: {ais}, VMS: {vms}"
+            "Steaming {id}, Duration: {duration:.1}H, Estimate: {estimate:.0}L, Ballpark: {steaming_usage:.1}L, Diff: {diff:.0}L ({diff_percent:.0}%), AIS: {ais}, VMS: {vms}"
         );
 
         id += 1;
         prev = Some(range.start);
     }
 
-    let n = diffs.len() as f64;
-    let mean = diffs.iter().sum::<f64>() / n;
-
-    let sd = (diffs.iter().map(|v| (v - mean).abs().powf(2.)).sum::<f64>() / n).sqrt();
-
-    println!();
-    println!("Mean diff percent: {mean:.0}");
-    println!("SD:                {sd:.2}");
+    println!("\nDiff Percent");
+    print_mean_and_sd(&diffs);
 
     Ok(())
 }

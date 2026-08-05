@@ -20,7 +20,7 @@ use tracing::{error, info, instrument, warn};
 
 #[derive(Debug, Clone)]
 pub struct PostgresAdapter {
-    pub(crate) pool: PgPool,
+    pub pool: PgPool,
     no_plan_cache_pool: Option<PgPool>,
     pub(crate) ignored_conflict_call_signs: Vec<String>,
     pub(crate) environment: Environment,
