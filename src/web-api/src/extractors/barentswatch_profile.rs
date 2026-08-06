@@ -250,7 +250,16 @@ impl FromRequest for OptionBwProfile {
         payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
         let fut = BwProfile::from_request(req, payload);
-        Box::pin(async move { Ok(Self(fut.await.ok())) })
+        Box::pin(async move {
+            match fut.await {
+                Ok(profile) => Ok(Self(Some(profile))),
+                // A missing token means the user is anonymous; all other extraction
+                // failures (invalid/expired token, profile fetch errors) are real auth
+                // failures and should be propagated instead of being silently downgraded.
+                Err(Error::MissingJWT { .. }) => Ok(Self(None)),
+                Err(e) => Err(e),
+            }
+        })
     }
 }
 
