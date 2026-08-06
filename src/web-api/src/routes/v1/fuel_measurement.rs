@@ -58,17 +58,7 @@ pub async fn create_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<CreateFuelMeasurement>>,
 ) -> Result<Response<Vec<FuelMeasurement>>> {
     let body = body.into_inner();
-    if let Some((fuel_after_liter, fuel_liter)) = body
-        .iter()
-        .filter_map(|b| b.fuel_after_liter.map(|a| (a, b.fuel_liter)))
-        .find(|v| v.0 <= v.1)
-    {
-        return FuelAfterLowerThanFuelSnafu {
-            fuel_after_liter,
-            fuel_liter,
-        }
-        .fail();
-    };
+    validate_fuel_after_fuel(&body)?;
 
     let user_id = profile.user.id;
     let call_sign = profile.call_sign(db.as_ref()).await?;
@@ -106,6 +96,8 @@ pub async fn upload_fuel_measurements<T: Database + 'static>(
         })
         .collect::<Vec<_>>();
 
+    validate_fuel_after_fuel(&measurements)?;
+
     let measurements = db
         .add_fuel_measurements(&measurements, &call_sign, user_id)
         .await?;
@@ -121,17 +113,7 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
     body: web::Json<Vec<FuelMeasurement>>,
 ) -> Result<Response<()>> {
     let body = body.into_inner();
-    if let Some((fuel_after_liter, fuel_liter)) = body
-        .iter()
-        .filter_map(|b| b.fuel_after_liter.map(|a| (a, b.fuel_liter)))
-        .find(|v| v.0 <= v.1)
-    {
-        return FuelAfterLowerThanFuelSnafu {
-            fuel_after_liter,
-            fuel_liter,
-        }
-        .fail();
-    };
+    validate_fuel_after_fuel(&body)?;
 
     let user_id = profile.user.id;
     let call_sign = profile.call_sign(db.as_ref()).await?;
@@ -171,6 +153,45 @@ impl FuelMeasurementsParams {
             offset,
         }
     }
+}
+
+trait FuelAfterFuel {
+    fn fuel_liter(&self) -> f64;
+    fn fuel_after_liter(&self) -> Option<f64>;
+}
+
+impl FuelAfterFuel for CreateFuelMeasurement {
+    fn fuel_liter(&self) -> f64 {
+        self.fuel_liter
+    }
+    fn fuel_after_liter(&self) -> Option<f64> {
+        self.fuel_after_liter
+    }
+}
+
+impl FuelAfterFuel for FuelMeasurement {
+    fn fuel_liter(&self) -> f64 {
+        self.fuel_liter
+    }
+    fn fuel_after_liter(&self) -> Option<f64> {
+        self.fuel_after_liter
+    }
+}
+
+fn validate_fuel_after_fuel<T: FuelAfterFuel>(measurements: &[T]) -> Result<()> {
+    if let Some((fuel_after_liter, fuel_liter)) = measurements
+        .iter()
+        .filter_map(|b| b.fuel_after_liter().map(|a| (a, b.fuel_liter())))
+        .find(|v| v.0 <= v.1)
+    {
+        return FuelAfterLowerThanFuelSnafu {
+            fuel_after_liter,
+            fuel_liter,
+        }
+        .fail();
+    }
+
+    Ok(())
 }
 
 pub fn deserialize_norwegian_timestamp<'de, D>(

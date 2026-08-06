@@ -307,10 +307,7 @@ SELECT
 FROM
     ranked_data
 WHERE
-    (
-        percent <= 0.95
-        OR percent >= 0.05
-    )
+    percent BETWEEN 0.05 AND 0.95
     OR (
         SELECT
             COUNT(*)
@@ -385,10 +382,7 @@ SELECT
 FROM
     ranked_data
 WHERE
-    (
-        percent <= 0.95
-        OR percent >= 0.05
-    )
+    percent BETWEEN 0.05 AND 0.95
     OR (
         SELECT
             COUNT(*)

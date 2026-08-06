@@ -29,7 +29,7 @@ impl WeeklySalesScraper {
 #[async_trait]
 impl DataSource for WeeklySalesScraper {
     fn id(&self) -> ScraperId {
-        ScraperId::FishingFacility
+        ScraperId::RafisklagetWeeklySales
     }
 
     async fn scrape(&self, processor: &dyn Processor) -> Result<(), Error> {
