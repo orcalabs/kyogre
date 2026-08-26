@@ -27,6 +27,7 @@ WITH
             INNER JOIN fuel_measurement_ranges f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
             AND f.fuel_range && t.period
             AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (f.fuel_range, t.period) >= 0.5
+            AND NOT f.is_reset
         WHERE
             t.trip_id = $1
     )

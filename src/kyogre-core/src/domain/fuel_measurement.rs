@@ -19,8 +19,6 @@ pub struct FuelMeasurement {
     pub timestamp: DateTime<Utc>,
     #[serde(rename = "fuel")]
     pub fuel_liter: f64,
-    #[serde(rename = "fuelAfter")]
-    pub fuel_after_liter: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -30,8 +28,6 @@ pub struct CreateFuelMeasurement {
     pub timestamp: DateTime<Utc>,
     #[serde(rename = "fuel")]
     pub fuel_liter: f64,
-    #[serde(rename = "fuelAfter")]
-    pub fuel_after_liter: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -46,6 +42,7 @@ pub struct FuelMeasurementRange {
     pub fuel_used_liter: f64,
     pub fuel_range: DateRange,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub is_reset: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -162,13 +162,6 @@ pub enum Error {
         #[snafu(source)]
         error: base64::DecodeError,
     },
-    #[snafu(display("An invalid Excel document was provided"))]
-    #[stack_error(opaque_std_from = [calamine::DeError, calamine::XlsxError])]
-    InvalidExcel {
-        #[snafu(implicit)]
-        location: Location,
-        opaque: OpaqueError,
-    },
     #[snafu(display("Query payload error"))]
     QueryPayload {
         #[snafu(implicit)]
@@ -211,7 +204,6 @@ impl ResponseError for Error {
             | QueryPayload
             | FuelAfterLowerThanFuel
             | Base64Decode
-            | InvalidExcel
             | CallSignDoesNotExist
             | CannotModifyActiveUserHaul
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
