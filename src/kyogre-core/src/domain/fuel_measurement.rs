@@ -1,3 +1,5 @@
+use crate::Bunkering;
+
 use super::DateRange;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::FiskeridirVesselId;
@@ -19,8 +21,15 @@ pub struct FuelMeasurement {
     pub timestamp: DateTime<Utc>,
     #[serde(rename = "fuel")]
     pub fuel_liter: f64,
-    #[serde(rename = "fuelAfter")]
-    pub fuel_after_liter: Option<f64>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[serde(tag = "type", content = "value")]
+#[serde(rename_all = "camelCase")]
+pub enum FuelMeasurementOrBunkering {
+    Bunkering(Bunkering),
+    FuelMeasurement(FuelMeasurement),
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -30,15 +39,6 @@ pub struct CreateFuelMeasurement {
     pub timestamp: DateTime<Utc>,
     #[serde(rename = "fuel")]
     pub fuel_liter: f64,
-    #[serde(rename = "fuelAfter")]
-    pub fuel_after_liter: Option<f64>,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
-#[serde(rename_all = "camelCase")]
-pub struct DeleteFuelMeasurement {
-    pub id: FuelMeasurementId,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,6 +46,7 @@ pub struct FuelMeasurementRange {
     pub fuel_used_liter: f64,
     pub fuel_range: DateRange,
     pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub is_reset: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -60,13 +61,15 @@ impl From<FuelMeasurementId> for i64 {
     }
 }
 
-#[cfg(feature = "test")]
-mod test {
-    use super::*;
+impl FuelMeasurementId {
+    /// Need to construct this in a query
+    pub fn new(value: i64) -> Self {
+        Self(value)
+    }
+}
 
-    impl FuelMeasurementId {
-        pub fn test_new(value: i64) -> Self {
-            Self(value)
-        }
+impl std::fmt::Display for FuelMeasurementId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }

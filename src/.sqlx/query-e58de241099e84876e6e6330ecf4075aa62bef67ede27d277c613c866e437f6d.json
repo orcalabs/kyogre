@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    TRUE AS bunkering_exists\nFROM\n    bunkerings\nWHERE\n    fiskeridir_vessel_id = $1\n    AND timestamp = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "bunkering_exists",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e58de241099e84876e6e6330ecf4075aa62bef67ede27d277c613c866e437f6d"
+}

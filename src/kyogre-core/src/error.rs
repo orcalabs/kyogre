@@ -1,4 +1,4 @@
-use crate::{IsTimeout, UserHaulId};
+use crate::{BunkeringId, FuelMeasurementId, IsTimeout, UserHaulId};
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, OrgId};
 use snafu::{Location, Snafu};
@@ -47,6 +47,10 @@ impl IsTimeout for std::io::Error {
 /// All objects that has a not found scenario.
 #[derive(Debug, Clone, strum::Display)]
 pub enum Object {
+    #[strum(to_string = "FuelMeasurement with id: '{0}' not found")]
+    FuelMeasurement(FuelMeasurementId),
+    #[strum(to_string = "Bunkering with id: '{0}' not found")]
+    Bunkering(BunkeringId),
     #[strum(to_string = "UserHaul with id: '{0}' for call_sign: '{1}' not found")]
     UserHaul(UserHaulId, CallSign),
     #[strum(to_string = "The org '{0}' was not found")]
@@ -87,6 +91,12 @@ pub enum WebApiError {
         location: Location,
         opaque: OpaqueError,
         call_sign: CallSign,
+    },
+    #[snafu(display("Bunkering at '{ts}' already exists"))]
+    BunkeringAlreadyExists {
+        #[snafu(implicit)]
+        location: Location,
+        ts: DateTime<Utc>,
     },
     #[snafu(display("Timeout error"))]
     Timeout {

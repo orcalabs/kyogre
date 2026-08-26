@@ -138,11 +138,11 @@ WHERE
         &self,
         call_sign: &CallSign,
         executor: impl sqlx::Executor<'_, Database = sqlx::Postgres>,
-    ) -> Result<()> {
-        let exists = sqlx::query!(
+    ) -> Result<FiskeridirVesselId> {
+        let id = sqlx::query!(
             r#"
 SELECT
-    1 AS EXISTS
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId"
 FROM
     active_vessels
 WHERE
@@ -151,11 +151,10 @@ WHERE
             call_sign.as_ref(),
         )
         .fetch_optional(executor)
-        .await?
-        .is_some();
+        .await?;
 
-        if exists {
-            Ok(())
+        if let Some(id) = id {
+            Ok(id.fiskeridir_vessel_id)
         } else {
             CallSignDoesNotExistSnafu {
                 call_sign: call_sign.clone(),

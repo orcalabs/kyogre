@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\"\nFROM\n    active_vessels\nWHERE\n    call_sign = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "89fcd40f3675be9d1c15182dc7a2556347eb3b4882729f8cc2f5243a5d525a57"
+}

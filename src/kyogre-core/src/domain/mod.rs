@@ -1,5 +1,6 @@
 mod ais;
 mod ais_vms;
+mod bunkering;
 mod catch_location;
 mod current_position;
 mod date_range;
@@ -70,6 +71,7 @@ pub use fiskeridir_rs::FiskeridirVesselId;
 
 pub use ais::*;
 pub use ais_vms::*;
+pub use bunkering::*;
 pub use catch_location::*;
 pub use current_position::*;
 pub use date_range::*;
