@@ -2,7 +2,6 @@ use crate::{PostgresAdapter, error::Result};
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::CallSign;
 use futures::{Stream, TryStreamExt};
-use itertools::MultiUnzip;
 use kyogre_core::{
     BarentswatchUserId, DateRange, FiskeridirVesselId, FuelMeasurement, FuelMeasurementId,
     FuelMeasurementsQuery, ProcessingStatus, TripOverlappingFuelMeasurement,
@@ -36,6 +35,7 @@ WHERE
     fuel_range && $1
     AND fiskeridir_vessel_id = $2
     AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (fuel_range, $1) >= 0.5
+    AND NOT is_reset
             "#,
             pg_range,
             vessel_id.into_inner()
@@ -61,8 +61,7 @@ WHERE
 SELECT
     fuel_measurement_id AS "id: FuelMeasurementId ",
     timestamp,
-    fuel_liter,
-    fuel_after_liter
+    fuel_liter
 FROM
     active_vessels w
     INNER JOIN fuel_measurements f ON w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
@@ -93,50 +92,31 @@ OFFSET
         .map_err(|e| e.into())
     }
 
-    pub(crate) async fn update_fuel_measurements_impl(
+    pub(crate) async fn update_fuel_measurement_impl(
         &self,
-        measurements: &[kyogre_core::FuelMeasurement],
+        measurement: &kyogre_core::FuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
     ) -> Result<()> {
-        let mut fuel = Vec::with_capacity(measurements.len());
-        let mut call_signs = Vec::with_capacity(measurements.len());
-        let mut user_ids = Vec::with_capacity(measurements.len());
-        let mut timestamp = Vec::with_capacity(measurements.len());
-        let mut id = Vec::with_capacity(measurements.len());
-        let mut fuel_after = Vec::with_capacity(measurements.len());
-        for m in measurements {
-            fuel.push(m.fuel_liter);
-            call_signs.push(call_sign.as_ref());
-            user_ids.push(user_id);
-            timestamp.push(m.timestamp);
-            id.push(m.id);
-            fuel_after.push(m.fuel_after_liter);
-        }
-
         let mut tx = self.pool.begin().await?;
         self.assert_call_sign_exists(call_sign, &mut *tx).await?;
 
-        let (old_vessel_ids, old_timestamps): (Vec<_>, Vec<_>) = sqlx::query!(
+        let old_record = sqlx::query!(
             r#"
 WITH
     to_delete AS (
         SELECT
             w.fiskeridir_vessel_id,
-            u.barentswatch_user_id,
-            u.timestamp AS new_timestamp,
+            $1 AS barentswatch_user_id,
+            $2::TIMESTAMPTZ AS new_timestamp,
             f.timestamp AS old_timestamp,
             f.fuel_measurement_id
         FROM
-            UNNEST(
-                $1::TEXT[],
-                $2::UUID[],
-                $3::TIMESTAMPTZ[],
-                $4::BIGINT[]
-            ) u (call_sign, barentswatch_user_id, timestamp, id)
-            INNER JOIN active_vessels w ON w.call_sign = u.call_sign
-            INNER JOIN fuel_measurements f ON u.id = f.fuel_measurement_id
+            active_vessels w
+            INNER JOIN fuel_measurements f ON f.fuel_measurement_id = $3
             AND f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
+        WHERE
+            w.call_sign = $4
     ),
     deleted_ranges AS (
         DELETE FROM fuel_measurement_ranges r USING to_delete t
@@ -170,105 +150,58 @@ FROM
 WHERE
     NOT d.covered_delete
             "#,
-            &call_signs as &[&str],
-            &user_ids as &[BarentswatchUserId],
-            &timestamp,
-            &id as &[FuelMeasurementId],
+            user_id as BarentswatchUserId,
+            measurement.timestamp,
+            measurement.id as FuelMeasurementId,
+            call_sign.as_ref(),
             ProcessingStatus::Unprocessed as i32
         )
-        .fetch_all(&mut *tx)
-        .await?
-        .into_iter()
-        .map(|r| (r.fiskeridir_vessel_id, r.timestamp))
-        .unzip();
+        .fetch_optional(&mut *tx)
+        .await?;
 
-        let (updated_vessel_ids, updated_timestamps, updated_fuel, updated_fuel_after): (
-            Vec<_>,
-            Vec<_>,
-            Vec<_>,
-            Vec<_>,
-        ) = sqlx::query!(
+        let updated = sqlx::query!(
             r#"
-WITH
-    input AS (
-        SELECT
-            w.fiskeridir_vessel_id,
-            u.barentswatch_user_id,
-            u.timestamp,
-            u.fuel_liter,
-            f.fuel_measurement_id,
-            u.fuel_after_liter
-        FROM
-            UNNEST(
-                $1::TEXT[],
-                $2::UUID[],
-                $3::TIMESTAMPTZ[],
-                $4::DOUBLE PRECISION[],
-                $5::BIGINT[],
-                $6::DOUBLE PRECISION[]
-            ) u (
-                call_sign,
-                barentswatch_user_id,
-                timestamp,
-                fuel_liter,
-                id,
-                fuel_after_liter
-            )
-            INNER JOIN active_vessels w ON w.call_sign = u.call_sign
-            INNER JOIN fuel_measurements f ON u.id = f.fuel_measurement_id
-            AND f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
-    )
 UPDATE fuel_measurements f
 SET
-    fuel_liter = input.fuel_liter,
-    barentswatch_user_id = input.barentswatch_user_id,
-    timestamp = input.timestamp,
-    fuel_after_liter = input.fuel_after_liter
+    fuel_liter = $1,
+    barentswatch_user_id = $2,
+    timestamp = $3
 FROM
-    input
+    active_vessels w
 WHERE
-    f.fuel_measurement_id = input.fuel_measurement_id
+    f.fuel_measurement_id = $4
+    AND w.call_sign = $5
+    AND w.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 RETURNING
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
     f.timestamp,
-    f.fuel_liter,
-    f.fuel_after_liter
+    f.fuel_liter
             "#,
-            &call_signs as &[&str],
-            &user_ids as &[BarentswatchUserId],
-            &timestamp,
-            &fuel,
-            &id as &[FuelMeasurementId],
-            &fuel_after as &[Option<f64>],
+            measurement.fuel_liter,
+            user_id as BarentswatchUserId,
+            measurement.timestamp,
+            measurement.id as FuelMeasurementId,
+            call_sign.as_ref(),
         )
-        .fetch_all(&mut *tx)
-        .await?
-        .into_iter()
-        .map(|r| {
-            (
-                r.fiskeridir_vessel_id,
-                r.timestamp,
-                r.fuel_liter,
-                r.fuel_after_liter,
-            )
-        })
-        .multiunzip();
+        .fetch_one(&mut *tx)
+        .await?;
 
         self.add_fuel_measurement_ranges_post_measurement_insertion(
-            &updated_vessel_ids,
-            &updated_timestamps,
-            &updated_fuel,
-            &updated_fuel_after,
+            updated.fiskeridir_vessel_id,
+            updated.timestamp,
+            updated.fuel_liter,
             &mut tx,
         )
         .await?;
 
-        self.add_fuel_measurement_ranges_post_measurement_deletion(
-            &old_vessel_ids,
-            &old_timestamps,
-            &mut tx,
-        )
-        .await?;
+        if let Some(old_record) = old_record {
+            self.add_fuel_measurement_ranges_post_measurement_deletion(
+                old_record.fiskeridir_vessel_id,
+                old_record.timestamp,
+                &mut tx,
+            )
+            .await?;
+        }
 
         tx.commit().await?;
 
@@ -277,10 +210,10 @@ RETURNING
 
     pub(crate) async fn add_fuel_measurements_impl(
         &self,
-        measurements: &[kyogre_core::CreateFuelMeasurement],
+        measurements: &kyogre_core::CreateFuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
-    ) -> Result<Vec<kyogre_core::FuelMeasurement>> {
+    ) -> Result<kyogre_core::FuelMeasurement> {
         let mut tx = self.pool.begin().await?;
 
         let out = self
@@ -294,24 +227,11 @@ RETURNING
 
     pub(crate) async fn add_fuel_measurements_tx(
         &self,
-        measurements: &[kyogre_core::CreateFuelMeasurement],
+        measurement: &kyogre_core::CreateFuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-    ) -> Result<Vec<kyogre_core::FuelMeasurement>> {
-        let mut fuel = Vec::with_capacity(measurements.len());
-        let mut call_signs = Vec::with_capacity(measurements.len());
-        let mut user_ids = Vec::with_capacity(measurements.len());
-        let mut timestamp = Vec::with_capacity(measurements.len());
-        let mut fuel_after = Vec::with_capacity(measurements.len());
-        for m in measurements {
-            fuel.push(m.fuel_liter);
-            call_signs.push(call_sign.as_ref());
-            user_ids.push(user_id);
-            timestamp.push(m.timestamp);
-            fuel_after.push(m.fuel_after_liter);
-        }
-
+    ) -> Result<kyogre_core::FuelMeasurement> {
         self.assert_call_sign_exists(call_sign, &mut **tx).await?;
 
         #[derive(Debug)]
@@ -320,10 +240,9 @@ RETURNING
             fiskeridir_vessel_id: FiskeridirVesselId,
             timestamp: DateTime<Utc>,
             fuel_liter: f64,
-            fuel_after_liter: Option<f64>,
         }
 
-        let measurements = sqlx::query_as!(
+        let measurement = sqlx::query_as!(
             Intermediate,
             r#"
 WITH
@@ -333,37 +252,23 @@ WITH
                 fiskeridir_vessel_id,
                 barentswatch_user_id,
                 timestamp,
-                fuel_liter,
-                fuel_after_liter
+                fuel_liter
             )
         SELECT
             f.fiskeridir_vessel_id,
-            u.barentswatch_user_id,
-            u.timestamp,
-            u.fuel_liter,
-            u.fuel_after_liter
+            $2,
+            $3,
+            $4
         FROM
-            UNNEST(
-                $1::TEXT[],
-                $2::UUID[],
-                $3::TIMESTAMPTZ[],
-                $4::DOUBLE PRECISION[],
-                $5::DOUBLE PRECISION[]
-            ) u (
-                call_sign,
-                barentswatch_user_id,
-                timestamp,
-                fuel_liter,
-                fuel_after_liter
-            )
-            INNER JOIN active_vessels f ON f.call_sign = u.call_sign
+            active_vessels f
+        WHERE
+            f.call_sign = $1
         ON CONFLICT (fiskeridir_vessel_id, timestamp) DO NOTHING
         RETURNING
             fuel_measurement_id,
             fiskeridir_vessel_id,
             timestamp,
-            fuel_liter,
-            fuel_after_liter
+            fuel_liter
     ),
     deleted AS (
         DELETE FROM fuel_measurement_ranges r USING inserted
@@ -377,7 +282,7 @@ WITH
     invalidated_trips AS (
         UPDATE trips_detailed t
         SET
-            benchmark_status = $6
+            benchmark_status = $5
         FROM
             deleted
         WHERE
@@ -388,69 +293,43 @@ SELECT
     fuel_measurement_id AS "id: FuelMeasurementId",
     fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
     timestamp,
-    fuel_liter,
-    fuel_after_liter
+    fuel_liter
 FROM
     inserted
             "#,
-            &call_signs as &[&str],
-            &user_ids as &[BarentswatchUserId],
-            &timestamp,
-            &fuel,
-            &fuel_after as &[Option<f64>],
+            call_sign.as_ref(),
+            user_id.as_ref(),
+            measurement.timestamp,
+            measurement.fuel_liter,
             ProcessingStatus::Unprocessed as i32
         )
-        .fetch_all(&mut **tx)
+        .fetch_one(&mut **tx)
         .await?;
 
-        let mut vessel_ids = Vec::with_capacity(measurements.len());
-        let mut ts = Vec::with_capacity(measurements.len());
-        let mut fuel = Vec::with_capacity(measurements.len());
-        let mut fuel_after = Vec::with_capacity(measurements.len());
-        for m in &measurements {
-            vessel_ids.push(m.fiskeridir_vessel_id);
-            ts.push(m.timestamp);
-            fuel.push(m.fuel_liter);
-            fuel_after.push(m.fuel_after_liter);
-        }
-
-        let out = measurements
-            .into_iter()
-            .map(|m| kyogre_core::FuelMeasurement {
-                id: m.id,
-                timestamp: m.timestamp,
-                fuel_liter: m.fuel_liter,
-                fuel_after_liter: m.fuel_after_liter,
-            })
-            .collect();
-
         self.add_fuel_measurement_ranges_post_measurement_insertion(
-            &vessel_ids,
-            &ts,
-            &fuel,
-            &fuel_after,
+            measurement.fiskeridir_vessel_id,
+            measurement.timestamp,
+            measurement.fuel_liter,
             &mut *tx,
         )
         .await?;
 
-        Ok(out)
+        Ok(kyogre_core::FuelMeasurement {
+            id: measurement.id,
+            timestamp: measurement.timestamp,
+            fuel_liter: measurement.fuel_liter,
+        })
     }
 
-    pub(crate) async fn delete_fuel_measurements_impl(
+    pub(crate) async fn delete_fuel_measurement_impl(
         &self,
-        measurements: &[kyogre_core::DeleteFuelMeasurement],
+        measurement: &kyogre_core::DeleteFuelMeasurement,
         call_sign: &CallSign,
     ) -> Result<()> {
-        let mut call_signs = Vec::with_capacity(measurements.len());
-        let mut id = Vec::with_capacity(measurements.len());
-        for m in measurements {
-            call_signs.push(call_sign.as_ref());
-            id.push(m.id);
-        }
         let mut tx = self.pool.begin().await?;
         self.assert_call_sign_exists(call_sign, &mut *tx).await?;
 
-        let (ts, vessel_ids): (Vec<_>, Vec<_>) = sqlx::query!(
+        let record = sqlx::query!(
             r#"
 WITH
     input AS (
@@ -458,15 +337,16 @@ WITH
             w.fiskeridir_vessel_id,
             f.timestamp
         FROM
-            UNNEST($1::TEXT[], $2::BIGINT[]) u (call_sign, id)
-            INNER JOIN active_vessels w ON w.call_sign = u.call_sign
-            INNER JOIN fuel_measurements f ON u.id = f.fuel_measurement_id
+            active_vessels w
+            INNER JOIN fuel_measurements f ON f.fuel_measurement_id = $1
             AND f.fiskeridir_vessel_id = w.fiskeridir_vessel_id
+        WHERE
+            w.call_sign = $2
     ),
-    ranges AS (
-        SELECT
-            r.fiskeridir_vessel_id,
-            r.fuel_range
+    updated_trips AS (
+        UPDATE trips_detailed t
+        SET
+            benchmark_status = $3
         FROM
             fuel_measurement_ranges r
             INNER JOIN input i ON r.fiskeridir_vessel_id = i.fiskeridir_vessel_id
@@ -474,16 +354,9 @@ WITH
                 r.start_measurement_ts = i.timestamp
                 OR r.end_measurement_ts = i.timestamp
             )
-    ),
-    updated_trips AS (
-        UPDATE trips_detailed t
-        SET
-            benchmark_status = $3
-        FROM
-            ranges
         WHERE
-            ranges.fiskeridir_vessel_id = t.fiskeridir_vessel_id
-            AND ranges.fuel_range && t.period
+            r.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND r.fuel_range && t.period
     )
 DELETE FROM fuel_measurements f USING input i
 WHERE
@@ -493,18 +366,19 @@ RETURNING
     f.timestamp,
     f.fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId"
             "#,
-            &call_signs as &[&str],
-            &id as &[FuelMeasurementId],
-            ProcessingStatus::Unprocessed as i32
+            measurement.id as FuelMeasurementId,
+            call_sign.as_ref(),
+            ProcessingStatus::Unprocessed as i32,
         )
-        .fetch_all(&mut *tx)
-        .await?
-        .into_iter()
-        .map(|v| (v.timestamp, v.fiskeridir_vessel_id))
-        .unzip();
+        .fetch_one(&mut *tx)
+        .await?;
 
-        self.add_fuel_measurement_ranges_post_measurement_deletion(&vessel_ids, &ts, &mut tx)
-            .await?;
+        self.add_fuel_measurement_ranges_post_measurement_deletion(
+            record.fiskeridir_vessel_id,
+            record.timestamp,
+            &mut tx,
+        )
+        .await?;
 
         tx.commit().await?;
 
@@ -513,81 +387,64 @@ RETURNING
 
     async fn add_fuel_measurement_ranges_post_measurement_deletion(
         &self,
-        vessel_ids: &[FiskeridirVesselId],
-        timestamps: &[DateTime<Utc>],
+        vessel_id: FiskeridirVesselId,
+        timestamp: DateTime<Utc>,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
 WITH
-    input AS (
-        SELECT
-            UNNEST($1::BIGINT[]) fiskeridir_vessel_id,
-            UNNEST($2::TIMESTAMPTZ[]) timestamp
-    ),
     top AS (
-        SELECT DISTINCT
-            ON (i.fiskeridir_vessel_id, i.timestamp) i.fiskeridir_vessel_id AS fiskeridir_vessel_id,
-            i.timestamp AS deleted_timestamp,
-            f.timestamp AS end_ts,
-            f.fuel_liter AS end_fuel_liter
+        SELECT
+            timestamp,
+            fuel_liter
         FROM
             fuel_measurements f
-            INNER JOIN input i ON f.fiskeridir_vessel_id = i.fiskeridir_vessel_id
-            AND f.timestamp > i.timestamp
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND timestamp > $2
         ORDER BY
-            i.fiskeridir_vessel_id,
-            i.timestamp,
-            f.timestamp ASC
+            timestamp
+        LIMIT
+            1
     ),
     bottom AS (
-        SELECT DISTINCT
-            ON (i.fiskeridir_vessel_id, i.timestamp) i.fiskeridir_vessel_id AS fiskeridir_vessel_id,
-            i.timestamp AS deleted_timestamp,
-            f.timestamp AS start_ts,
-            f.fuel_liter AS start_fuel_liter,
-            f.fuel_after_liter AS start_fuel_after_liter
+        SELECT
+            timestamp,
+            fuel_liter
         FROM
             fuel_measurements f
-            INNER JOIN input i ON f.fiskeridir_vessel_id = i.fiskeridir_vessel_id
-            AND f.timestamp < i.timestamp
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND timestamp < $2
         ORDER BY
-            i.fiskeridir_vessel_id,
-            i.timestamp,
-            f.timestamp DESC
+            timestamp DESC
+        LIMIT
+            1
     )
 INSERT INTO
     fuel_measurement_ranges (
         fiskeridir_vessel_id,
         start_measurement_ts,
         start_measurement_fuel_liter,
-        start_measurement_fuel_after_liter,
         end_measurement_ts,
         end_measurement_fuel_liter
     )
 SELECT
-    t.fiskeridir_vessel_id,
-    b.start_ts,
-    b.start_fuel_liter,
-    b.start_fuel_after_liter,
-    t.end_ts,
-    t.end_fuel_liter
+    $1,
+    b.timestamp,
+    b.fuel_liter,
+    t.timestamp,
+    t.fuel_liter
 FROM
     top t
-    INNER JOIN bottom b ON t.fiskeridir_vessel_id = b.fiskeridir_vessel_id
-    AND t.deleted_timestamp = b.deleted_timestamp
-WHERE
-    COMPUTE_FUEL_USED (
-        b.start_fuel_liter,
-        b.start_fuel_after_liter,
-        t.end_fuel_liter
-    ) > 0.0
+    INNER JOIN bottom b ON TRUE
     --! This only occurs if 'add_fuel_measurement_ranges_post_measurement_insertion' is called prior to this method
     --! then both will try to add the same fuel_measurement range
 ON CONFLICT (fiskeridir_vessel_id, fuel_range) DO NOTHING
             "#,
-            &vessel_ids as &[FiskeridirVesselId],
-            &timestamps
+            vessel_id as FiskeridirVesselId,
+            timestamp
         )
         .execute(&mut **tx)
         .await?;
@@ -597,55 +454,41 @@ ON CONFLICT (fiskeridir_vessel_id, fuel_range) DO NOTHING
 
     async fn add_fuel_measurement_ranges_post_measurement_insertion(
         &self,
-        vessel_ids: &[FiskeridirVesselId],
-        timestamps: &[DateTime<Utc>],
-        fuel_liter: &[f64],
-        fuel_after_liter: &[Option<f64>],
+        vessel_id: FiskeridirVesselId,
+        timestamp: DateTime<Utc>,
+        fuel_liter: f64,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<()> {
         sqlx::query!(
             r#"
 WITH
-    input AS (
-        SELECT
-            UNNEST($1::BIGINT[]) fiskeridir_vessel_id,
-            UNNEST($2::DOUBLE PRECISION[]) fuel_liter,
-            UNNEST($3::TIMESTAMPTZ[]) timestamp,
-            UNNEST($4::DOUBLE PRECISION[]) fuel_after_liter
-    ),
     top AS (
-        SELECT DISTINCT
-            ON (i.fiskeridir_vessel_id, i.timestamp) i.fiskeridir_vessel_id AS fiskeridir_vessel_id,
-            i.timestamp AS start_ts,
-            i.fuel_liter AS start_fuel_liter,
-            i.fuel_after_liter AS start_fuel_after_liter,
-            f.timestamp AS end_ts,
-            f.fuel_liter AS end_fuel_liter
+        SELECT
+            timestamp,
+            fuel_liter
         FROM
             fuel_measurements f
-            INNER JOIN input i ON f.fiskeridir_vessel_id = i.fiskeridir_vessel_id
-            AND f.timestamp > i.timestamp
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND timestamp > $2
         ORDER BY
-            i.fiskeridir_vessel_id,
-            i.timestamp,
-            f.timestamp ASC
+            timestamp
+        LIMIT
+            1
     ),
     bottom AS (
-        SELECT DISTINCT
-            ON (i.fiskeridir_vessel_id, i.timestamp) i.fiskeridir_vessel_id AS fiskeridir_vessel_id,
-            f.timestamp AS start_ts,
-            f.fuel_liter AS start_fuel_liter,
-            f.fuel_after_liter AS start_fuel_after_liter,
-            i.timestamp AS end_ts,
-            i.fuel_liter AS end_fuel_liter
+        SELECT
+            timestamp,
+            fuel_liter
         FROM
             fuel_measurements f
-            INNER JOIN input i ON f.fiskeridir_vessel_id = i.fiskeridir_vessel_id
-            AND f.timestamp < i.timestamp
+        WHERE
+            fiskeridir_vessel_id = $1
+            AND timestamp < $2
         ORDER BY
-            i.fiskeridir_vessel_id,
-            i.timestamp,
-            f.timestamp DESC
+            timestamp DESC
+        LIMIT
+            1
     ),
     inserted AS (
         INSERT INTO
@@ -653,7 +496,6 @@ WITH
                 fiskeridir_vessel_id,
                 start_measurement_ts,
                 start_measurement_fuel_liter,
-                start_measurement_fuel_after_liter,
                 end_measurement_ts,
                 end_measurement_fuel_liter
             )
@@ -662,48 +504,39 @@ WITH
         FROM
             (
                 SELECT
-                    b.fiskeridir_vessel_id,
-                    b.start_ts,
-                    b.start_fuel_liter,
-                    b.start_fuel_after_liter,
-                    b.end_ts,
-                    b.end_fuel_liter
+                    $1,
+                    b.timestamp,
+                    b.fuel_liter,
+                    $2,
+                    $3
                 FROM
                     bottom b
                 UNION
                 SELECT
-                    t.fiskeridir_vessel_id,
-                    t.start_ts,
-                    t.start_fuel_liter,
-                    t.start_fuel_after_liter,
-                    t.end_ts,
-                    t.end_fuel_liter
+                    $1,
+                    $2,
+                    $3,
+                    t.timestamp,
+                    t.fuel_liter
                 FROM
                     top t
-            ) q
-        WHERE
-            COMPUTE_FUEL_USED (
-                q.start_fuel_liter,
-                q.start_fuel_after_liter,
-                q.end_fuel_liter
-            ) > 0.0
+            )
         RETURNING
             fiskeridir_vessel_id,
             fuel_range
     )
 UPDATE trips_detailed t
 SET
-    benchmark_status = $5
+    benchmark_status = $4
 FROM
     inserted
 WHERE
     inserted.fiskeridir_vessel_id = t.fiskeridir_vessel_id
     AND inserted.fuel_range && t.period
             "#,
-            &vessel_ids as &[FiskeridirVesselId],
-            &fuel_liter,
-            &timestamps,
-            &fuel_after_liter as &[Option<f64>],
+            vessel_id as FiskeridirVesselId,
+            timestamp,
+            fuel_liter,
             ProcessingStatus::Unprocessed as i32
         )
         .execute(&mut **tx)

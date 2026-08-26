@@ -213,25 +213,19 @@ where
                     "/fuel_measurements",
                     post()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel_measurement::create_fuel_measurements::<T>),
-                )
-                .route(
-                    "/fuel_measurements/upload",
-                    post()
-                        .guard(guard.clone())
-                        .to(routes::v1::fuel_measurement::upload_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::create_fuel_measurement::<T>),
                 )
                 .route(
                     "/fuel_measurements",
                     put()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel_measurement::update_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::update_fuel_measurement::<T>),
                 )
                 .route(
                     "/fuel_measurements",
                     delete()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel_measurement::delete_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::delete_fuel_measurement::<T>),
                 )
                 .route(
                     "/vessels",

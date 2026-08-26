@@ -648,23 +648,19 @@ async fn test_org_fuel_only_includes_measurments_within_given_range() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: start - Duration::days(10),
-                fuel_liter: 4000.,
-                fuel_after_liter: None,
+                fuel_liter: 1000.,
             },
             CreateFuelMeasurement {
                 timestamp: start - Duration::days(8),
-                fuel_liter: 3000.,
-                fuel_after_liter: None,
+                fuel_liter: 2000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(3),
-                fuel_liter: 2000.,
-                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(4),
-                fuel_liter: 1000.,
-                fuel_after_liter: None,
+                fuel_liter: 4000.,
             },
         ];
 
@@ -744,12 +740,10 @@ async fn test_org_fuel_excludes_fuel_measurement_when_more_than_half_of_period_i
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(7),
                 fuel_liter: 3000.,
-                fuel_after_liter: None,
             },
             CreateFuelMeasurement {
                 timestamp: end + Duration::days(5),
                 fuel_liter: 2000.,
-                fuel_after_liter: None,
             },
         ];
 
