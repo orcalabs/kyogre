@@ -33,18 +33,15 @@ async fn test_setting_fuel_after_computes_correct_fuel_used() {
         let body = &[
             CreateFuelMeasurement {
                 timestamp: start,
-                fuel_liter: 3000.,
-                fuel_after_liter: None,
+                fuel_liter: 1000.,
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(1),
                 fuel_liter: 2000.,
-                fuel_after_liter: Some(2500.0),
             },
             CreateFuelMeasurement {
                 timestamp: start + Duration::days(2),
-                fuel_liter: 1000.,
-                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
         ];
 
@@ -72,8 +69,8 @@ async fn test_setting_fuel_after_computes_correct_fuel_used() {
             .map(|v| v.estimated_fuel_liter)
             .sum();
 
-        assert!(approx_eq!(f64, 2500.0, vessel_fuel));
-        assert!(approx_eq!(f64, 2500.0, org_fuel));
+        assert!(approx_eq!(f64, 2000.0, vessel_fuel));
+        assert!(approx_eq!(f64, 2000.0, org_fuel));
     })
     .await;
 }
@@ -126,13 +123,11 @@ async fn test_fuel_measurement_overlap_1() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel_liter: 4000.,
-                fuel_after_liter: None,
+                fuel_liter: 2000.,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel_liter: 2000.,
-                fuel_after_liter: None,
+                fuel_liter: 4000.,
             },
         ];
 
@@ -210,13 +205,11 @@ async fn test_fuel_measurement_overlap_2() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel_liter: 4000.,
-                fuel_after_liter: None,
+                fuel_liter: 2000.,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel_liter: 2000.,
-                fuel_after_liter: None,
+                fuel_liter: 4000.,
             },
         ];
 
@@ -334,13 +327,11 @@ async fn test_fuel_measurement_overlap_3() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel_liter: 4000.,
-                fuel_after_liter: None,
+                fuel_liter: 2000.,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel_liter: 2000.,
-                fuel_after_liter: None,
+                fuel_liter: 4000.,
             },
         ];
 
@@ -446,13 +437,11 @@ async fn test_fuel_measurement_overlap_4() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel_liter: 4000.,
-                fuel_after_liter: None,
+                fuel_liter: 2000.,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel_liter: 2000.,
-                fuel_after_liter: None,
+                fuel_liter: 4000.,
             },
         ];
 
@@ -552,23 +541,19 @@ async fn test_fuel_measurement_overlap_5() {
         let body = vec![
             CreateFuelMeasurement {
                 timestamp: first_measurement,
-                fuel_liter: 4000.,
-                fuel_after_liter: None,
+                fuel_liter: 1000.,
             },
             CreateFuelMeasurement {
                 timestamp: second_measurement,
-                fuel_liter: 3000.,
-                fuel_after_liter: None,
+                fuel_liter: 2000.,
             },
             CreateFuelMeasurement {
                 timestamp: third_measurement,
-                fuel_liter: 2000.,
-                fuel_after_liter: None,
+                fuel_liter: 3000.,
             },
             CreateFuelMeasurement {
                 timestamp: last_measurement,
-                fuel_liter: 1000.,
-                fuel_after_liter: None,
+                fuel_liter: 4000.,
             },
         ];
 

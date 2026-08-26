@@ -210,28 +210,28 @@ where
                         .to(routes::v1::fuel_measurement::get_fuel_measurements::<T>),
                 )
                 .route(
-                    "/fuel_measurements",
-                    post()
-                        .guard(guard.clone())
-                        .to(routes::v1::fuel_measurement::create_fuel_measurements::<T>),
-                )
-                .route(
-                    "/fuel_measurements/upload",
-                    post()
-                        .guard(guard.clone())
-                        .to(routes::v1::fuel_measurement::upload_fuel_measurements::<T>),
+                    "/fuel_measurements_and_bunkerings",
+                    get().guard(guard.clone()).to(
+                        routes::v1::fuel_measurement::get_fuel_measurements_and_bunkerings::<T>,
+                    ),
                 )
                 .route(
                     "/fuel_measurements",
+                    post()
+                        .guard(guard.clone())
+                        .to(routes::v1::fuel_measurement::create_fuel_measurement::<T>),
+                )
+                .route(
+                    "/fuel_measurements/{fuel_measurement_id}",
                     put()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel_measurement::update_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::update_fuel_measurement::<T>),
                 )
                 .route(
-                    "/fuel_measurements",
+                    "/fuel_measurements/{fuel_measurement_id}",
                     delete()
                         .guard(guard.clone())
-                        .to(routes::v1::fuel_measurement::delete_fuel_measurements::<T>),
+                        .to(routes::v1::fuel_measurement::delete_fuel_measurement::<T>),
                 )
                 .route(
                     "/vessels",
@@ -332,7 +332,25 @@ where
                     get()
                         .guard(guard.clone())
                         .to(routes::v1::trip::benchmarks::per_vessel_benchmarks_avg::<T>),
-                );
+                )
+                .route(
+                    "/bunkering",
+                    post()
+                        .guard(guard.clone())
+                        .to(routes::v1::bunkering::create_bunkering::<T>),
+                )
+                .route(
+                    "/bunkering/{bunkering_id}",
+                    put()
+                        .guard(guard.clone())
+                        .to(routes::v1::bunkering::update_bunkering::<T>),
+                )
+                .route(
+                    "/bunkering/{bunkering_id}",
+                    delete()
+                        .guard(guard.clone())
+                        .to(routes::v1::bunkering::delete_bunkering::<T>),
+                )
         }
 
         let mut server = oasgen::Server::actix().service(scope);

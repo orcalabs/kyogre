@@ -126,6 +126,10 @@ pub trait WebApiOutboundPort {
     fn delivery_points(&self) -> PinBoxStream<'_, DeliveryPoint>;
     fn weather(&self, query: WeatherQuery) -> PinBoxStream<'_, Weather>;
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation>;
+    fn fuel_measurements_and_bunkerings(
+        &self,
+        query: FuelMeasurementsQuery,
+    ) -> PinBoxStream<'_, FuelMeasurementOrBunkering>;
     fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement>;
     async fn update_vessel(
         &self,

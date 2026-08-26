@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use fiskeridir_rs::{CallSign, LandingIdError, ParseStringError};
 use kyogre_core::{
     ActiveVesselConflict, CatchLocationIdError, DateRangeError, IsTimeout, MatrixIndexError, Object,
@@ -22,6 +23,12 @@ pub enum Error {
         #[snafu(implicit)]
         location: Location,
         object: Object,
+    },
+    #[snafu(display("Bunkering at '{ts}' already exists"))]
+    BunkeringAlreadyExists {
+        #[snafu(implicit)]
+        location: Location,
+        ts: DateTime<Utc>,
     },
     #[snafu(display("The currently active user haul cannot be fully modified"))]
     CannotModifyActiveUserHaul {
@@ -244,6 +251,7 @@ impl From<Error> for kyogre_core::Error {
             | Error::InvalidIsoWeek { .. }
             | Error::CallSignDoesNotExist { .. }
             | Error::ObjectNotFound { .. }
+            | Error::BunkeringAlreadyExists { .. }
             | Error::CannotModifyActiveUserHaul { .. }
             | Error::Migrate { .. } => kyogre_core::Error::Unexpected {
                 location,
@@ -288,6 +296,9 @@ impl From<Error> for kyogre_core::WebApiError {
             }
             Error::CannotModifyActiveUserHaul { location } => {
                 kyogre_core::WebApiError::CannotModifyActiveUserHaul { location }
+            }
+            Error::BunkeringAlreadyExists { location, ts } => {
+                kyogre_core::WebApiError::BunkeringAlreadyExists { location, ts }
             }
             Error::Conversion { .. }
             | Error::MissingValue { .. }

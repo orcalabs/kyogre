@@ -108,23 +108,39 @@ pub trait WebApiInboundPort {
         id: BarentswatchUserId,
         update_selected_vessel: &Option<UpdateSelectedVessel>,
     ) -> WebApiResult<()>;
-    async fn add_fuel_measurements(
+    async fn add_fuel_measurement(
         &self,
-        measurements: &[CreateFuelMeasurement],
+        measurements: &CreateFuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
-    ) -> WebApiResult<Vec<FuelMeasurement>>;
-    async fn update_fuel_measurements(
+    ) -> WebApiResult<FuelMeasurement>;
+    async fn update_fuel_measurement(
         &self,
-        measurements: &[FuelMeasurement],
+        id: FuelMeasurementId,
+        measurements: &CreateFuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
     ) -> WebApiResult<()>;
-    async fn delete_fuel_measurements(
+    async fn delete_fuel_measurement(
         &self,
-        measurements: &[DeleteFuelMeasurement],
+        id: FuelMeasurementId,
         call_sign: &CallSign,
     ) -> WebApiResult<()>;
+
+    async fn add_bunkering(
+        &self,
+        bunkering: &CreateBunkering,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+    ) -> WebApiResult<Bunkering>;
+    async fn update_bunkering(
+        &self,
+        id: BunkeringId,
+        bunkering: &CreateBunkering,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+    ) -> WebApiResult<()>;
+    async fn delete_bunkering(&self, id: BunkeringId, call_sign: &CallSign) -> WebApiResult<()>;
 }
 
 #[async_trait]

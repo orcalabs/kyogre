@@ -832,21 +832,17 @@ RETURNING
         let start_fuel = kyogre_core::CreateFuelMeasurement {
             timestamp: haul.start_ts,
             fuel_liter: haul.start_fuel_liter as f64,
-            fuel_after_liter: None,
         };
+
         let end_fuel = kyogre_core::CreateFuelMeasurement {
             timestamp: haul.end_ts,
             fuel_liter: haul.end_fuel_liter as f64,
-            fuel_after_liter: None,
         };
 
-        self.add_fuel_measurements_tx(
-            &[start_fuel, end_fuel],
-            call_sign,
-            barentswatch_user_id,
-            &mut tx,
-        )
-        .await?;
+        self.add_fuel_measurements_tx(&start_fuel, call_sign, barentswatch_user_id, &mut tx)
+            .await?;
+        self.add_fuel_measurements_tx(&end_fuel, call_sign, barentswatch_user_id, &mut tx)
+            .await?;
 
         self.set_user_haul_start_position(haul.id, &mut tx).await?;
 
@@ -1040,6 +1036,7 @@ FROM
     overlapping o
 WHERE
     o.user_haul_id = u.user_haul_id
+    AND u.end_ts IS NOT NULL
             "#,
             vessel_id as FiskeridirVesselId,
             timestamp,
@@ -1073,6 +1070,7 @@ FROM
     overlapping o
 WHERE
     o.user_haul_id = u.user_haul_id
+    AND u.end_ts IS NOT NULL
             "#,
             &user_haul_ids
         )

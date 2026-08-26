@@ -1,0 +1,37 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    bunkerings (\n        fuel_liter,\n        timestamp,\n        fiskeridir_vessel_id,\n        barentswatch_user_id\n    )\nVALUES\n    ($1, $2, $3, $4)\nRETURNING\n    bunkering_id AS \"id: BunkeringId\",\n    fuel_liter,\n    timestamp\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: BunkeringId",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Float8",
+        "Timestamptz",
+        "Int8",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f92608faf14de138686b44d4cd78cc2d296d47e2ef93a5a9eb38944566915b64"
+}

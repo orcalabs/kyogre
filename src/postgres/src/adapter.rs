@@ -905,7 +905,14 @@ impl WebApiOutboundPort for PostgresAdapter {
     fn weather_locations(&self) -> PinBoxStream<'_, WeatherLocation> {
         self.weather_locations_impl().try_convert().boxed()
     }
-
+    fn fuel_measurements_and_bunkerings(
+        &self,
+        query: FuelMeasurementsQuery,
+    ) -> PinBoxStream<'_, FuelMeasurementOrBunkering> {
+        self.fuel_measurements_and_bunkerings_impl(query)
+            .map_err(|e| e.into())
+            .boxed()
+    }
     fn fuel_measurements(&self, query: FuelMeasurementsQuery) -> PinBoxStream<'_, FuelMeasurement> {
         self.fuel_measurements_impl(query)
             .map_err(|e| e.into())
@@ -971,29 +978,53 @@ impl WebApiInboundPort for PostgresAdapter {
         retry(|| self.update_user_impl(user, id, update_selected_vessel)).await?;
         Ok(())
     }
-    async fn add_fuel_measurements(
+    async fn add_fuel_measurement(
         &self,
-        measurements: &[CreateFuelMeasurement],
+        measurements: &CreateFuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
-    ) -> WebApiResult<Vec<FuelMeasurement>> {
+    ) -> WebApiResult<FuelMeasurement> {
         Ok(retry(|| self.add_fuel_measurements_impl(measurements, call_sign, user_id)).await?)
     }
-    async fn update_fuel_measurements(
+    async fn update_fuel_measurement(
         &self,
-        measurements: &[FuelMeasurement],
+        id: FuelMeasurementId,
+        measurement: &CreateFuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
     ) -> WebApiResult<()> {
-        retry(|| self.update_fuel_measurements_impl(measurements, call_sign, user_id)).await?;
+        retry(|| self.update_fuel_measurement_impl(id, measurement, call_sign, user_id)).await?;
         Ok(())
     }
-    async fn delete_fuel_measurements(
+    async fn delete_fuel_measurement(
         &self,
-        measurements: &[DeleteFuelMeasurement],
+        id: FuelMeasurementId,
         call_sign: &CallSign,
     ) -> WebApiResult<()> {
-        retry(|| self.delete_fuel_measurements_impl(measurements, call_sign)).await?;
+        retry(|| self.delete_fuel_measurement_impl(id, call_sign)).await?;
+        Ok(())
+    }
+
+    async fn add_bunkering(
+        &self,
+        bunkering: &CreateBunkering,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+    ) -> WebApiResult<Bunkering> {
+        Ok(retry(|| self.add_bunkering_impl(bunkering, call_sign, user_id)).await?)
+    }
+    async fn update_bunkering(
+        &self,
+        id: BunkeringId,
+        bunkering: &CreateBunkering,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+    ) -> WebApiResult<()> {
+        retry(|| self.update_bunkering_impl(id, bunkering, call_sign, user_id)).await?;
+        Ok(())
+    }
+    async fn delete_bunkering(&self, id: BunkeringId, call_sign: &CallSign) -> WebApiResult<()> {
+        retry(|| self.delete_bunkering_impl(id, call_sign)).await?;
         Ok(())
     }
 }

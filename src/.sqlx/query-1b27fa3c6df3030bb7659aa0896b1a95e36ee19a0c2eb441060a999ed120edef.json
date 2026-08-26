@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id: FiskeridirVesselId\",\n    fuel_range AS \"fuel_range: DateRange\",\n    fuel_used_liter\nFROM\n    fuel_measurement_ranges\nORDER BY\n    fuel_range\n                ",
+  "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id: FiskeridirVesselId\",\n    fuel_range AS \"fuel_range: DateRange\",\n    fuel_used_liter,\n    is_reset\nFROM\n    fuel_measurement_ranges\nORDER BY\n    fuel_range\n                ",
   "describe": {
     "columns": [
       {
@@ -17,6 +17,11 @@
         "ordinal": 2,
         "name": "fuel_used_liter",
         "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_reset",
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -25,8 +30,9 @@
     "nullable": [
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "3f945ebb5b0271d2e614560d7a35732a0733ca921d8ad8698ceec6fee004ca28"
+  "hash": "1b27fa3c6df3030bb7659aa0896b1a95e36ee19a0c2eb441060a999ed120edef"
 }

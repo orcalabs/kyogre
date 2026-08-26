@@ -143,11 +143,8 @@ WHERE
             r#"
 SELECT
     fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    SUM(benchmark_fuel_consumption_liter) AS sum_fuel_consumption_liter,
     SUM(benchmark_weight_per_hour) AS sum_weight_per_hour,
     SUM(benchmark_weight_per_distance) AS sum_weight_per_distance,
-    SUM(benchmark_weight_per_fuel_liter) AS sum_weight_per_fuel_liter,
-    SUM(benchmark_catch_value_per_fuel_liter) AS sum_catch_value_per_fuel_liter,
     SUM(landing_total_living_weight) AS sum_living_weight
 FROM
     trips_detailed

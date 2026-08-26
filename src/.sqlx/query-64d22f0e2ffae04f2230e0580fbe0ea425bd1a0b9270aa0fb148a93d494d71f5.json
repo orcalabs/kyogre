@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM bunkerings\nWHERE\n    bunkering_id = $1\n    AND fiskeridir_vessel_id = $2\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "64d22f0e2ffae04f2230e0580fbe0ea425bd1a0b9270aa0fb148a93d494d71f5"
+}

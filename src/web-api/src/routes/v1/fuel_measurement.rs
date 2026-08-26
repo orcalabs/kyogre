@@ -1,23 +1,21 @@
+use crate::{
+    Database,
+    error::Result,
+    extractors::BwProfile,
+    response::{Response, StreamResponse},
+    stream_response,
+};
 use actix_web::web;
 use chrono::{DateTime, NaiveDateTime, TimeZone, Utc, offset::LocalResult};
 use chrono_tz::Europe::Oslo;
 use fiskeridir_rs::CallSign;
 use kyogre_core::{
-    CreateFuelMeasurement, DeleteFuelMeasurement, FuelMeasurement, FuelMeasurementsQuery,
-    OptionalDateTimeRange,
+    CreateFuelMeasurement, FuelMeasurement, FuelMeasurementId, FuelMeasurementOrBunkering,
+    FuelMeasurementsQuery, OptionalDateTimeRange,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Deserializer, Serialize, de::Unexpected};
 use serde_qs::actix::QsQuery as Query;
-
-use crate::{
-    Database,
-    error::{Result, error::FuelAfterLowerThanFuelSnafu},
-    excel::decode_excel_base64,
-    extractors::BwProfile,
-    response::{Response, StreamResponse},
-    stream_response,
-};
 
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
@@ -28,9 +26,21 @@ pub struct FuelMeasurementsParams {
     pub offset: Option<u64>,
 }
 
-#[derive(Debug, Deserialize, Serialize, OaSchema)]
-pub struct UploadFuelMeasurement {
-    pub file: String,
+#[oasgen(skip(db), tags("FuelMeasurement"))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
+pub async fn get_fuel_measurements_and_bunkerings<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    params: Query<FuelMeasurementsParams>,
+) -> Result<StreamResponse<FuelMeasurementOrBunkering>> {
+    let call_sign = profile.call_sign(db.as_ref()).await?;
+    let query = params.into_inner().to_query(call_sign.clone());
+
+    let response = stream_response! {
+        db.fuel_measurements_and_bunkerings(query)
+    };
+
+    Ok(response)
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
@@ -52,73 +62,35 @@ pub async fn get_fuel_measurements<T: Database + Send + Sync + 'static>(
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
 #[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
-pub async fn create_fuel_measurements<T: Database + 'static>(
+pub async fn create_fuel_measurement<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-    body: web::Json<Vec<CreateFuelMeasurement>>,
-) -> Result<Response<Vec<FuelMeasurement>>> {
+    body: web::Json<CreateFuelMeasurement>,
+) -> Result<Response<FuelMeasurement>> {
     let body = body.into_inner();
-    validate_fuel_after_fuel(&body)?;
 
     let user_id = profile.user.id;
     let call_sign = profile.call_sign(db.as_ref()).await?;
 
-    let measurements = db.add_fuel_measurements(&body, &call_sign, user_id).await?;
+    let measurement = db.add_fuel_measurement(&body, &call_sign, user_id).await?;
 
-    Ok(Response::new(measurements))
-}
-
-#[oasgen(skip(db), tags("FuelMeasurement"))]
-#[tracing::instrument(skip(db, body), fields(user_id = profile.tracing_id()))]
-pub async fn upload_fuel_measurements<T: Database + 'static>(
-    db: web::Data<T>,
-    profile: BwProfile,
-    body: web::Json<UploadFuelMeasurement>,
-) -> Result<Response<Vec<FuelMeasurement>>> {
-    let user_id = profile.user.id;
-    let call_sign = profile.call_sign(db.as_ref()).await?;
-
-    #[derive(Deserialize)]
-    struct Record {
-        #[serde(deserialize_with = "deserialize_norwegian_timestamp")]
-        pub timestamp: DateTime<Utc>,
-        pub fuel_liter_before: f64,
-        #[serde(default)]
-        pub fuel_after_liter: Option<f64>,
-    }
-
-    let measurements = decode_excel_base64(body.into_inner().file)?
-        .into_iter()
-        .map(|v: Record| CreateFuelMeasurement {
-            timestamp: v.timestamp,
-            fuel_liter: v.fuel_liter_before,
-            fuel_after_liter: v.fuel_after_liter,
-        })
-        .collect::<Vec<_>>();
-
-    validate_fuel_after_fuel(&measurements)?;
-
-    let measurements = db
-        .add_fuel_measurements(&measurements, &call_sign, user_id)
-        .await?;
-
-    Ok(Response::new(measurements))
+    Ok(Response::new(measurement))
 }
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
 #[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
-pub async fn update_fuel_measurements<T: Database + 'static>(
+pub async fn update_fuel_measurement<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-    body: web::Json<Vec<FuelMeasurement>>,
+    path: web::Path<FuelMeasurementId>,
+    body: web::Json<CreateFuelMeasurement>,
 ) -> Result<Response<()>> {
     let body = body.into_inner();
-    validate_fuel_after_fuel(&body)?;
 
     let user_id = profile.user.id;
     let call_sign = profile.call_sign(db.as_ref()).await?;
 
-    db.update_fuel_measurements(&body, &call_sign, user_id)
+    db.update_fuel_measurement(path.into_inner(), &body, &call_sign, user_id)
         .await?;
 
     Ok(Response::new(()))
@@ -126,14 +98,14 @@ pub async fn update_fuel_measurements<T: Database + 'static>(
 
 #[oasgen(skip(db), tags("FuelMeasurement"))]
 #[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
-pub async fn delete_fuel_measurements<T: Database + 'static>(
+pub async fn delete_fuel_measurement<T: Database + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
-    body: web::Json<Vec<DeleteFuelMeasurement>>,
+    path: web::Path<FuelMeasurementId>,
 ) -> Result<Response<()>> {
     let call_sign = profile.call_sign(db.as_ref()).await?;
 
-    db.delete_fuel_measurements(&body.into_inner(), &call_sign)
+    db.delete_fuel_measurement(path.into_inner(), &call_sign)
         .await?;
     Ok(Response::new(()))
 }
@@ -153,45 +125,6 @@ impl FuelMeasurementsParams {
             offset,
         }
     }
-}
-
-trait FuelAfterFuel {
-    fn fuel_liter(&self) -> f64;
-    fn fuel_after_liter(&self) -> Option<f64>;
-}
-
-impl FuelAfterFuel for CreateFuelMeasurement {
-    fn fuel_liter(&self) -> f64 {
-        self.fuel_liter
-    }
-    fn fuel_after_liter(&self) -> Option<f64> {
-        self.fuel_after_liter
-    }
-}
-
-impl FuelAfterFuel for FuelMeasurement {
-    fn fuel_liter(&self) -> f64 {
-        self.fuel_liter
-    }
-    fn fuel_after_liter(&self) -> Option<f64> {
-        self.fuel_after_liter
-    }
-}
-
-fn validate_fuel_after_fuel<T: FuelAfterFuel>(measurements: &[T]) -> Result<()> {
-    if let Some((fuel_after_liter, fuel_liter)) = measurements
-        .iter()
-        .filter_map(|b| b.fuel_after_liter().map(|a| (a, b.fuel_liter())))
-        .find(|v| v.0 <= v.1)
-    {
-        return FuelAfterLowerThanFuelSnafu {
-            fuel_after_liter,
-            fuel_liter,
-        }
-        .fail();
-    }
-
-    Ok(())
 }
 
 pub fn deserialize_norwegian_timestamp<'de, D>(

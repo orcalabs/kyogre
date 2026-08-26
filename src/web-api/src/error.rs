@@ -46,6 +46,12 @@ pub enum Error {
         location: Location,
         object: Object,
     },
+    #[snafu(display("Bunkering at '{ts}' already exists"))]
+    BunkeringAlreadyExists {
+        #[snafu(implicit)]
+        location: Location,
+        ts: DateTime<Utc>,
+    },
     #[snafu(display("The currently active user haul cannot be fully updated"))]
     CannotModifyActiveUserHaul {
         #[snafu(implicit)]
@@ -162,13 +168,6 @@ pub enum Error {
         #[snafu(source)]
         error: base64::DecodeError,
     },
-    #[snafu(display("An invalid Excel document was provided"))]
-    #[stack_error(opaque_std_from = [calamine::DeError, calamine::XlsxError])]
-    InvalidExcel {
-        #[snafu(implicit)]
-        location: Location,
-        opaque: OpaqueError,
-    },
     #[snafu(display("Query payload error"))]
     QueryPayload {
         #[snafu(implicit)]
@@ -211,9 +210,9 @@ impl ResponseError for Error {
             | QueryPayload
             | FuelAfterLowerThanFuel
             | Base64Decode
-            | InvalidExcel
             | CallSignDoesNotExist
             | CannotModifyActiveUserHaul
+            | BunkeringAlreadyExists
             | MissingMmsiOrCallSignOrTripId => StatusCode::BAD_REQUEST,
             InsufficientPermissions => StatusCode::FORBIDDEN,
             NoActiveUserHaul => StatusCode::CONFLICT,
@@ -268,6 +267,9 @@ impl From<WebApiError> for Error {
             }
             WebApiError::CannotModifyActiveUserHaul { location } => {
                 Error::CannotModifyActiveUserHaul { location }
+            }
+            WebApiError::BunkeringAlreadyExists { location, ts } => {
+                Error::BunkeringAlreadyExists { location, ts }
             }
         }
     }

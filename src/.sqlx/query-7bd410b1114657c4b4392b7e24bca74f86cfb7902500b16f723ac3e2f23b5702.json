@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessel AS (\n        SELECT\n            fiskeridir_vessel_id\n        FROM\n            active_vessels\n        WHERE\n            call_sign = $1\n    ),\n    measurements AS (\n        SELECT\n            fuel_measurement_id AS id,\n            timestamp,\n            fuel_liter,\n            TRUE AS is_measurement\n        FROM\n            vessel v\n            INNER JOIN fuel_measurements f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n        WHERE\n            (\n                $2::TIMESTAMPTZ IS NULL\n                OR timestamp >= $2\n            )\n            AND (\n                $3::TIMESTAMPTZ IS NULL\n                OR timestamp <= $3\n            )\n    ),\n    bunks AS (\n        SELECT\n            bunkering_id AS id,\n            timestamp,\n            fuel_liter,\n            FALSE AS is_measurement\n        FROM\n            vessel v\n            INNER JOIN bunkerings b ON v.fiskeridir_vessel_id = b.fiskeridir_vessel_id\n        WHERE\n            (\n                $2::TIMESTAMPTZ IS NULL\n                OR timestamp >= $2\n            )\n            AND (\n                $3::TIMESTAMPTZ IS NULL\n                OR timestamp <= $3\n            )\n    )\nSELECT\n    id AS \"id!\",\n    timestamp AS \"timestamp!\",\n    fuel_liter AS \"fuel_liter!\",\n    is_measurement AS \"is_measurement!\"\nFROM\n    (\n        SELECT\n            *\n        FROM\n            measurements\n        UNION\n        SELECT\n            *\n        FROM\n            bunks\n    ) q\nORDER BY\n    timestamp DESC\nLIMIT\n    $4\nOFFSET\n    $5\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "fuel_liter!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_measurement!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "7bd410b1114657c4b4392b7e24bca74f86cfb7902500b16f723ac3e2f23b5702"
+}
