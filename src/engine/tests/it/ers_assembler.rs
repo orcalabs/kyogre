@@ -704,3 +704,47 @@ async fn test_uses_the_first_arrival_for_landing_coverage() {
     })
     .await;
 }
+
+#[tokio::test]
+async fn test_por_conflict_on_same_timestamp_as_end_of_a_trip() {
+    test(|_helper, builder| async move {
+        let departure = Utc.timestamp_opt(10, 0).unwrap();
+        let por = Utc.timestamp_opt(20, 0).unwrap();
+
+        let departure2 = Utc.timestamp_opt(30, 0).unwrap();
+        let por2 = Utc.timestamp_opt(40, 0).unwrap();
+
+        let departure3 = Utc.timestamp_opt(50, 0).unwrap();
+
+        let conflict_por = Utc.timestamp_opt(40, 0).unwrap();
+
+        let state = builder
+            .vessels(1)
+            .dep(1)
+            .modify(|d| d.dep.set_departure_timestamp(departure))
+            .por(1)
+            .modify(|a| a.por.set_arrival_timestamp(por))
+            .dep(1)
+            .modify(|d| d.dep.set_departure_timestamp(departure2))
+            .por(1)
+            .modify(|a| a.por.set_arrival_timestamp(por2))
+            .dep(1)
+            .modify(|d| d.dep.set_departure_timestamp(departure3))
+            .new_cycle()
+            .por(1)
+            .modify(|a| a.por.set_arrival_timestamp(conflict_por))
+            .build()
+            .await;
+
+        assert_eq!(state.trips.len(), 2);
+        let trip = &state.trips[0];
+        let trip2 = &state.trips[1];
+
+        assert_eq!(trip.period.start(), departure);
+        assert_eq!(trip.period.end(), por);
+
+        assert_eq!(trip2.period.start(), departure2);
+        assert_eq!(trip2.period.end(), por2);
+    })
+    .await;
+}

@@ -1,0 +1,78 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    trip AS (\n        SELECT\n            trip_id,\n            start_vessel_event_id,\n            end_vessel_event_id,\n            fiskeridir_vessel_id\n        FROM\n            trips\n        WHERE\n            fiskeridir_vessel_id = $1\n            AND (\n                (\n                    $2 = 1\n                    AND UPPER(period) <= $3\n                )\n                OR (\n                    $2 = 2\n                    AND UPPER(period) < $3\n                )\n            )\n        ORDER BY\n            period DESC\n        LIMIT\n            1\n    ),\n    trip_arrival AS (\n        SELECT\n            a.arrival_timestamp AS occurence_timestamp,\n            a.relevant_year,\n            a.message_number,\n            a.message_timestamp AS report_timestamp,\n            a.port_id,\n            a.vessel_event_id,\n            t.trip_id,\n            t.fiskeridir_vessel_id\n        FROM\n            trip t\n            INNER JOIN ers_arrivals a ON a.vessel_event_id = t.end_vessel_event_id\n    ),\n    all_events_after_latest_arrival AS (\n        SELECT\n            vessel_event_id,\n            fiskeridir_vessel_id,\n            report_timestamp,\n            vessel_event_type_id,\n            port_id,\n            estimated_timestamp,\n            message_number,\n            relevant_year\n        FROM\n            --! If we have a conflict we want all events that occured *AFTER* the end of the trip preceding the conflict.\n            --! If there is no conflict we want all events that occured *AFTER* the 'trip_calculation_timer', any event that occurs exactly\n            --! at the 'trip_calculation_timer' will generate a conflict.\n            (\n                SELECT\n                    d.vessel_event_id,\n                    d.fiskeridir_vessel_id,\n                    d.message_timestamp AS report_timestamp,\n                    d.vessel_event_type_id,\n                    d.port_id,\n                    d.relevant_year,\n                    d.message_number,\n                    d.departure_timestamp AS estimated_timestamp\n                FROM\n                    trip_arrival t\n                    INNER JOIN ers_departures d ON d.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n                WHERE\n                    (\n                        $2 = 2\n                        AND d.departure_timestamp >= t.occurence_timestamp\n                    )\n                    OR d.departure_timestamp > $3::TIMESTAMPTZ\n                UNION\n                SELECT\n                    a.vessel_event_id,\n                    a.fiskeridir_vessel_id,\n                    a.message_timestamp AS report_timestamp,\n                    a.vessel_event_type_id,\n                    a.port_id,\n                    a.relevant_year,\n                    a.message_number,\n                    a.arrival_timestamp AS estimated_timestamp\n                FROM\n                    trip_arrival t\n                    INNER JOIN ers_arrivals a ON a.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n                    AND t.vessel_event_id != a.vessel_event_id\n                WHERE\n                    (\n                        $2 = 2\n                        AND a.arrival_timestamp >= t.occurence_timestamp\n                    )\n                    OR a.arrival_timestamp > $3::TIMESTAMPTZ\n            ) q\n        ORDER BY\n            estimated_timestamp,\n            relevant_year,\n            message_number\n    )\nSELECT\n    ANY_VALUE (t.fiskeridir_vessel_id) AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    ANY_VALUE (t.end_vessel_event_id) AS \"arrival_vessel_event_id!\",\n    ANY_VALUE (a.port_id) AS \"arrival_port_id\",\n    ANY_VALUE (a.occurence_timestamp) AS \"arrival_estimated_timestamp!\",\n    ANY_VALUE (a.report_timestamp) AS \"arrival_report_timestamp!\",\n    ANY_VALUE (t.start_vessel_event_id) AS \"departure_vessel_event_id!\",\n    ANY_VALUE (d.port_id) AS \"departure_port_id\",\n    ANY_VALUE (d.departure_timestamp) AS \"departure_estimated_timestamp!\",\n    ANY_VALUE (d.message_timestamp) AS \"departure_report_timestamp!\",\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'vessel_event_id',\n                e.vessel_event_id,\n                'fiskeridir_vessel_id',\n                e.fiskeridir_vessel_id,\n                'report_timestamp',\n                e.report_timestamp,\n                'estimated_timestamp',\n                e.estimated_timestamp,\n                'vessel_event_type_id',\n                e.vessel_event_type_id,\n                'departure_port_id',\n                NULL,\n                'arrival_port_id',\n                NULL,\n                'port_id',\n                e.port_id\n            )\n            ORDER BY\n                e.estimated_timestamp,\n                e.relevant_year,\n                e.message_number\n        ) FILTER (\n            WHERE\n                e.vessel_event_id IS NOT NULL\n        ),\n        '[]'\n    )::TEXT AS \"por_and_dep_events_after_trip!\"\nFROM\n    trip t\n    INNER JOIN ers_departures d ON d.vessel_event_id = t.start_vessel_event_id\n    INNER JOIN trip_arrival a ON a.trip_id = t.trip_id\n    -- The result set produced by joining `trip`, `trip_arrival`, and `ers_departures`\n    -- will always contain a single row or be empty.\n    -- start/end vessel_event_id is unique on trips table.\n    LEFT JOIN all_events_after_latest_arrival e ON TRUE\nGROUP BY\n    t.trip_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "arrival_vessel_event_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "arrival_port_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "arrival_estimated_timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 4,
+        "name": "arrival_report_timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "departure_vessel_event_id!",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "departure_port_id",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "departure_estimated_timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "departure_report_timestamp!",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "por_and_dep_events_after_trip!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Int4",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "2da760a9d63a8e41a16a3d460385137a348a8d43cf7c289b6927afa8d2da6c9d"
+}

@@ -2420,6 +2420,7 @@ WITH
             a.message_number,
             a.message_timestamp AS report_timestamp,
             a.port_id,
+            a.vessel_event_id,
             t.trip_id,
             t.fiskeridir_vessel_id
         FROM
@@ -2437,60 +2438,48 @@ WITH
             message_number,
             relevant_year
         FROM
+            --! If we have a conflict we want all events that occured *AFTER* the end of the trip preceding the conflict.
+            --! If there is no conflict we want all events that occured *AFTER* the 'trip_calculation_timer', any event that occurs exactly
+            --! at the 'trip_calculation_timer' will generate a conflict.
             (
                 SELECT
-                    v.vessel_event_id,
-                    v.fiskeridir_vessel_id,
-                    v.report_timestamp,
-                    v.vessel_event_type_id,
+                    d.vessel_event_id,
+                    d.fiskeridir_vessel_id,
+                    d.message_timestamp AS report_timestamp,
+                    d.vessel_event_type_id,
                     d.port_id,
                     d.relevant_year,
                     d.message_number,
                     d.departure_timestamp AS estimated_timestamp
                 FROM
-                    vessel_events v
-                    INNER JOIN ers_departures d ON d.vessel_event_id = v.vessel_event_id
-                    INNER JOIN trip_arrival t ON t.fiskeridir_vessel_id = d.fiskeridir_vessel_id
-                    AND (
-                        d.departure_timestamp > t.occurence_timestamp
-                        OR (
-                            d.relevant_year > t.relevant_year
-                            OR (
-                                d.relevant_year = t.relevant_year
-                                AND d.message_number > t.message_number
-                            )
-                        )
-                    )
+                    trip_arrival t
+                    INNER JOIN ers_departures d ON d.fiskeridir_vessel_id = t.fiskeridir_vessel_id
                 WHERE
-                    v.fiskeridir_vessel_id = $1::BIGINT
-                    AND v.occurence_timestamp >= $3::TIMESTAMPTZ
+                    (
+                        $2 = 2
+                        AND d.departure_timestamp >= t.occurence_timestamp
+                    )
+                    OR d.departure_timestamp > $3::TIMESTAMPTZ
                 UNION
                 SELECT
-                    v.vessel_event_id,
-                    v.fiskeridir_vessel_id,
-                    v.report_timestamp,
-                    v.vessel_event_type_id,
+                    a.vessel_event_id,
+                    a.fiskeridir_vessel_id,
+                    a.message_timestamp AS report_timestamp,
+                    a.vessel_event_type_id,
                     a.port_id,
                     a.relevant_year,
                     a.message_number,
                     a.arrival_timestamp AS estimated_timestamp
                 FROM
-                    vessel_events v
-                    INNER JOIN ers_arrivals a ON a.vessel_event_id = v.vessel_event_id
-                    INNER JOIN trip_arrival t ON t.fiskeridir_vessel_id = a.fiskeridir_vessel_id
-                    AND (
-                        a.arrival_timestamp > t.occurence_timestamp
-                        OR (
-                            a.relevant_year > t.relevant_year
-                            OR (
-                                a.relevant_year = t.relevant_year
-                                AND a.message_number > t.message_number
-                            )
-                        )
-                    )
+                    trip_arrival t
+                    INNER JOIN ers_arrivals a ON a.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+                    AND t.vessel_event_id != a.vessel_event_id
                 WHERE
-                    v.fiskeridir_vessel_id = $1::BIGINT
-                    AND v.occurence_timestamp >= $3::TIMESTAMPTZ
+                    (
+                        $2 = 2
+                        AND a.arrival_timestamp >= t.occurence_timestamp
+                    )
+                    OR a.arrival_timestamp > $3::TIMESTAMPTZ
             ) q
         ORDER BY
             estimated_timestamp,
@@ -2498,15 +2487,15 @@ WITH
             message_number
     )
 SELECT
-    MAX(t.fiskeridir_vessel_id) AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    MAX(t.end_vessel_event_id) AS "arrival_vessel_event_id!",
-    MAX(a.port_id) AS "arrival_port_id",
-    MAX(a.occurence_timestamp) AS "arrival_estimated_timestamp!",
-    MAX(a.report_timestamp) AS "arrival_report_timestamp!",
-    MAX(t.start_vessel_event_id) AS "departure_vessel_event_id!",
-    MAX(d.port_id) AS "departure_port_id",
-    MAX(d.departure_timestamp) AS "departure_estimated_timestamp!",
-    MAX(d.message_timestamp) AS "departure_report_timestamp!",
+    ANY_VALUE (t.fiskeridir_vessel_id) AS "fiskeridir_vessel_id!: FiskeridirVesselId",
+    ANY_VALUE (t.end_vessel_event_id) AS "arrival_vessel_event_id!",
+    ANY_VALUE (a.port_id) AS "arrival_port_id",
+    ANY_VALUE (a.occurence_timestamp) AS "arrival_estimated_timestamp!",
+    ANY_VALUE (a.report_timestamp) AS "arrival_report_timestamp!",
+    ANY_VALUE (t.start_vessel_event_id) AS "departure_vessel_event_id!",
+    ANY_VALUE (d.port_id) AS "departure_port_id",
+    ANY_VALUE (d.departure_timestamp) AS "departure_estimated_timestamp!",
+    ANY_VALUE (d.message_timestamp) AS "departure_report_timestamp!",
     COALESCE(
         JSONB_AGG(
             JSONB_BUILD_OBJECT(
