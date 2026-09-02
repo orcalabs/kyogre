@@ -955,29 +955,29 @@ impl WebApiInboundPort for PostgresAdapter {
         retry(|| self.update_user_impl(user, id, update_selected_vessel)).await?;
         Ok(())
     }
-    async fn add_fuel_measurements(
+    async fn add_fuel_measurement(
         &self,
-        measurements: &[CreateFuelMeasurement],
+        measurements: &CreateFuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
-    ) -> WebApiResult<Vec<FuelMeasurement>> {
+    ) -> WebApiResult<FuelMeasurement> {
         Ok(retry(|| self.add_fuel_measurements_impl(measurements, call_sign, user_id)).await?)
     }
-    async fn update_fuel_measurements(
+    async fn update_fuel_measurement(
         &self,
-        measurements: &[FuelMeasurement],
+        measurements: &FuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
     ) -> WebApiResult<()> {
-        retry(|| self.update_fuel_measurements_impl(measurements, call_sign, user_id)).await?;
+        retry(|| self.update_fuel_measurement_impl(measurements, call_sign, user_id)).await?;
         Ok(())
     }
-    async fn delete_fuel_measurements(
+    async fn delete_fuel_measurement(
         &self,
-        measurements: &[DeleteFuelMeasurement],
+        measurements: &DeleteFuelMeasurement,
         call_sign: &CallSign,
     ) -> WebApiResult<()> {
-        retry(|| self.delete_fuel_measurements_impl(measurements, call_sign)).await?;
+        retry(|| self.delete_fuel_measurement_impl(measurements, call_sign)).await?;
         Ok(())
     }
 }

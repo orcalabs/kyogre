@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    to_delete AS (\n        SELECT\n            w.fiskeridir_vessel_id,\n            $1 AS barentswatch_user_id,\n            $2::TIMESTAMPTZ AS new_timestamp,\n            f.timestamp AS old_timestamp,\n            f.fuel_measurement_id\n        FROM\n            active_vessels w\n            INNER JOIN fuel_measurements f ON f.fuel_measurement_id = $3\n            AND f.fiskeridir_vessel_id = w.fiskeridir_vessel_id\n        WHERE\n            w.call_sign = $4\n    ),\n    deleted_ranges AS (\n        DELETE FROM fuel_measurement_ranges r USING to_delete t\n        WHERE\n            r.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND (\n                r.fuel_range @> t.old_timestamp\n                OR r.fuel_range @> t.new_timestamp\n            )\n        RETURNING\n            r.fuel_range,\n            r.fiskeridir_vessel_id,\n            t.old_timestamp,\n            r.fuel_range @> t.new_timestamp AS covered_delete\n    ),\n    updated_trips AS (\n        UPDATE trips_detailed t\n        SET\n            benchmark_status = $5\n        FROM\n            deleted_ranges\n        WHERE\n            deleted_ranges.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND deleted_ranges.fuel_range && t.period\n    )\nSELECT\n    d.fiskeridir_vessel_id AS \"fiskeridir_vessel_id: FiskeridirVesselId\",\n    d.old_timestamp AS \"timestamp!\"\nFROM\n    deleted_ranges d\nWHERE\n    NOT d.covered_delete\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "timestamp!",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz",
+        "Int8",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "9055e0e854c424c68bb62fcd3f35f1f280c854e82f22ed9cd39b7efd954f0c43"
+}

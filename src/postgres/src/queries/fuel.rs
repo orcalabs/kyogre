@@ -305,6 +305,7 @@ WITH
             INNER JOIN fuel_measurement_ranges r ON v.fiskeridir_vessel_id = r.fiskeridir_vessel_id
             AND r.fuel_range && $2
             AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (r.fuel_range, $2) >= 0.5
+            AND NOT r.is_reset
     ),
     overlapping AS (
         SELECT

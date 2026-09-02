@@ -17,7 +17,7 @@ use web_api::{
         ais_vms::{AisVmsParameters, AisVmsPosition, CurrentPosition, CurrentPositionParameters},
         delivery_point::DeliveryPoint,
         fishing_facility::{FishingFacilitiesParams, FishingFacility},
-        fuel_measurement::{FuelMeasurementsParams, UploadFuelMeasurement},
+        fuel_measurement::FuelMeasurementsParams,
         haul::{Haul, HaulsMatrix, HaulsMatrixParams, HaulsParams},
         landing::{Landing, LandingMatrix, LandingMatrixParams, LandingsParams},
         org::OrgBenchmarkParameters,
@@ -422,28 +422,49 @@ impl ApiClient {
         self.send("fuel_measurements", Method::GET, &(), Some(&params))
             .await
     }
+    pub async fn create_fuel_measurement(
+        &self,
+        body: &CreateFuelMeasurement,
+    ) -> Result<FuelMeasurement, Error> {
+        self.send("fuel_measurements", Method::POST, &body, None::<&()>)
+            .await
+    }
+
     pub async fn create_fuel_measurements(
         &self,
         body: &[CreateFuelMeasurement],
     ) -> Result<Vec<FuelMeasurement>, Error> {
-        self.send("fuel_measurements", Method::POST, &body, None::<&()>)
-            .await
+        let mut out = Vec::with_capacity(body.len());
+        for b in body {
+            let created = self.create_fuel_measurement(b).await?;
+            out.push(created);
+        }
+
+        Ok(out)
     }
-    pub async fn upload_fuel_measurements(
-        &self,
-        body: UploadFuelMeasurement,
-    ) -> Result<Vec<FuelMeasurement>, Error> {
-        self.send("fuel_measurements/upload", Method::POST, &body, None::<&()>)
-            .await
-    }
+
     pub async fn update_fuel_measurements(&self, body: &[FuelMeasurement]) -> Result<(), Error> {
+        for b in body {
+            self.update_fuel_measurement(b).await?;
+        }
+        Ok(())
+    }
+
+    pub async fn update_fuel_measurement(&self, body: &FuelMeasurement) -> Result<(), Error> {
         self.send("fuel_measurements", Method::PUT, &body, None::<&()>)
             .await
     }
+
     pub async fn delete_fuel_measurements(
         &self,
         body: &[DeleteFuelMeasurement],
     ) -> Result<(), Error> {
+        for b in body {
+            self.delete_fuel_measurement(b).await?;
+        }
+        Ok(())
+    }
+    pub async fn delete_fuel_measurement(&self, body: &DeleteFuelMeasurement) -> Result<(), Error> {
         self.send("fuel_measurements", Method::DELETE, &body, None::<&()>)
             .await
     }

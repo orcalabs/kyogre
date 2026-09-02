@@ -5,7 +5,6 @@ use kyogre_core::{MatrixCacheOutbound, WebApiInboundPort, WebApiOutboundPort};
 use postgres::PostgresAdapter;
 
 pub mod error;
-pub mod excel;
 pub mod extractors;
 pub mod guards;
 pub mod response;

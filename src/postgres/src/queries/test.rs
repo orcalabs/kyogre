@@ -67,7 +67,8 @@ WHERE
 SELECT
     fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
     fuel_range AS "fuel_range: DateRange",
-    fuel_used_liter
+    fuel_used_liter,
+    is_reset
 FROM
     fuel_measurement_ranges
 ORDER BY

@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    top AS (\n        SELECT\n            timestamp,\n            fuel_liter\n        FROM\n            fuel_measurements f\n        WHERE\n            fiskeridir_vessel_id = $1\n            AND timestamp > $2\n        ORDER BY\n            timestamp\n        LIMIT\n            1\n    ),\n    bottom AS (\n        SELECT\n            timestamp,\n            fuel_liter\n        FROM\n            fuel_measurements f\n        WHERE\n            fiskeridir_vessel_id = $1\n            AND timestamp < $2\n        ORDER BY\n            timestamp DESC\n        LIMIT\n            1\n    ),\n    inserted AS (\n        INSERT INTO\n            fuel_measurement_ranges (\n                fiskeridir_vessel_id,\n                start_measurement_ts,\n                start_measurement_fuel_liter,\n                end_measurement_ts,\n                end_measurement_fuel_liter\n            )\n        SELECT\n            *\n        FROM\n            (\n                SELECT\n                    $1,\n                    b.timestamp,\n                    b.fuel_liter,\n                    $2,\n                    $3\n                FROM\n                    bottom b\n                UNION\n                SELECT\n                    $1,\n                    $2,\n                    $3,\n                    t.timestamp,\n                    t.fuel_liter\n                FROM\n                    top t\n            )\n        RETURNING\n            fiskeridir_vessel_id,\n            fuel_range\n    )\nUPDATE trips_detailed t\nSET\n    benchmark_status = $4\nFROM\n    inserted\nWHERE\n    inserted.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n    AND inserted.fuel_range && t.period\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Timestamptz",
+        "Float8",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e0a120bd1ac7b14bc5db0d25d216cdb0a0272f0b452ad65c9f2f9b1f57b031da"
+}
