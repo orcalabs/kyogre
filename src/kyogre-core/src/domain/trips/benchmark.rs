@@ -21,6 +21,22 @@ pub enum TripBenchmarkId {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct PerVesselBenchmark {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub weight_per_hour: Option<f64>,
+    pub weight_per_distance: Option<f64>,
+    #[serde(rename = "weightPerFuel")]
+    pub weight_per_fuel_liter: Option<f64>,
+    #[serde(rename = "catchValuePerFuel")]
+    pub catch_value_per_fuel_liter: Option<f64>,
+    #[serde(rename = "fuelConsumption")]
+    pub fuel_consumption_liter: Option<f64>,
+    pub living_weight: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct AverageTripBenchmarks {
     pub weight_per_hour: Option<f64>,
     pub weight_per_distance: Option<f64>,

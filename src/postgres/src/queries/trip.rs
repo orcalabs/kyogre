@@ -1447,6 +1447,7 @@ UPDATE trips_detailed
 SET
     landings = COALESCE(q.landings, '[]'),
     landing_species_group_ids = COALESCE(q.landing_species_group_ids, '{}'),
+    landing_species_main_group_ids = COALESCE(q.landing_species_main_group_ids, '{}'),
     landing_total_living_weight = COALESCE(q.living_weight, 0),
     landing_total_gross_weight = COALESCE(q.gross_weight, 0),
     landing_total_product_weight = COALESCE(q.product_weight, 0),
@@ -1469,6 +1470,10 @@ FROM
                 SELECT DISTINCT
                     UNNEST(ARRAY_AGG(qi.species_group_ids))
             ) AS landing_species_group_ids,
+            ARRAY(
+                SELECT DISTINCT
+                    UNNEST(ARRAY_AGG(qi.species_main_group_ids))
+            ) AS landing_species_main_group_ids,
             SUM(qi.living_weight) AS living_weight,
             SUM(qi.gross_weight) AS gross_weight,
             SUM(qi.product_weight) AS product_weight,
@@ -1482,6 +1487,10 @@ FROM
                         WHERE
                             t.species_group_id IS NOT NULL
                     ) AS species_group_ids,
+                    ARRAY_AGG(DISTINCT t.species_main_group_id) FILTER (
+                        WHERE
+                            t.species_main_group_id IS NOT NULL
+                    ) AS species_main_group_ids,
                     JSONB_BUILD_OBJECT(
                         'living_weight',
                         COALESCE(SUM(t.living_weight), 0),

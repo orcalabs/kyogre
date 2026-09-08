@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(ARRAY_AGG(fiskeridir_vessel_id), '{}') AS ids\nFROM\n    fiskeridir_vessels\nWHERE\n    (\n        $1::INT[] IS NULL\n        OR $1 && gear_group_ids\n    )\n    AND (\n        $2::INT[] IS NULL\n        OR fiskeridir_length_group_id = ANY ($2)\n    )\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ids",
+        "type_info": "Int8Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8af8c7f3ff32684ec3181219555045190191e9507a11c518afe80f1f634c0be5"
+}
