@@ -1,15 +1,93 @@
-use fiskeridir_rs::{CallSign, SpeciesGroup};
+use crate::{PostgresAdapter, error::Result, models::TripBenchmarkOutput};
+use fiskeridir_rs::{CallSign, SpeciesGroup, SpeciesMainGroup};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageFuiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
-    DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone, EngineType,
-    FiskeridirVesselId, FuiQuery, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi,
-    ProcessingStatus, TripBenchmarksQuery, TripId, TripWithBenchmark,
+    BarentswatchUserId, DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone,
+    EngineType, FiskeridirVesselId, FuiQuery, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi,
+    PerVesselBenchmark, PerVesselBenchmarkParams, ProcessingStatus, TripBenchmarksQuery, TripId,
+    TripWithBenchmark,
 };
 
-use crate::{PostgresAdapter, error::Result, models::TripBenchmarkOutput};
-
 impl PostgresAdapter {
+    pub(crate) async fn per_vessel_benchmarks_impl(
+        &self,
+        user_id: &BarentswatchUserId,
+        query: &PerVesselBenchmarkParams,
+    ) -> Result<Vec<PerVesselBenchmark>> {
+        let vessels = if query.use_following_list.unwrap_or(false) {
+            sqlx::query!(
+                r#"
+SELECT
+    COALESCE(ARRAY_AGG(fiskeridir_vessel_id), '{}') AS ids
+FROM
+    user_follows
+WHERE
+    barentswatch_user_id = $1
+                 "#,
+                user_id.as_ref()
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .ids
+        } else {
+            sqlx::query!(
+                r#"
+SELECT
+    COALESCE(ARRAY_AGG(fiskeridir_vessel_id), '{}') AS ids
+FROM
+    fiskeridir_vessels
+WHERE
+    (
+        $1::INT[] IS NULL
+        OR $1 && gear_group_ids
+    )
+    AND (
+        $2::INT[] IS NULL
+        OR fiskeridir_length_group_id = ANY ($2)
+    )
+                "#,
+                &query.gear_groups as &Option<Vec<GearGroup>>,
+                &query.length_groups as &Option<Vec<VesselLengthGroup>>,
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .ids
+        };
+        let out = sqlx::query_as!(
+            PerVesselBenchmark,
+            r#"
+SELECT
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
+    SUM(benchmark_fuel_consumption_liter) AS fuel_consumption_liter,
+    SUM(benchmark_weight_per_hour) AS weight_per_hour,
+    SUM(benchmark_weight_per_distance) AS weight_per_distance,
+    SUM(benchmark_weight_per_fuel_liter) AS weight_per_fuel_liter,
+    SUM(benchmark_catch_value_per_fuel_liter) AS catch_value_per_fuel_liter,
+    SUM(landing_total_living_weight) AS living_weight
+FROM
+    trips_detailed
+WHERE
+    start_timestamp >= $1
+    AND stop_timestamp <= $2
+    AND (
+        $3::INT[] IS NULL
+        OR landing_species_main_group_ids && $3
+    )
+    AND fiskeridir_vessel_id = ANY ($4)
+GROUP BY
+    fiskeridir_vessel_id
+            "#,
+            query.range.start(),
+            query.range.end(),
+            &query.species_main_group_ids as &Option<Vec<SpeciesMainGroup>>,
+            vessels.as_deref() as Option<&[i64]>
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(out)
+    }
     pub(crate) async fn add_benchmark_output(
         &self,
         value: &kyogre_core::TripBenchmarkOutput,

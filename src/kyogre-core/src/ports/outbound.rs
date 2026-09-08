@@ -97,6 +97,11 @@ pub trait WebApiOutboundPort {
         &self,
         query: AverageTripBenchmarksQuery,
     ) -> WebApiResult<AverageTripBenchmarks>;
+    async fn per_vessel_benchmarks(
+        &self,
+        user_id: &BarentswatchUserId,
+        query: &PerVesselBenchmarkParams,
+    ) -> WebApiResult<Vec<PerVesselBenchmark>>;
     async fn average_eeoi(&self, query: AverageEeoiQuery) -> WebApiResult<Option<f64>>;
     async fn average_fui(&self, query: AverageFuiQuery) -> WebApiResult<Option<f64>>;
     async fn live_fuel(&self, query: &LiveFuelQuery) -> WebApiResult<LiveFuel>;

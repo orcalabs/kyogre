@@ -660,6 +660,13 @@ impl LiveFuelInbound for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
+    async fn per_vessel_benchmarks(
+        &self,
+        user_id: &BarentswatchUserId,
+        query: &PerVesselBenchmarkParams,
+    ) -> WebApiResult<Vec<PerVesselBenchmark>> {
+        Ok(retry(|| self.per_vessel_benchmarks_impl(user_id, query)).await?)
+    }
     async fn price(&self, query: PriceQuery) -> WebApiResult<Option<f64>> {
         Ok(retry(|| self.price_impl(&query)).await?)
     }

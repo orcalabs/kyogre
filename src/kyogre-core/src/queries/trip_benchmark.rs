@@ -1,6 +1,10 @@
 use super::Ordering;
-use crate::{DateTimeRange, OptionalDateTimeRange};
-use fiskeridir_rs::{CallSign, FiskeridirVesselId, GearGroup, SpeciesGroup, VesselLengthGroup};
+use crate::{DateTimeRange, DateTimeRangeWithDefaultTimeSpan, OptionalDateTimeRange};
+use fiskeridir_rs::{
+    CallSign, FiskeridirVesselId, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup,
+};
+use serde::{Deserialize, Serialize};
+use serde_with::{DisplayFromStr, serde_as};
 
 #[derive(Debug, Clone)]
 pub struct TripBenchmarksQuery {
@@ -45,4 +49,20 @@ pub struct AverageFuiQuery {
     pub length_group: Option<VesselLengthGroup>,
     pub vessel_ids: Vec<FiskeridirVesselId>,
     pub species_group_id: Option<SpeciesGroup>,
+}
+
+#[serde_as]
+#[derive(Default, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct PerVesselBenchmarkParams {
+    #[serde(flatten)]
+    pub range: DateTimeRangeWithDefaultTimeSpan<30>,
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub gear_groups: Option<Vec<GearGroup>>,
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub length_groups: Option<Vec<VesselLengthGroup>>,
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub species_main_group_ids: Option<Vec<SpeciesMainGroup>>,
+    pub use_following_list: Option<bool>,
 }
