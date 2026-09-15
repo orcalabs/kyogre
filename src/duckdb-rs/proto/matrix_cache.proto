@@ -50,8 +50,5 @@ message CatchLocation {
     uint32 catch_area_id = 2;
 }
 
-message DatabaseName {
-    string name = 1;
-}
 // Protobuf requires us to have parameteres for each service function
 message EmptyMessage {}

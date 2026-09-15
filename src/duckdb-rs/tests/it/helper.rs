@@ -1,6 +1,6 @@
 use duckdb_rs::{
+    Client,
     adapter::{CacheMode, CacheStorage, DuckdbSettings},
-    api::Client,
     settings::Settings,
     startup::App,
 };

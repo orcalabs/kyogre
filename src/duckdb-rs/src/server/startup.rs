@@ -1,6 +1,6 @@
-use crate::api::matrix_cache::matrix_cache_server::MatrixCacheServer;
+use crate::protobuf::matrix_cache_server::MatrixCacheServer;
 use crate::refresher::DuckdbRefresher;
-use crate::{adapter::DuckdbAdapter, api::MatrixCacheService, settings::Settings};
+use crate::server::{adapter::DuckdbAdapter, api::MatrixCacheService, settings::Settings};
 use tokio::net::TcpListener;
 use tokio::task::JoinSet;
 use tokio_stream::wrappers::TcpListenerStream;

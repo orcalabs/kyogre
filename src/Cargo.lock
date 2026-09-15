@@ -1639,6 +1639,7 @@ dependencies = [
  "chrono",
  "config",
  "duckdb",
+ "duckdb-rs",
  "fiskeridir-rs",
  "futures",
  "http 1.5.0",
