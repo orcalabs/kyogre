@@ -1,6 +1,5 @@
 use super::{barentswatch_helper::BarentswatchHelper, test_client::ApiClient};
 use chrono::{DateTime, NaiveDate, Utc};
-use duckdb_rs::{CacheStorage, adapter};
 use engine::*;
 use futures::Future;
 use kyogre_core::*;
@@ -19,7 +18,7 @@ use web_api::extractors::AcceptedIssuer;
 use web_api::settings::BwEnvironmentSettings;
 use web_api::{
     routes::v1::{haul, landing},
-    settings::{ApiSettings, BwSettings, Duckdb, Settings},
+    settings::{ApiSettings, BwSettings, Settings},
     startup::App,
 };
 
@@ -35,8 +34,8 @@ pub const INSIDE_HAULS_POLYGON: (f64, f64) = (22.089711, 73.858074);
 pub struct TestHelper {
     pub app: ApiClient,
     pub db: TestDb,
-    duck_db: Option<duckdb_rs::Client>,
     db_settings: PsqlSettings,
+    duck_db: Option<duckdb_rs::Client>,
 }
 
 impl TestHelper {
@@ -104,8 +103,8 @@ impl TestHelper {
         TestHelper {
             app: ApiClient::new(address, bw_helper),
             db: TestDb { db },
-            duck_db,
             db_settings,
+            duck_db,
         }
     }
     pub async fn refresh_matrix_cache(&self) {
@@ -124,7 +123,7 @@ where
         + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test, CacheMode::NoCache, PgTag::Master).await;
+    test_impl(test, PgTag::Master).await;
 }
 
 pub async fn test<T, Fut>(test: T)
@@ -132,29 +131,7 @@ where
     T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
 {
-    test_impl(test, CacheMode::NoCache, PgTag::Local).await;
-}
-
-pub async fn test_with_matrix_cache<T, Fut>(test: T)
-where
-    T: FnOnce(TestHelper, TestStateBuilder) -> Fut
-        + panic::UnwindSafe
-        + Send
-        + Sync
-        + Clone
-        + 'static,
-    Fut: Future<Output = ()> + Send + 'static,
-{
-    #[cfg(feature = "all-tests")]
-    test_impl(test.clone(), CacheMode::MatrixCache, PgTag::Local).await;
-
-    test_impl(test, CacheMode::NoCache, PgTag::Local).await;
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CacheMode {
-    NoCache,
-    MatrixCache,
+    test_impl(test, PgTag::Local).await;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -184,7 +161,7 @@ impl PgTag {
     }
 }
 
-async fn test_impl<T, Fut>(test: T, cache_mode: CacheMode, pg_tag: PgTag)
+async fn test_impl<T, Fut>(test: T, pg_tag: PgTag)
 where
     T: FnOnce(TestHelper, TestStateBuilder) -> Fut + panic::UnwindSafe + Send + Sync + 'static,
     Fut: Future<Output = ()> + Send + 'static,
@@ -224,7 +201,11 @@ where
                 .await;
             let bw_address = bw_helper.address();
 
-            let (duck_db_api, duck_db_client) = if cache_mode == CacheMode::MatrixCache {
+            let bw_profiles_url = format!("{bw_address}/profiles");
+
+            #[cfg(feature = "all-tests")]
+            {
+                use duckdb_rs::{CacheStorage, adapter};
                 let duckdb_app = duckdb_rs::App::build(&duckdb_rs::Settings {
                     postgres: db_settings.clone(),
                     environment: Environment::Test,
@@ -241,57 +222,90 @@ where
                 let ip = "127.0.0.1".to_string();
                 tokio::spawn(duckdb_app.run());
 
-                (
-                    Some(Duckdb {
-                        ip: ip.clone(),
-                        port,
+                let duck_db_api = web_api::settings::Duckdb {
+                    ip: ip.clone(),
+                    port,
+                };
+
+                let duck_db_client = duckdb_rs::Client::new(ip, port).await.unwrap();
+
+                let api_settings = Settings {
+                    api: ApiSettings {
+                        ip: "127.0.0.1".to_string(),
+                        port: 0,
+                        num_workers: Some(1),
+                    },
+                    postgres: db_settings.clone(),
+                    environment: Environment::Test,
+                    bw_settings: Some(BwSettings {
+                        audience: bw_helper.audience.clone(),
+                        issuers: HashMap::from_iter([(
+                            AcceptedIssuer::Barentswatch,
+                            BwEnvironmentSettings {
+                                jwks_url: format!("{bw_address}/jwks"),
+                                profiles_url: bw_profiles_url.clone(),
+                            },
+                        )]),
                     }),
-                    Some(duckdb_rs::Client::new(ip, port).await.unwrap()),
+                    duck_db_api: Some(duck_db_api),
+                    auth0: None,
+                };
+
+                let app = TestHelper::spawn_app(
+                    adapter.clone(),
+                    db_settings,
+                    App::build(&api_settings).await,
+                    bw_helper,
+                    Some(duck_db_client),
                 )
-            } else {
-                (None, None)
-            };
+                .await;
 
-            let bw_profiles_url = format!("{bw_address}/profiles");
+                let builder = app.builder().await;
+                test(app, builder).await;
 
-            let api_settings = Settings {
-                api: ApiSettings {
-                    ip: "127.0.0.1".to_string(),
-                    port: 0,
-                    num_workers: Some(1),
-                },
-                postgres: db_settings.clone(),
-                environment: Environment::Test,
-                bw_settings: Some(BwSettings {
-                    audience: bw_helper.audience.clone(),
-                    issuers: HashMap::from_iter([(
-                        AcceptedIssuer::Barentswatch,
-                        BwEnvironmentSettings {
-                            jwks_url: format!("{bw_address}/jwks"),
-                            profiles_url: bw_profiles_url.clone(),
-                        },
-                    )]),
-                }),
-                duck_db_api,
-                auth0: None,
-            };
+                adapter.verify_database().await.unwrap();
+                adapter.close().await;
+            }
 
-            let app = TestHelper::spawn_app(
-                adapter.clone(),
-                db_settings,
-                App::build(&api_settings).await,
-                bw_helper,
-                duck_db_client,
-            )
-            .await;
+            #[cfg(not(feature = "all-tests"))]
+            {
+                let api_settings = Settings {
+                    api: ApiSettings {
+                        ip: "127.0.0.1".to_string(),
+                        port: 0,
+                        num_workers: Some(1),
+                    },
+                    postgres: db_settings.clone(),
+                    environment: Environment::Test,
+                    bw_settings: Some(BwSettings {
+                        audience: bw_helper.audience.clone(),
+                        issuers: HashMap::from_iter([(
+                            AcceptedIssuer::Barentswatch,
+                            BwEnvironmentSettings {
+                                jwks_url: format!("{bw_address}/jwks"),
+                                profiles_url: bw_profiles_url.clone(),
+                            },
+                        )]),
+                    }),
+                    duck_db_api: None,
+                    auth0: None,
+                };
 
-            dbg!(cache_mode);
+                let app = TestHelper::spawn_app(
+                    adapter.clone(),
+                    db_settings,
+                    App::build(&api_settings).await,
+                    bw_helper,
+                    None,
+                )
+                .await;
 
-            let builder = app.builder().await;
-            test(app, builder).await;
+                let builder = app.builder().await;
+                test(app, builder).await;
 
-            adapter.verify_database().await.unwrap();
-            adapter.close().await;
+                adapter.verify_database().await.unwrap();
+                adapter.close().await;
+            }
         })
         .await;
 }

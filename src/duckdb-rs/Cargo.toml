@@ -9,7 +9,7 @@ edition = "2024"
 server = ["duckdb", "libduckdb-sys", "r2d2"]
 client = []
 
-default = ["server"]
+default = ["client"]
 
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
@@ -44,11 +44,15 @@ tonic-prost = { version = "0.14" }
 
 
 [dev-dependencies]
+duckdb-rs = { path = ".", features = ["server"] }
 postgres = { path = "../postgres", features = ["test"] }
-duckdb-rs = { path = ".", features = ["client"] }
-
 futures = { workspace = true }
 orca-core = { workspace = true, features = ["test-helper"] }
 
 [build-dependencies]
 tonic-prost-build = "0.14"
+
+[[ bin ]]
+name = "duckdb"
+path = "src/main.rs"
+required-features = ["server"]

@@ -1,4 +1,4 @@
-use super::helper::test_with_matrix_cache;
+use super::helper::test;
 use crate::v1::helper::*;
 use chrono::{DateTime, Utc};
 use engine::*;
@@ -12,7 +12,7 @@ use web_api::routes::{utils::datetime_to_month, v1::landing::LandingMatrixParams
 
 #[tokio::test]
 async fn test_landing_matrix_returns_correct_sum_for_all_landings() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::Date;
 
         builder
@@ -40,7 +40,7 @@ async fn test_landing_matrix_returns_correct_sum_for_all_landings() {
 
 #[tokio::test]
 async fn test_landing_matrix_filters_by_catch_locations() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::GearGroup;
 
         builder
@@ -73,7 +73,7 @@ async fn test_landing_matrix_filters_by_catch_locations() {
 
 #[tokio::test]
 async fn test_landing_matrix_filters_by_months() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::GearGroup;
 
         let month1: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
@@ -111,7 +111,7 @@ async fn test_landing_matrix_filters_by_months() {
 
 #[tokio::test]
 async fn test_landing_matrix_filters_by_vessel_length() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::SpeciesGroup;
 
         builder
@@ -157,7 +157,7 @@ async fn test_landing_matrix_filters_by_vessel_length() {
 
 #[tokio::test]
 async fn test_landing_matrix_filters_by_species_group() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::GearGroup;
 
         builder
@@ -205,7 +205,7 @@ async fn test_landing_matrix_filters_by_species_group() {
 
 #[tokio::test]
 async fn test_landing_matrix_filters_by_gear_group() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::SpeciesGroup;
 
         builder
@@ -242,7 +242,7 @@ async fn test_landing_matrix_filters_by_gear_group() {
 
 #[tokio::test]
 async fn test_landing_matrix_filters_by_fiskeridir_vessel_ids() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::Date;
 
         let state = builder
@@ -267,7 +267,7 @@ async fn test_landing_matrix_filters_by_fiskeridir_vessel_ids() {
 
 #[tokio::test]
 async fn test_landing_matrix_date_sum_area_table_is_correct() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::Date;
 
         let month1: DateTime<Utc> = "2013-01-1T00:00:00Z".parse().unwrap();
@@ -312,7 +312,7 @@ async fn test_landing_matrix_date_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_landing_matrix_gear_group_sum_area_table_is_correct() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::GearGroup;
 
         builder
@@ -357,7 +357,7 @@ async fn test_landing_matrix_gear_group_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_landing_matrix_vessel_length_sum_area_table_is_correct() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::VesselLength;
 
         builder
@@ -403,7 +403,7 @@ async fn test_landing_matrix_vessel_length_sum_area_table_is_correct() {
 
 #[tokio::test]
 async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::SpeciesGroup;
 
         builder
@@ -451,7 +451,7 @@ async fn test_landing_matrix_species_group_sum_area_table_is_correct() {
 #[tokio::test]
 async fn test_landing_matrix_have_correct_totals_after_landing_is_replaced_by_newer_version_with_another_weight()
  {
-    test_with_matrix_cache(|helper, builder| async move {
+    test(|helper, builder| async move {
         let filter = ActiveLandingFilter::SpeciesGroup;
 
         builder

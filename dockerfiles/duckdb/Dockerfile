@@ -30,7 +30,7 @@ RUN --mount=type=secret,id=cloudsmith-api-key,required=true \
 
 COPY src src
 RUN cd src && \
-    cargo build --release --bin duckdb-rs
+    cargo build --release --bin duckdb --features server
 
 FROM gcr.io/distroless/cc
 
