@@ -5,6 +5,12 @@ edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+server = ["duckdb", "libduckdb-sys", "r2d2"]
+client = []
+
+default = ["server"]
+
 [dependencies]
 kyogre-core = { path = "../kyogre-core" }
 
@@ -28,16 +34,18 @@ tokio = { workspace = true, features = [
 tokio-stream = { workspace = true, features = ["net"] }
 http = { workspace = true }
 
-duckdb = { version = "1", features = ["r2d2", "bundled"] }
-libduckdb-sys = { version = "1" }
-r2d2 = { version = "0.8" }
+duckdb = { version = "1", features = ["r2d2", "bundled"], optional = true }
+libduckdb-sys = { version = "1", optional = true }
+r2d2 = { version = "0.8", optional = true }
+
 tonic = { version = "0.14.2", features = ["gzip"] }
-prost = "0.14"
-tonic-prost = "0.14"
+prost = { version = "0.14" }
+tonic-prost = { version = "0.14" }
 
 
 [dev-dependencies]
-postgres = { path = "../postgres" }
+postgres = { path = "../postgres", features = ["test"] }
+duckdb-rs = { path = ".", features = ["client"] }
 
 futures = { workspace = true }
 orca-core = { workspace = true, features = ["test-helper"] }

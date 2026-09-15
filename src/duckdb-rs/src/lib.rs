@@ -1,15 +1,14 @@
 #![deny(warnings)]
 #![deny(rust_2018_idioms)]
 
-pub mod adapter;
-pub mod api;
+#[cfg(feature = "client")]
+pub mod client;
 pub mod error;
-pub mod filter;
-pub mod refresher;
-pub mod settings;
-pub mod startup;
+mod protobuf;
+#[cfg(feature = "server")]
+pub mod server;
 
-pub use adapter::*;
-pub use api::Client;
-pub use settings::*;
-pub use startup::*;
+#[cfg(feature = "client")]
+pub use client::Client;
+#[cfg(feature = "server")]
+pub use server::*;

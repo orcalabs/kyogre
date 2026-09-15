@@ -12,7 +12,9 @@ all-tests = []
 [dependencies]
 kyogre-core = { path = "../kyogre-core", features = ["oasgen"] }
 postgres = { path = "../postgres" }
-duckdb-rs = { path = "../duckdb-rs" }
+duckdb-rs = { path = "../duckdb-rs", default-features = false, features = [
+    "client",
+] }
 http-client = { path = "../http-client" }
 processors = { path = "../processors" }
 
@@ -50,6 +52,7 @@ base64 = "0.22.1"
 [dev-dependencies]
 engine = { path = "../engine", features = ["test"] }
 http-client = { path = "../http-client", default-features = false }
+duckdb-rs = { path = "../duckdb-rs" }
 
 machine = { workspace = true }
 fiskeridir-rs = { workspace = true, features = ["test"] }

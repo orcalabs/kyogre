@@ -1,8 +1,8 @@
 use crate::{
-    api::matrix_cache::LandingMatrix,
     error::{Error, Result, error::RefreshCommunictionSnafu},
-    filter::{HaulFilters, LandingFilters},
+    protobuf::LandingMatrix,
     refresher::{DuckdbRefresher, RefreshRequest},
+    server::filter::{HaulFilters, LandingFilters},
 };
 use duckdb::DuckdbConnectionManager;
 use kyogre_core::{

@@ -1,7 +1,9 @@
-use crate::refresher::RefreshRequest;
+#[cfg(feature = "server")]
+use crate::server::refresher::RefreshRequest;
 use kyogre_core::{IsTimeout, MatrixIndexError};
 use snafu::{Location, Snafu};
 use stack_error::{OpaqueError, StackError};
+#[cfg(feature = "server")]
 use tokio::sync::mpsc::error::SendError;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -15,6 +17,7 @@ impl IsTimeout for Error {
 #[derive(Snafu, StackError)]
 #[snafu(module, visibility(pub))]
 pub enum Error {
+    #[cfg(feature = "server")]
     #[snafu(display("Failed a duckdb operation"))]
     #[stack_error(skip_from_impls)]
     Duckdb {
@@ -32,12 +35,12 @@ pub enum Error {
         error: std::io::Error,
     },
     #[snafu(display("Duckdb timeout error"))]
-    #[stack_error(opaque_std_from = [r2d2::Error])]
     Timeout {
         #[snafu(implicit)]
         location: Location,
         opaque: OpaqueError,
     },
+    #[cfg(feature = "server")]
     #[snafu(display("Refresh channel send error"))]
     Refresh {
         #[snafu(implicit)]
@@ -142,6 +145,7 @@ impl From<tonic::Status> for Error {
     }
 }
 
+#[cfg(feature = "server")]
 impl From<duckdb::Error> for Error {
     #[track_caller]
     fn from(value: duckdb::Error) -> Self {
@@ -208,6 +212,18 @@ impl From<Error> for kyogre_core::Error {
                 location,
                 opaque: OpaqueError::Std(Box::new(value)),
             },
+        }
+    }
+}
+
+#[cfg(feature = "server")]
+impl From<r2d2::Error> for Error {
+    #[track_caller]
+    fn from(value: r2d2::Error) -> Self {
+        let location = std::panic::Location::caller();
+        Error::Timeout {
+            location,
+            opaque: OpaqueError::Std(Box::new(value)),
         }
     }
 }
