@@ -5,8 +5,9 @@ use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageFuiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
-    DateTimeRange, EeoiQuery, FiskeridirVesselId, FuiQuery, Mean, OptionalDateTimeRange, Ordering,
-    PerVesselBenchmark, PerVesselBenchmarkParams, TripBenchmarksQuery, TripId, TripWithBenchmark,
+    AverageVesselsBenchmarks, DateTimeRange, EeoiQuery, FiskeridirVesselId, FuiQuery, Mean,
+    OptionalDateTimeRange, Ordering, PerVesselBenchmarkParams, SumVesselBenchmark,
+    TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -81,14 +82,30 @@ pub struct AverageEeoiParams {
 
 #[oasgen(skip(db), tags("Trip"))]
 #[tracing::instrument(skip(db))]
-pub async fn per_vessel_benchmarks<T: Database + Send + Sync + 'static>(
+pub async fn per_vessel_benchmarks_sum<T: Database + Send + Sync + 'static>(
     db: web::Data<T>,
     profile: BwProfile,
     params: Query<PerVesselBenchmarkParams>,
-) -> Result<Response<Vec<PerVesselBenchmark>>> {
+) -> Result<Response<Vec<SumVesselBenchmark>>> {
     let query = params.into_inner();
     Ok(Response::new(
-        db.per_vessel_benchmarks(&profile.user.id, &query).await?,
+        db.per_vessel_benchmarks_sum(&profile.user.id, &query)
+            .await?,
+    ))
+}
+
+#[oasgen(skip(db), tags("Trip"))]
+#[tracing::instrument(skip(db))]
+pub async fn per_vessel_benchmarks_avg<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    params: Query<PerVesselBenchmarkParams>,
+) -> Result<Response<Option<AverageVesselsBenchmarks>>> {
+    let query = params.into_inner();
+    let call_sign = profile.call_sign(db.as_ref()).await?;
+    Ok(Response::new(
+        db.per_vessel_benchmarks_avg(&profile.user.id, &call_sign, &query)
+            .await?,
     ))
 }
 

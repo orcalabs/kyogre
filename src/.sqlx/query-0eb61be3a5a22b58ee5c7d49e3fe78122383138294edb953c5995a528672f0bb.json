@@ -1,0 +1,92 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    logged_in_user_values AS (\n        SELECT\n            AVG(benchmark_fuel_consumption_liter) AS own_average_fuel_consumption_liter,\n            AVG(benchmark_weight_per_hour) AS own_average_weight_per_hour,\n            AVG(benchmark_weight_per_distance) AS own_average_weight_per_distance,\n            AVG(benchmark_weight_per_fuel_liter) AS own_average_weight_per_fuel_liter,\n            AVG(benchmark_catch_value_per_fuel_liter) AS own_average_catch_value_per_fuel_liter,\n            AVG(landing_total_living_weight) AS own_average_living_weight\n        FROM\n            trips_detailed\n        WHERE\n            start_timestamp >= $1\n            AND stop_timestamp <= $2\n            AND (\n                $3::INT[] IS NULL\n                OR landing_species_main_group_ids && $3\n            )\n            AND fiskeridir_vessel_id = (\n                SELECT\n                    fiskeridir_vessel_id\n                FROM\n                    all_vessels\n                WHERE\n                    call_sign = $4\n            )\n    ),\n    other_vessels AS (\n        SELECT\n            MAX(average_weight_per_hour) AS highest_average_weight_per_hour,\n            MAX(average_fuel_consumption_liter) AS highest_average_fuel_consumption_liter,\n            MAX(average_weight_per_distance) AS highest_average_weight_per_distance,\n            MAX(average_weight_per_fuel_liter) AS highest_average_weight_per_fuel_liter,\n            MAX(average_catch_value_per_fuel_liter) AS highest_average_catch_value_per_fuel_liter,\n            MAX(average_living_weight) AS highest_average_living_weight\n        FROM\n            (\n                SELECT\n                    AVG(benchmark_fuel_consumption_liter) AS average_fuel_consumption_liter,\n                    AVG(benchmark_weight_per_hour) AS average_weight_per_hour,\n                    AVG(benchmark_weight_per_distance) AS average_weight_per_distance,\n                    AVG(benchmark_weight_per_fuel_liter) AS average_weight_per_fuel_liter,\n                    AVG(benchmark_catch_value_per_fuel_liter) AS average_catch_value_per_fuel_liter,\n                    AVG(landing_total_living_weight) AS average_living_weight\n                FROM\n                    trips_detailed\n                WHERE\n                    start_timestamp >= $1\n                    AND stop_timestamp <= $2\n                    AND (\n                        $3::INT[] IS NULL\n                        OR landing_species_main_group_ids && $3\n                    )\n                    AND fiskeridir_vessel_id = ANY ($5)\n                GROUP BY\n                    fiskeridir_vessel_id\n            ) q\n    )\nSELECT\n    *\nFROM\n    other_vessels o\n    INNER JOIN logged_in_user_values l ON TRUE\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "highest_average_weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "highest_average_fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "highest_average_weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "highest_average_weight_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "highest_average_catch_value_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "highest_average_living_weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "own_average_fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "own_average_weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 8,
+        "name": "own_average_weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "own_average_weight_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "own_average_catch_value_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 11,
+        "name": "own_average_living_weight",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Int4Array",
+        "Text",
+        "Int8Array"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "0eb61be3a5a22b58ee5c7d49e3fe78122383138294edb953c5995a528672f0bb"
+}

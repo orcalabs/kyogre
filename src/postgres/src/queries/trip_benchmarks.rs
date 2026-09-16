@@ -3,18 +3,18 @@ use fiskeridir_rs::{CallSign, SpeciesGroup, SpeciesMainGroup};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
     AverageEeoiQuery, AverageFuiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
-    BarentswatchUserId, DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone,
-    EngineType, FiskeridirVesselId, FuiQuery, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi,
-    PerVesselBenchmark, PerVesselBenchmarkParams, ProcessingStatus, TripBenchmarksQuery, TripId,
-    TripWithBenchmark,
+    AverageVesselsBenchmarks, BarentswatchUserId, DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery,
+    EmptyVecToNone, EngineType, FiskeridirVesselId, FuiQuery, METERS_TO_NAUTICAL_MILES,
+    MIN_EEOI_DISTANCE, Mmsi, PerVesselBenchmarkParams, ProcessingStatus, SumVesselBenchmark,
+    TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 
 impl PostgresAdapter {
-    pub(crate) async fn per_vessel_benchmarks_impl(
+    pub(crate) async fn similar_or_following_vessels(
         &self,
         user_id: &BarentswatchUserId,
         query: &PerVesselBenchmarkParams,
-    ) -> Result<Vec<PerVesselBenchmark>> {
+    ) -> Result<Vec<i64>> {
         let vessels = if query.use_following_list.unwrap_or(false) {
             sqlx::query!(
                 r#"
@@ -53,18 +53,28 @@ WHERE
             .fetch_one(&self.pool)
             .await?
             .ids
-        };
+        }
+        .unwrap_or_default();
+
+        Ok(vessels)
+    }
+    pub(crate) async fn per_vessel_benchmarks_sum_impl(
+        &self,
+        user_id: &BarentswatchUserId,
+        query: &PerVesselBenchmarkParams,
+    ) -> Result<Vec<SumVesselBenchmark>> {
+        let vessels = self.similar_or_following_vessels(user_id, query).await?;
         let out = sqlx::query_as!(
-            PerVesselBenchmark,
+            SumVesselBenchmark,
             r#"
 SELECT
     fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
-    SUM(benchmark_fuel_consumption_liter) AS fuel_consumption_liter,
-    SUM(benchmark_weight_per_hour) AS weight_per_hour,
-    SUM(benchmark_weight_per_distance) AS weight_per_distance,
-    SUM(benchmark_weight_per_fuel_liter) AS weight_per_fuel_liter,
-    SUM(benchmark_catch_value_per_fuel_liter) AS catch_value_per_fuel_liter,
-    SUM(landing_total_living_weight) AS living_weight
+    SUM(benchmark_fuel_consumption_liter) AS sum_fuel_consumption_liter,
+    SUM(benchmark_weight_per_hour) AS sum_weight_per_hour,
+    SUM(benchmark_weight_per_distance) AS sum_weight_per_distance,
+    SUM(benchmark_weight_per_fuel_liter) AS sum_weight_per_fuel_liter,
+    SUM(benchmark_catch_value_per_fuel_liter) AS sum_catch_value_per_fuel_liter,
+    SUM(landing_total_living_weight) AS sum_living_weight
 FROM
     trips_detailed
 WHERE
@@ -81,9 +91,94 @@ GROUP BY
             query.range.start(),
             query.range.end(),
             &query.species_main_group_ids as &Option<Vec<SpeciesMainGroup>>,
-            vessels.as_deref() as Option<&[i64]>
+            &vessels
         )
         .fetch_all(&self.pool)
+        .await?;
+
+        Ok(out)
+    }
+    pub(crate) async fn per_vessel_benchmarks_avg_impl(
+        &self,
+        user_id: &BarentswatchUserId,
+        call_sign: &CallSign,
+        query: &PerVesselBenchmarkParams,
+    ) -> Result<Option<AverageVesselsBenchmarks>> {
+        let vessels = self.similar_or_following_vessels(user_id, query).await?;
+        let out = sqlx::query_as!(
+            AverageVesselsBenchmarks,
+            r#"
+WITH
+    logged_in_user_values AS (
+        SELECT
+            AVG(benchmark_fuel_consumption_liter) AS own_average_fuel_consumption_liter,
+            AVG(benchmark_weight_per_hour) AS own_average_weight_per_hour,
+            AVG(benchmark_weight_per_distance) AS own_average_weight_per_distance,
+            AVG(benchmark_weight_per_fuel_liter) AS own_average_weight_per_fuel_liter,
+            AVG(benchmark_catch_value_per_fuel_liter) AS own_average_catch_value_per_fuel_liter,
+            AVG(landing_total_living_weight) AS own_average_living_weight
+        FROM
+            trips_detailed
+        WHERE
+            start_timestamp >= $1
+            AND stop_timestamp <= $2
+            AND (
+                $3::INT[] IS NULL
+                OR landing_species_main_group_ids && $3
+            )
+            AND fiskeridir_vessel_id = (
+                SELECT
+                    fiskeridir_vessel_id
+                FROM
+                    all_vessels
+                WHERE
+                    call_sign = $4
+            )
+    ),
+    other_vessels AS (
+        SELECT
+            MAX(average_weight_per_hour) AS highest_average_weight_per_hour,
+            MAX(average_fuel_consumption_liter) AS highest_average_fuel_consumption_liter,
+            MAX(average_weight_per_distance) AS highest_average_weight_per_distance,
+            MAX(average_weight_per_fuel_liter) AS highest_average_weight_per_fuel_liter,
+            MAX(average_catch_value_per_fuel_liter) AS highest_average_catch_value_per_fuel_liter,
+            MAX(average_living_weight) AS highest_average_living_weight
+        FROM
+            (
+                SELECT
+                    AVG(benchmark_fuel_consumption_liter) AS average_fuel_consumption_liter,
+                    AVG(benchmark_weight_per_hour) AS average_weight_per_hour,
+                    AVG(benchmark_weight_per_distance) AS average_weight_per_distance,
+                    AVG(benchmark_weight_per_fuel_liter) AS average_weight_per_fuel_liter,
+                    AVG(benchmark_catch_value_per_fuel_liter) AS average_catch_value_per_fuel_liter,
+                    AVG(landing_total_living_weight) AS average_living_weight
+                FROM
+                    trips_detailed
+                WHERE
+                    start_timestamp >= $1
+                    AND stop_timestamp <= $2
+                    AND (
+                        $3::INT[] IS NULL
+                        OR landing_species_main_group_ids && $3
+                    )
+                    AND fiskeridir_vessel_id = ANY ($5)
+                GROUP BY
+                    fiskeridir_vessel_id
+            ) q
+    )
+SELECT
+    *
+FROM
+    other_vessels o
+    INNER JOIN logged_in_user_values l ON TRUE
+            "#,
+            query.range.start(),
+            query.range.end(),
+            &query.species_main_group_ids as &Option<Vec<SpeciesMainGroup>>,
+            call_sign.as_ref(),
+            &vessels
+        )
+        .fetch_optional(&self.pool)
         .await?;
 
         Ok(out)
