@@ -322,10 +322,16 @@ where
                         .to(routes::v1::trip::benchmarks::eeoi::<T>),
                 )
                 .route(
-                    "/trip/benchmarks/per_vessel",
+                    "/trip/benchmarks/per_vessel_sum",
                     get()
                         .guard(guard.clone())
-                        .to(routes::v1::trip::benchmarks::per_vessel_benchmarks::<T>),
+                        .to(routes::v1::trip::benchmarks::per_vessel_benchmarks_sum::<T>),
+                )
+                .route(
+                    "/trip/benchmarks/per_vessel_avg",
+                    get()
+                        .guard(guard.clone())
+                        .to(routes::v1::trip::benchmarks::per_vessel_benchmarks_avg::<T>),
                 );
         }
 

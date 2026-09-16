@@ -21,17 +21,33 @@ pub enum TripBenchmarkId {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
-pub struct PerVesselBenchmark {
-    pub fiskeridir_vessel_id: FiskeridirVesselId,
-    pub weight_per_hour: Option<f64>,
-    pub weight_per_distance: Option<f64>,
-    #[serde(rename = "weightPerFuel")]
-    pub weight_per_fuel_liter: Option<f64>,
-    #[serde(rename = "catchValuePerFuel")]
-    pub catch_value_per_fuel_liter: Option<f64>,
-    #[serde(rename = "fuelConsumption")]
-    pub fuel_consumption_liter: Option<f64>,
-    pub living_weight: Option<f64>,
+pub struct SumVesselBenchmark {
+    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
+    pub sum_fuel_consumption_liter: Option<f64>,
+    pub sum_weight_per_hour: Option<f64>,
+    pub sum_weight_per_distance: Option<f64>,
+    pub sum_weight_per_fuel_liter: Option<f64>,
+    pub sum_catch_value_per_fuel_liter: Option<f64>,
+    pub sum_living_weight: Option<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct AverageVesselsBenchmarks {
+    pub highest_average_fuel_consumption_liter: Option<f64>,
+    pub highest_average_weight_per_hour: Option<f64>,
+    pub highest_average_weight_per_distance: Option<f64>,
+    pub highest_average_weight_per_fuel_liter: Option<f64>,
+    pub highest_average_catch_value_per_fuel_liter: Option<f64>,
+    pub highest_average_living_weight: Option<f64>,
+
+    pub own_average_fuel_consumption_liter: Option<f64>,
+    pub own_average_weight_per_hour: Option<f64>,
+    pub own_average_weight_per_distance: Option<f64>,
+    pub own_average_weight_per_fuel_liter: Option<f64>,
+    pub own_average_catch_value_per_fuel_liter: Option<f64>,
+    pub own_average_living_weight: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
