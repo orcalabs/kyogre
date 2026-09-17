@@ -1,5 +1,6 @@
 use chrono::{Duration, TimeZone, Utc};
 use engine::{Modifiable, TripLevel};
+use kyogre_core::METERS_TO_NAUTICAL_MILES;
 
 use crate::v1::helper::test;
 
@@ -59,7 +60,7 @@ async fn test_weight_per_distance_is_correct() {
         assert_eq!(bench.trips.len(), 1);
         assert_eq!(
             bench.trips[0].weight_per_distance.unwrap() as i64,
-            (weight / distance) as i64
+            (weight / (distance * METERS_TO_NAUTICAL_MILES)) as i64
         );
     })
     .await;
