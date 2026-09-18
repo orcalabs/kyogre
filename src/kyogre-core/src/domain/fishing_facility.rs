@@ -44,6 +44,7 @@ pub enum FishingFacilityToolType {
     PlannedCableLaying = 12,
     Fishpot = 13,
     Storagecage = 14,
+    Storagepot = 15,
 }
 
 #[derive(
