@@ -2,7 +2,7 @@ use crate::*;
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
-use fiskeridir_rs::{CallSign, DataFileId};
+use fiskeridir_rs::{CallSign, DataFileId, VesselPermission};
 
 pub type BoxIterator<T> = Box<dyn Iterator<Item = T> + Send + Sync>;
 
@@ -129,6 +129,7 @@ pub trait WebApiInboundPort {
 
 #[async_trait]
 pub trait ScraperInboundPort {
+    async fn add_vessel_permissions(&self, permissions: Vec<VesselPermission>) -> CoreResult<()>;
     async fn add_fishing_facilities(&self, facilities: Vec<FishingFacility>) -> CoreResult<()>;
     async fn add_weekly_sales(&self, weekly_sales: Vec<WeeklySale>) -> CoreResult<()>;
     async fn add_register_vessels(

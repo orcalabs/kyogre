@@ -16,7 +16,7 @@ pub enum Error {
         location: Location,
         source: kyogre_core::Error,
     },
-    #[snafu(display("Fiskeridir erorr"))]
+    #[snafu(display("Fiskeridir error"))]
     Fiskeridir {
         #[snafu(implicit)]
         location: Location,

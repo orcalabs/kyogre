@@ -1,11 +1,11 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id: FiskeridirVesselId\",\n    SUM(benchmark_fuel_consumption_liter) AS sum_fuel_consumption_liter,\n    SUM(benchmark_weight_per_hour) AS sum_weight_per_hour,\n    SUM(benchmark_weight_per_distance) AS sum_weight_per_distance,\n    SUM(benchmark_weight_per_fuel_liter) AS sum_weight_per_fuel_liter,\n    SUM(benchmark_catch_value_per_fuel_liter) AS sum_catch_value_per_fuel_liter,\n    SUM(landing_total_living_weight) AS sum_living_weight\nFROM\n    trips_detailed\nWHERE\n    start_timestamp >= $1\n    AND stop_timestamp <= $2\n    AND (\n        $3::INT[] IS NULL\n        OR landing_species_main_group_ids && $3\n    )\n    AND fiskeridir_vessel_id = ANY ($4)\nGROUP BY\n    fiskeridir_vessel_id\n            ",
+  "query": "\nSELECT\n    fiskeridir_vessel_id AS \"fiskeridir_vessel_id!: FiskeridirVesselId\",\n    SUM(benchmark_fuel_consumption_liter) AS sum_fuel_consumption_liter,\n    SUM(benchmark_weight_per_hour) AS sum_weight_per_hour,\n    SUM(benchmark_weight_per_distance) AS sum_weight_per_distance,\n    SUM(benchmark_weight_per_fuel_liter) AS sum_weight_per_fuel_liter,\n    SUM(benchmark_catch_value_per_fuel_liter) AS sum_catch_value_per_fuel_liter,\n    SUM(landing_total_living_weight) AS sum_living_weight\nFROM\n    trips_detailed\nWHERE\n    start_timestamp >= $1\n    AND stop_timestamp <= $2\n    AND (\n        $3::INT[] IS NULL\n        OR landing_species_main_group_ids && $3\n    )\n    AND fiskeridir_vessel_id = ANY ($4)\nGROUP BY\n    fiskeridir_vessel_id\n            ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "fiskeridir_vessel_id: FiskeridirVesselId",
+        "name": "fiskeridir_vessel_id!: FiskeridirVesselId",
         "type_info": "Int8"
       },
       {
@@ -57,5 +57,5 @@
       null
     ]
   },
-  "hash": "fc366e14fb7f8263e9c32323245d525caf24811540ac702013fb5ece7737d7cc"
+  "hash": "51ab35d150d76783d9086c1c7a6b015967720f06e89257703d525d913bc635cc"
 }

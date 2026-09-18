@@ -7,6 +7,7 @@ mod erspor;
 mod erstra;
 mod landing;
 mod register_vessel;
+mod vessel_permission;
 mod vms;
 
 pub use aqua_culture_register::AquaCultureEntry;
@@ -18,4 +19,5 @@ pub use erspor::ErsPor;
 pub use erstra::ErsTra;
 pub use landing::*;
 pub use register_vessel::*;
+pub use vessel_permission::*;
 pub use vms::Vms;

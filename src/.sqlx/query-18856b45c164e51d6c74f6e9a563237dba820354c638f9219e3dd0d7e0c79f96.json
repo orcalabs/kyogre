@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    logged_in_vessel AS (\n        SELECT\n            gear_group_ids,\n            fiskeridir_length_group_id\n        FROM\n            fiskeridir_vessels\n        WHERE\n            fiskeridir_vessel_id = $1\n    )\nSELECT\n    COALESCE(ARRAY_AGG(DISTINCT p.fiskeridir_vessel_id), '{}') AS ids\nFROM\n    vessel_permissions p\n    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = p.fiskeridir_vessel_id\n    INNER JOIN logged_in_vessel l ON p.permission_type = ANY ($2)\n    AND l.gear_group_ids && f.gear_group_ids\n    AND l.fiskeridir_length_group_id = f.fiskeridir_length_group_id\nWHERE\n    p.fiskeridir_vessel_id != $1\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ids",
+        "type_info": "Int8Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "18856b45c164e51d6c74f6e9a563237dba820354c638f9219e3dd0d7e0c79f96"
+}

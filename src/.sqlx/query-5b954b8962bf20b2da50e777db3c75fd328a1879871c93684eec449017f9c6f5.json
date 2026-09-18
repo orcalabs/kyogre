@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nINSERT INTO\n    vessel_permissions (\n    fiskeridir_vessel_id,permission_type\n   )\nSELECT\n    *\nFROM\n    UNNEST(\n        $1::BIGINT[],$2::TEXT[]\n    )\n        ON CONFLICT (fiskeridir_vessel_id, permission_type) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5b954b8962bf20b2da50e777db3c75fd328a1879871c93684eec449017f9c6f5"
+}

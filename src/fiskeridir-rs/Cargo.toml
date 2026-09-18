@@ -36,6 +36,7 @@ sqlx = { workspace = true, features = [
 enum_index = { workspace = true }
 enum_index_derive = { workspace = true }
 
+tar = "0.4.46"
 ahash = "0.8.11"
 zip = "8"
 
