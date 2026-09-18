@@ -22,7 +22,7 @@ pub enum TripBenchmarkId {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct SumVesselBenchmark {
-    pub fiskeridir_vessel_id: Option<FiskeridirVesselId>,
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
     pub sum_fuel_consumption_liter: Option<f64>,
     pub sum_weight_per_hour: Option<f64>,
     pub sum_weight_per_distance: Option<f64>,

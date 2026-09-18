@@ -59,6 +59,7 @@ impl DataSource for ErsScraper {
                     }
                     DataFile::Landings { .. }
                     | DataFile::Vms { .. }
+                    | DataFile::VesselPermissions
                     | DataFile::AquaCultureRegister => unreachable!(),
                 }
             },

@@ -88,8 +88,9 @@ pub async fn per_vessel_benchmarks_sum<T: Database + Send + Sync + 'static>(
     params: Query<PerVesselBenchmarkParams>,
 ) -> Result<Response<Vec<SumVesselBenchmark>>> {
     let query = params.into_inner();
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     Ok(Response::new(
-        db.per_vessel_benchmarks_sum(&profile.user.id, &query)
+        db.per_vessel_benchmarks_sum(&profile.user.id, &call_sign, &query)
             .await?,
     ))
 }

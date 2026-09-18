@@ -13,8 +13,30 @@ impl PostgresAdapter {
     pub(crate) async fn similar_or_following_vessels(
         &self,
         user_id: &BarentswatchUserId,
+        call_sign: &CallSign,
         query: &PerVesselBenchmarkParams,
     ) -> Result<Vec<i64>> {
+        let logged_in_vessel = sqlx::query!(
+            r#"
+SELECT
+    fiskeridir_vessel_id
+FROM
+    all_vessels
+WHERE
+    call_sign = $1
+            "#,
+            call_sign.as_ref()
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let logged_in_vessel =
+            if let Some(logged_in_vessel) = logged_in_vessel.map(|r| r.fiskeridir_vessel_id) {
+                logged_in_vessel
+            } else {
+                return Ok(vec![]);
+            };
+
         let vessels = if query.use_following_list.unwrap_or(false) {
             sqlx::query!(
                 r#"
@@ -31,8 +53,24 @@ WHERE
             .await?
             .ids
         } else {
-            sqlx::query!(
+            let permissions = sqlx::query!(
                 r#"
+SELECT
+    COALESCE(ARRAY_AGG(permission_type), '{}') AS "permissions!"
+FROM
+    vessel_permissions p
+WHERE
+    fiskeridir_vessel_id = $1
+                "#,
+                logged_in_vessel
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .permissions;
+
+            if permissions.is_empty() {
+                sqlx::query!(
+                    r#"
 SELECT
     COALESCE(ARRAY_AGG(fiskeridir_vessel_id), '{}') AS ids
 FROM
@@ -47,12 +85,43 @@ WHERE
         OR fiskeridir_length_group_id = ANY ($2)
     )
                 "#,
-                &query.gear_groups as &Option<Vec<GearGroup>>,
-                &query.length_groups as &Option<Vec<VesselLengthGroup>>,
-            )
-            .fetch_one(&self.pool)
-            .await?
-            .ids
+                    &query.gear_groups as &Option<Vec<GearGroup>>,
+                    &query.length_groups as &Option<Vec<VesselLengthGroup>>,
+                )
+                .fetch_one(&self.pool)
+                .await?
+                .ids
+            } else {
+                sqlx::query!(
+                    r#"
+WITH
+    logged_in_vessel AS (
+        SELECT
+            gear_group_ids,
+            fiskeridir_length_group_id
+        FROM
+            fiskeridir_vessels
+        WHERE
+            fiskeridir_vessel_id = $1
+    )
+SELECT
+    COALESCE(ARRAY_AGG(DISTINCT p.fiskeridir_vessel_id), '{}') AS ids
+FROM
+    vessel_permissions p
+    INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = p.fiskeridir_vessel_id
+    INNER JOIN logged_in_vessel l ON p.permission_type = ANY ($2)
+    AND l.gear_group_ids && f.gear_group_ids
+    AND l.fiskeridir_length_group_id = f.fiskeridir_length_group_id
+WHERE
+    p.fiskeridir_vessel_id != $1
+                "#,
+                    logged_in_vessel,
+                    &permissions
+                )
+                .fetch_one(&self.pool)
+                .await?
+                .ids
+            }
         }
         .unwrap_or_default();
 
@@ -61,14 +130,17 @@ WHERE
     pub(crate) async fn per_vessel_benchmarks_sum_impl(
         &self,
         user_id: &BarentswatchUserId,
+        call_sign: &CallSign,
         query: &PerVesselBenchmarkParams,
     ) -> Result<Vec<SumVesselBenchmark>> {
-        let vessels = self.similar_or_following_vessels(user_id, query).await?;
+        let vessels = self
+            .similar_or_following_vessels(user_id, call_sign, query)
+            .await?;
         let out = sqlx::query_as!(
             SumVesselBenchmark,
             r#"
 SELECT
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id: FiskeridirVesselId",
+    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
     SUM(benchmark_fuel_consumption_liter) AS sum_fuel_consumption_liter,
     SUM(benchmark_weight_per_hour) AS sum_weight_per_hour,
     SUM(benchmark_weight_per_distance) AS sum_weight_per_distance,
@@ -104,7 +176,9 @@ GROUP BY
         call_sign: &CallSign,
         query: &PerVesselBenchmarkParams,
     ) -> Result<Option<AverageVesselsBenchmarks>> {
-        let vessels = self.similar_or_following_vessels(user_id, query).await?;
+        let vessels = self
+            .similar_or_following_vessels(user_id, call_sign, query)
+            .await?;
         let out = sqlx::query_as!(
             AverageVesselsBenchmarks,
             r#"

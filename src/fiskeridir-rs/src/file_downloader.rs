@@ -1,13 +1,12 @@
+use crate::{ApiDownloader, Result, utils::hash_file};
 use chrono::Datelike;
-use std::{fmt::Display, io::Write, path::PathBuf, time::Duration};
-
 use chrono::Utc;
 use csv::DeserializeRecordsIntoIter;
 use futures_util::StreamExt;
 use http_client::HttpClient;
 use serde::de::DeserializeOwned;
-
-use crate::{ApiDownloader, Result, utils::hash_file};
+use std::{fmt::Display, io::Write, path::PathBuf, time::Duration};
+use tar::Archive;
 
 #[derive(Debug, Clone)]
 pub struct DataDownloader {
@@ -20,6 +19,7 @@ pub struct DataDownloader {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataDir {
     dir_path: PathBuf,
+    delimiter: CsvDelimeter,
 }
 
 pub struct FiskeridirRecordIter<R, D> {
@@ -33,15 +33,34 @@ impl<R: std::io::Read, D: DeserializeOwned> Iterator for FiskeridirRecordIter<R,
     }
 }
 
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub enum CsvDelimeter {
+    #[default]
+    SemiColon,
+    Comma,
+}
+
+impl CsvDelimeter {
+    pub fn char(&self) -> char {
+        match self {
+            CsvDelimeter::SemiColon => ';',
+            CsvDelimeter::Comma => ',',
+        }
+    }
+}
+
 impl DataDir {
+    pub fn set_delimiter(&mut self, delimiter: CsvDelimeter) {
+        self.delimiter = delimiter;
+    }
+
     pub fn into_deserialize<T: DeserializeOwned + 'static>(
         self,
         file: &DataFile,
     ) -> Result<FiskeridirRecordIter<std::fs::File, T>> {
         let file = std::fs::File::open(self.file_name(file))?;
-
         let csv_reader = csv::ReaderBuilder::new()
-            .delimiter(b';')
+            .delimiter(self.delimiter.char() as u8)
             .flexible(true)
             .from_reader(file);
 
@@ -62,6 +81,7 @@ impl DataDir {
 // Different sources within Fiskeridir
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FileSource {
+    VesselPermissions,
     Landings { year: u32, url: Option<String> },
     Vms { year: u32, url: String },
     Ers { year: u32, url: Option<String> },
@@ -78,6 +98,7 @@ pub enum DataFile {
     ErsDep { year: u32 },
     ErsTra { year: u32 },
     AquaCultureRegister,
+    VesselPermissions,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -97,6 +118,7 @@ impl FileSource {
             Vms { year, .. } => format!("{year}-Vms"),
             Ers { year, .. } => format!("{year}-Ers"),
             AquaCultureRegister { .. } => "AquaCultureRegister".into(),
+            VesselPermissions => "tillatelser".into(),
         }
     }
 
@@ -116,6 +138,9 @@ impl FileSource {
             },
             Vms { url, .. } => url.clone(),
             AquaCultureRegister { url } => url.clone(),
+            VesselPermissions => {
+                "https://register.fiskeridir.no/fartoyreg/last/frtyweb.tar".to_string()
+            }
         }
     }
 
@@ -124,7 +149,7 @@ impl FileSource {
 
         match *self {
             Landings { year, .. } | Vms { year, .. } | Ers { year, .. } => year,
-            AquaCultureRegister { .. } => 0,
+            AquaCultureRegister { .. } | VesselPermissions => 0,
         }
     }
 
@@ -150,6 +175,7 @@ impl FileSource {
                 out
             }
             AquaCultureRegister { .. } => vec![DataFile::AquaCultureRegister],
+            VesselPermissions => vec![DataFile::VesselPermissions],
         }
     }
 }
@@ -166,6 +192,7 @@ impl DataFile {
             ErsTra { year } => DataFileId(format!("ers_tra_{year}")),
             Vms { year } => DataFileId(format!("vms_{year}")),
             AquaCultureRegister => DataFileId("aqua_culture_register".into()),
+            VesselPermissions => DataFileId("vessel_permissions".into()),
         }
     }
 
@@ -190,6 +217,7 @@ impl DataFile {
                 format!("elektronisk-rapportering-ers-{year}-overforingsmelding-tra.csv")
             }
             AquaCultureRegister => "AquaCultureRegister.csv".into(),
+            VesselPermissions => "tillatelser.csv".into(),
         }
     }
 
@@ -203,7 +231,7 @@ impl DataFile {
             | ErsDep { year, .. }
             | ErsPor { year, .. }
             | ErsTra { year, .. } => year,
-            AquaCultureRegister => 0,
+            AquaCultureRegister | VesselPermissions => 0,
         }
     }
 }
@@ -217,6 +245,7 @@ impl Display for FileSource {
             Ers { .. } => write!(f, "ers"),
             Vms { .. } => write!(f, "vms"),
             AquaCultureRegister { .. } => write!(f, "aqua_culture_register"),
+            VesselPermissions => write!(f, "vessel_permissions"),
         }
     }
 }
@@ -233,6 +262,7 @@ impl Display for DataFile {
             ErsTra { .. } => write!(f, "ers_tra"),
             Vms { .. } => write!(f, "vms"),
             AquaCultureRegister => write!(f, "aqua_culture_register"),
+            VesselPermissions => write!(f, "vessel_permissions"),
         }
     }
 }
@@ -285,6 +315,28 @@ impl DataDownloader {
 
                 extract_path
             }
+            FileSource::VesselPermissions => {
+                let mut archive_path = PathBuf::from(&self.directory_path);
+                archive_path.push(source.archive_name());
+
+                let mut file = std::fs::File::create(&archive_path)?;
+
+                let mut stream = response.bytes_stream();
+
+                while let Some(item) = stream.next().await {
+                    file.write_all(&item?)?
+                }
+
+                let file = std::fs::File::open(&archive_path)?;
+
+                let mut archive = Archive::new(&file);
+
+                let extract_path =
+                    PathBuf::from(&self.directory_path.join(source.extract_dir_name()));
+                archive.unpack(&extract_path)?;
+
+                extract_path
+            }
             FileSource::AquaCultureRegister { .. } => {
                 let path = &self
                     .directory_path
@@ -306,6 +358,7 @@ impl DataDownloader {
 
         Ok(DataDir {
             dir_path: file_path,
+            delimiter: Default::default(),
         })
     }
 }

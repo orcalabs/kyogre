@@ -7,6 +7,7 @@ mod buyer_register;
 mod ers;
 mod landings;
 mod register_vessel;
+mod vessel_permission;
 mod vms;
 
 pub use aqua_culture_register::*;
@@ -14,6 +15,7 @@ pub use buyer_register::*;
 pub use ers::*;
 pub use landings::*;
 pub use register_vessel::*;
+pub use vessel_permission::*;
 pub use vms::*;
 
 pub trait ScraperFileHashPort:

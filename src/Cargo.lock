@@ -1874,6 +1874,7 @@ dependencies = [
  "sqlx",
  "stack-error",
  "strum 0.28.0",
+ "tar",
  "tempfile",
  "tokio",
  "tracing",

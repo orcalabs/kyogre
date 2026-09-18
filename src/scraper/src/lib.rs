@@ -33,6 +33,8 @@ pub use barentswatch::BarentswatchSource;
 pub use error::{Error, Result};
 pub use fiskeridir::FiskeridirSource;
 
+use crate::fiskeridir::VesselPermissionScraper;
+
 pub trait Processor: ScraperInboundPort + ScraperOutboundPort + Send + Sync {}
 impl<T> Processor for T where T: ScraperInboundPort + ScraperOutboundPort + Send + Sync {}
 
@@ -149,7 +151,7 @@ impl Scraper {
         let register_vessels_scraper =
             RegisterVesselsScraper::new(fiskeridir_arc.clone(), register_vessels_source);
         let buyer_register_scraper =
-            BuyerRegisterScraper::new(fiskeridir_arc, buyer_register_source);
+            BuyerRegisterScraper::new(fiskeridir_arc.clone(), buyer_register_source);
 
         let http_client = Arc::new(HttpClient::new());
 
@@ -167,6 +169,11 @@ impl Scraper {
         let _weather_scraper = WeatherScraper::new();
         let _ocean_climate_scraper = OceanClimateScraper::new();
 
+        let vessel_permission_scraper = VesselPermissionScraper::new(
+            fiskeridir_arc,
+            Some(fiskeridir_rs::FileSource::VesselPermissions),
+        );
+
         Scraper {
             environment,
             scrapers: vec![
@@ -182,6 +189,7 @@ impl Scraper {
                 ],
                 vec![Arc::new(vms_scraper)],
                 vec![Arc::new(mattilsynet_scraper)],
+                vec![Arc::new(vessel_permission_scraper)],
                 // vec![Arc::new(weather_scraper)],
                 // vec![Box::new(ocean_climate_scraper)],
             ],
@@ -241,6 +249,7 @@ pub enum ScraperId {
     Landings,
     Ers,
     RegisterVessels,
+    VesselPermissions,
     BuyerRegister,
     Vms,
     FishingFacility,
@@ -267,6 +276,7 @@ impl std::fmt::Display for ScraperId {
             ScraperId::Weather => write!(f, "weather"),
             ScraperId::OceanClimate => write!(f, "ocean_climate"),
             ScraperId::RafisklagetWeeklySales => write!(f, "rafisklaget_weekly_sales"),
+            ScraperId::VesselPermissions => write!(f, "vessel_permissions"),
         }
     }
 }

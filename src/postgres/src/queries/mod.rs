@@ -35,6 +35,7 @@ pub mod verify_database;
 pub mod vessel;
 pub mod vessel_benchmarks;
 pub mod vessel_events;
+pub mod vessel_permission;
 pub mod vms;
 pub mod weather;
 

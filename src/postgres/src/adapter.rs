@@ -5,7 +5,7 @@ use crate::{
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, OrgId};
+use fiskeridir_rs::{CallSign, DataFileId, OrgId, VesselPermission};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -663,9 +663,10 @@ impl WebApiOutboundPort for PostgresAdapter {
     async fn per_vessel_benchmarks_sum(
         &self,
         user_id: &BarentswatchUserId,
+        call_sign: &CallSign,
         query: &PerVesselBenchmarkParams,
     ) -> WebApiResult<Vec<SumVesselBenchmark>> {
-        Ok(retry(|| self.per_vessel_benchmarks_sum_impl(user_id, query)).await?)
+        Ok(retry(|| self.per_vessel_benchmarks_sum_impl(user_id, call_sign, query)).await?)
     }
     async fn per_vessel_benchmarks_avg(
         &self,
@@ -999,6 +1000,11 @@ impl WebApiInboundPort for PostgresAdapter {
 
 #[async_trait]
 impl ScraperInboundPort for PostgresAdapter {
+    async fn add_vessel_permissions(&self, permissions: Vec<VesselPermission>) -> CoreResult<()> {
+        self.add_vessel_permissions_impl(permissions).await?;
+        Ok(())
+    }
+
     async fn add_fishing_facilities(&self, facilities: Vec<FishingFacility>) -> CoreResult<()> {
         self.add_fishing_facilities_impl(facilities).await?;
         Ok(())

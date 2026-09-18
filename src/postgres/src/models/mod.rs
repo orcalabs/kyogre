@@ -26,6 +26,7 @@ mod trip_benchmarks;
 mod user_haul;
 mod vessel;
 mod vessel_events;
+mod vessel_permission;
 mod vms;
 mod weather;
 
@@ -57,5 +58,6 @@ pub use trip_benchmarks::*;
 pub use user_haul::*;
 pub use vessel::*;
 pub use vessel_events::*;
+pub use vessel_permission::*;
 pub use vms::*;
 pub use weather::*;
