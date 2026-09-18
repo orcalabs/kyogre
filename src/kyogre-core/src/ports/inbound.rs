@@ -108,21 +108,21 @@ pub trait WebApiInboundPort {
         id: BarentswatchUserId,
         update_selected_vessel: &Option<UpdateSelectedVessel>,
     ) -> WebApiResult<()>;
-    async fn add_fuel_measurements(
+    async fn add_fuel_measurement(
         &self,
-        measurements: &[CreateFuelMeasurement],
+        measurements: &CreateFuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
-    ) -> WebApiResult<Vec<FuelMeasurement>>;
-    async fn update_fuel_measurements(
+    ) -> WebApiResult<FuelMeasurement>;
+    async fn update_fuel_measurement(
         &self,
-        measurements: &[FuelMeasurement],
+        measurements: &FuelMeasurement,
         call_sign: &CallSign,
         user_id: BarentswatchUserId,
     ) -> WebApiResult<()>;
-    async fn delete_fuel_measurements(
+    async fn delete_fuel_measurement(
         &self,
-        measurements: &[DeleteFuelMeasurement],
+        measurements: &DeleteFuelMeasurement,
         call_sign: &CallSign,
     ) -> WebApiResult<()>;
 }

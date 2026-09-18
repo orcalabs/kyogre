@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nUPDATE fuel_measurements f\nSET\n    fuel_liter = $1,\n    barentswatch_user_id = $2,\n    timestamp = $3\nFROM\n    active_vessels w\nWHERE\n    f.fuel_measurement_id = $4\n    AND w.call_sign = $5\n    AND w.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nRETURNING\n    f.fiskeridir_vessel_id AS \"fiskeridir_vessel_id: FiskeridirVesselId\",\n    f.timestamp,\n    f.fuel_liter\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fiskeridir_vessel_id: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "timestamp",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "fuel_liter",
+        "type_info": "Float8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Float8",
+        "Uuid",
+        "Timestamptz",
+        "Int8",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c83911378240cfddc56c9db2d9b16dbbd13195a49a21a89f1230c347386dd098"
+}
