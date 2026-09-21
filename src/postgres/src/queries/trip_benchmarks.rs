@@ -37,7 +37,7 @@ WHERE
                 return Ok(vec![]);
             };
 
-        let vessels = if query.use_following_list.unwrap_or(false) {
+        let mut vessels = if query.use_following_list.unwrap_or(false) {
             sqlx::query!(
                 r#"
 SELECT
@@ -124,6 +124,8 @@ WHERE
             }
         }
         .unwrap_or_default();
+
+        vessels.push(logged_in_vessel);
 
         Ok(vessels)
     }
