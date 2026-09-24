@@ -12,7 +12,7 @@ use kyogre_core::{
 impl PostgresAdapter {
     pub(crate) async fn similar_or_following_vessels(
         &self,
-        user_id: &BarentswatchUserId,
+        _user_id: &BarentswatchUserId,
         call_sign: &CallSign,
         query: &PerVesselBenchmarkParams,
     ) -> Result<Vec<i64>> {
@@ -38,20 +38,21 @@ WHERE
             };
 
         let mut vessels = if query.use_following_list.unwrap_or(false) {
-            sqlx::query!(
-                r#"
-SELECT
-    COALESCE(ARRAY_AGG(fiskeridir_vessel_id), '{}') AS ids
-FROM
-    user_follows
-WHERE
-    barentswatch_user_id = $1
-                 "#,
-                user_id.as_ref()
-            )
-            .fetch_one(&self.pool)
-            .await?
-            .ids
+            None
+            // sqlx::query!(
+            //     r#"
+            // SELECT
+            // COALESCE(ARRAY_AGG(fiskeridir_vessel_id), '{}') AS ids
+            // FROM
+            // user_follows
+            // WHERE
+            // barentswatch_user_id = $1
+            //      "#,
+            //     user_id.as_ref()
+            // )
+            // .fetch_one(&self.pool)
+            // .await?
+            // .ids
         } else {
             let permissions = sqlx::query!(
                 r#"
@@ -126,6 +127,10 @@ WHERE
         .unwrap_or_default();
 
         vessels.push(logged_in_vessel);
+
+        if vessels.len() < 10 {
+            return Ok(vec![]);
+        }
 
         Ok(vessels)
     }
