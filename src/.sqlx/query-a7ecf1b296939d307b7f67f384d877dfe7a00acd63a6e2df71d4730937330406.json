@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    position AS (\n        SELECT\n            p.latitude,\n            p.longitude\n        FROM\n            user_hauls u\n            INNER JOIN ais_positions p ON (\n                p.mmsi = $1\n                AND p.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts + INTERVAL '5 minutes'\n            )\n        WHERE\n            u.user_haul_id = $2\n        ORDER BY\n            ABS(\n                EXTRACT(\n                    EPOCH\n                    FROM\n                        p.timestamp\n                ) - EXTRACT(\n                    EPOCH\n                    FROM\n                        u.start_ts\n                )\n            )\n        LIMIT\n            1\n    )\nUPDATE user_hauls h\nSET\n    start_longitude = p.longitude,\n    start_latitude = p.latitude\nFROM\n    position p\nWHERE\n    h.user_haul_id = $2\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a7ecf1b296939d307b7f67f384d877dfe7a00acd63a6e2df71d4730937330406"
+}

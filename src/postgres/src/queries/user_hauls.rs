@@ -58,7 +58,7 @@ WITH
                     vms_positions v
                 WHERE
                     v.call_sign = $1
-                    AND v.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts  + INTERVAL '5 minutes'
+                    AND v.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts + INTERVAL '5 minutes'
                 ORDER BY
                     ABS(
                         EXTRACT(
@@ -1112,7 +1112,7 @@ WITH
             user_hauls u
             INNER JOIN ais_positions p ON (
                 p.mmsi = $1
-                AND p.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts  + INTERVAL '5 minutes'
+                AND p.timestamp BETWEEN u.start_ts - INTERVAL '5 minutes' AND u.start_ts + INTERVAL '5 minutes'
             )
         WHERE
             u.user_haul_id = $2
