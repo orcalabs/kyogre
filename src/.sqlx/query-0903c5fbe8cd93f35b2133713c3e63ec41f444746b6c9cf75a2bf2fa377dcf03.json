@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(ARRAY_AGG(fiskeridir_vessel_id), '{}') AS \"ids!: Vec<FiskeridirVesselId>\"\nFROM\n    user_follows\nWHERE\n    barentswatch_user_id = $1\n                 ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ids!: Vec<FiskeridirVesselId>",
+        "type_info": "Int8Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "0903c5fbe8cd93f35b2133713c3e63ec41f444746b6c9cf75a2bf2fa377dcf03"
+}

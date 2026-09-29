@@ -121,6 +121,29 @@ pub struct VesselEvent {
     pub event_type: VesselEventType,
 }
 
+#[derive(Debug, Clone)]
+pub struct VesselCatchSimilarity {
+    pub vessel_one: FiskeridirVesselId,
+    pub vessel_two: FiskeridirVesselId,
+    pub distance: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct VesselCatchAggregate {
+    pub id: FiskeridirVesselId,
+    pub total_living_weight: f64,
+    pub catches: Vec<VesselSpeciesCatch>,
+    pub gear_groups: Vec<GearGroup>,
+    pub length_group: VesselLengthGroup,
+    pub permissions: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct VesselSpeciesCatch {
+    pub total_living_weight: f64,
+    pub species_group_id: SpeciesGroup,
+}
+
 #[derive(Copy, Debug, Clone, PartialEq, Eq)]
 pub enum VesselEventOrdering {
     Timestamp = 1,

@@ -155,6 +155,8 @@ impl Worker {
             status: ProcessingStatus::Successful,
             benchmark_state_counter: trip.benchmark_state_counter,
             percentage_of_trip_covered_by_measurements: None,
+            weight_per_fuel_liter_estimated_only: None,
+            catch_value_per_fuel_liter_estimated_only: None,
         };
 
         for b in benchmarks {

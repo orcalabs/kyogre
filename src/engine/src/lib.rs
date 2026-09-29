@@ -99,6 +99,7 @@ pub struct SharedState {
     pub trip_position_layers: Vec<Box<dyn TripPositionLayer>>,
     pub catch_location_weather: Box<dyn DailyWeatherInbound>,
     pub fuel_estimation: Arc<dyn FuelEstimation>,
+    pub vessel_aggregates: Box<dyn VesselAggregate>,
 }
 
 impl SharedState {
@@ -131,6 +132,7 @@ impl SharedState {
         haul_weather_inbound: Box<dyn HaulWeatherInbound>,
         haul_weather_outbound: Box<dyn HaulWeatherOutbound>,
         catch_location_weather: Box<dyn DailyWeatherInbound>,
+        vessel_aggregates: Box<dyn VesselAggregate>,
         fuel_estimation: Arc<dyn FuelEstimation>,
         scraper: Option<Box<dyn Scraper>>,
         trip_assemblers: Vec<Box<dyn TripAssembler>>,
@@ -158,6 +160,7 @@ impl SharedState {
             catch_location_weather,
             fuel_estimation,
             fuel_mode,
+            vessel_aggregates,
         }
     }
 }

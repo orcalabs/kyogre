@@ -508,6 +508,22 @@ impl AisMigratorSource for PostgresAdapter {
 }
 
 #[async_trait]
+impl VesselAggregate for PostgresAdapter {
+    async fn vessel_catch_aggregates(&self) -> CoreResult<Vec<VesselCatchAggregate>> {
+        self.vessel_catch_aggregates_impl()
+            .try_convert_collect()
+            .await
+    }
+    async fn update_vessel_catch_similarities(
+        &self,
+        updates: Vec<VesselCatchSimilarity>,
+    ) -> CoreResult<()> {
+        self.update_vessel_catch_similarities_impl(updates).await?;
+        Ok(())
+    }
+}
+
+#[async_trait]
 impl AisMigratorDestination for PostgresAdapter {
     async fn add_mmsis(&self, mmsis: &[Mmsi]) -> CoreResult<()> {
         self.add_mmsis_impl(mmsis).await?;

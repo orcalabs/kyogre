@@ -188,10 +188,28 @@ pub struct DateTimeRange {
     end: DateTime<Utc>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct DateTimeRangeWithDefaultTimeSpan<const DAYS: u8> {
     start: DateTime<Utc>,
     end: DateTime<Utc>,
+}
+
+impl<const DAYS: u8> From<DateTimeRangeWithDefaultTimeSpan<DAYS>> for OptionalDateTimeRange {
+    fn from(value: DateTimeRangeWithDefaultTimeSpan<DAYS>) -> Self {
+        OptionalDateTimeRange {
+            start: Some(value.start()),
+            end: Some(value.end()),
+        }
+    }
+}
+
+impl<const DAYS: u8> From<DateTimeRangeWithDefaultTimeSpan<DAYS>> for DateTimeRange {
+    fn from(value: DateTimeRangeWithDefaultTimeSpan<DAYS>) -> Self {
+        DateTimeRange {
+            start: value.start(),
+            end: value.end(),
+        }
+    }
 }
 
 impl<const T: u8> NaiveDateRange<T> {

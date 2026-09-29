@@ -3,6 +3,7 @@ use crate::{
     error::Result,
     models::{
         FiskeridirAisVesselCombination, NewMunicipality, NewOrg, NewOrgVessel, NewRegisterVessel,
+        VesselCatchAggregate, VesselCatchSimilarity,
     },
 };
 use fiskeridir_rs::{CallSign, GearGroup, OrgId, SpeciesGroup, VesselLengthGroup};
@@ -15,6 +16,70 @@ use kyogre_core::{
 use std::collections::{HashMap, HashSet};
 
 impl PostgresAdapter {
+    pub(crate) async fn update_vessel_catch_similarities_impl(
+        &self,
+        updates: Vec<kyogre_core::VesselCatchSimilarity>,
+    ) -> Result<()> {
+        self.unnest_insert_from::<_, _, VesselCatchSimilarity>(updates, &self.pool)
+            .await?;
+        Ok(())
+    }
+    pub(crate) fn vessel_catch_aggregates_impl(
+        &self,
+    ) -> impl Stream<Item = Result<VesselCatchAggregate>> + '_ {
+        sqlx::query_as!(
+            VesselCatchAggregate,
+            r#"
+WITH
+    vessels AS (
+        SELECT DISTINCT
+            fiskeridir_vessel_id
+        FROM
+            vessel_catch_aggregates
+    ),
+    permissions AS (
+        SELECT
+            ARRAY_AGG(permission_type) AS permissions,
+            p.fiskeridir_vessel_id
+        FROM
+            vessels v
+            INNER JOIN vessel_permissions p ON p.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+        GROUP BY
+            p.fiskeridir_vessel_id
+    )
+SELECT
+    f.fiskeridir_vessel_id AS "id: FiskeridirVesselId",
+    f.total_living_weight,
+    f.gear_group_ids AS "gear_groups!: Vec<GearGroup>",
+    f.fiskeridir_length_group_id AS "length_group: VesselLengthGroup",
+    COALESCE(
+        JSONB_AGG(
+            JSONB_BUILD_OBJECT(
+                'total_living_weight',
+                v.total_living_weight,
+                'species_group_id',
+                v.species_group_id
+            )
+        ),
+        '[]'
+    )::TEXT AS "catches!",
+    COALESCE(ANY_VALUE (permissions), '{}') AS "permissions!"
+FROM
+    vessel_catch_aggregates v
+    INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    LEFT JOIN permissions p ON p.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+WHERE
+    f.total_living_weight > 0.0
+    AND v.total_living_weight > 0.0
+GROUP BY
+    f.fiskeridir_vessel_id
+ORDER BY
+    f.fiskeridir_vessel_id
+            "#
+        )
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
+    }
     pub(crate) async fn queue_vessel_trip_reset(
         &self,
         vessel_id: FiskeridirVesselId,

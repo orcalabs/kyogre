@@ -2,6 +2,23 @@ use crate::queries::{type_to_i32, type_to_i64};
 use kyogre_core::{ProcessingStatus, TripId};
 use unnest_insert::UnnestUpdate;
 
+#[derive(Debug, Clone)]
+pub struct AverageVesselsBenchmarks {
+    pub highest_average_fuel_consumption_liter: Option<f64>,
+    pub highest_average_weight_per_hour: Option<f64>,
+    pub highest_average_weight_per_distance: Option<f64>,
+    pub highest_average_weight_per_fuel_liter: Option<f64>,
+    pub highest_average_catch_value_per_fuel_liter: Option<f64>,
+    pub highest_average_living_weight: Option<f64>,
+
+    pub own_average_fuel_consumption_liter: Option<f64>,
+    pub own_average_weight_per_hour: Option<f64>,
+    pub own_average_weight_per_distance: Option<f64>,
+    pub own_average_weight_per_fuel_liter: Option<f64>,
+    pub own_average_catch_value_per_fuel_liter: Option<f64>,
+    pub own_average_living_weight: Option<f64>,
+}
+
 #[derive(Debug, Clone, UnnestUpdate)]
 #[unnest_update(
     table_name = "trips_detailed",
@@ -16,7 +33,9 @@ pub struct TripBenchmarkOutput {
     pub benchmark_fuel_consumption_liter_estimated_only: Option<f64>,
     pub benchmark_percentage_of_trip_covered_by_measurements: Option<f64>,
     pub benchmark_weight_per_fuel_liter: Option<f64>,
+    pub benchmark_weight_per_fuel_liter_estimated_only: Option<f64>,
     pub benchmark_catch_value_per_fuel_liter: Option<f64>,
+    pub benchmark_catch_value_per_fuel_liter_estimated_only: Option<f64>,
     pub benchmark_eeoi: Option<f64>,
     #[unnest_update(sql_type = "INT", type_conversion = "type_to_i32")]
     pub benchmark_status: ProcessingStatus,
@@ -39,6 +58,8 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
             benchmark_state_counter,
             fuel_consumption_liter_estimated_only,
             percentage_of_trip_covered_by_measurements,
+            weight_per_fuel_liter_estimated_only,
+            catch_value_per_fuel_liter_estimated_only,
         } = v;
 
         Self {
@@ -47,7 +68,10 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
             benchmark_weight_per_distance: *weight_per_distance,
             benchmark_fuel_consumption_liter: *fuel_consumption_liter,
             benchmark_weight_per_fuel_liter: *weight_per_fuel_liter,
+            benchmark_weight_per_fuel_liter_estimated_only: *weight_per_fuel_liter_estimated_only,
             benchmark_catch_value_per_fuel_liter: *catch_value_per_fuel_liter,
+            benchmark_catch_value_per_fuel_liter_estimated_only:
+                *catch_value_per_fuel_liter_estimated_only,
             benchmark_eeoi: *eeoi,
             benchmark_status: *status,
             benchmark_state_counter: *benchmark_state_counter,
