@@ -1,10 +1,8 @@
 use super::Ordering;
 use crate::{DateTimeRange, DateTimeRangeWithDefaultTimeSpan, OptionalDateTimeRange};
-use fiskeridir_rs::{
-    CallSign, FiskeridirVesselId, GearGroup, SpeciesGroup, SpeciesMainGroup, VesselLengthGroup,
-};
+use fiskeridir_rs::{CallSign, FiskeridirVesselId, GearGroup, SpeciesGroup, VesselLengthGroup};
 use serde::{Deserialize, Serialize};
-use serde_with::{DisplayFromStr, serde_as};
+use serde_with::serde_as;
 
 #[derive(Debug, Clone)]
 pub struct TripBenchmarksQuery {
@@ -58,11 +56,5 @@ pub struct AverageFuiQuery {
 pub struct PerVesselBenchmarkParams {
     #[serde(flatten)]
     pub range: DateTimeRangeWithDefaultTimeSpan<30>,
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub gear_groups: Option<Vec<GearGroup>>,
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub length_groups: Option<Vec<VesselLengthGroup>>,
-    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
-    pub species_main_group_ids: Option<Vec<SpeciesMainGroup>>,
     pub use_following_list: Option<bool>,
 }

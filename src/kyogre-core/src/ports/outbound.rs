@@ -243,6 +243,15 @@ pub trait MatrixCacheVersion: Send + Sync {
 }
 
 #[async_trait]
+pub trait VesselAggregate: Send + Sync {
+    async fn vessel_catch_aggregates(&self) -> CoreResult<Vec<VesselCatchAggregate>>;
+    async fn update_vessel_catch_similarities(
+        &self,
+        updates: Vec<VesselCatchSimilarity>,
+    ) -> CoreResult<()>;
+}
+
+#[async_trait]
 pub trait FuelEstimation: Send + Sync {
     // Only used in tests to reduce the amount of estimations generated
     #[cfg(feature = "test")]

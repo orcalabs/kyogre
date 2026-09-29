@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessels AS (\n        SELECT DISTINCT\n            fiskeridir_vessel_id\n        FROM\n            vessel_catch_aggregates\n    ),\n    permissions AS (\n        SELECT\n            ARRAY_AGG(permission_type) AS permissions,\n            p.fiskeridir_vessel_id\n        FROM\n            vessels v\n            INNER JOIN vessel_permissions p ON p.fiskeridir_vessel_id = v.fiskeridir_vessel_id\n        GROUP BY\n            p.fiskeridir_vessel_id\n    )\nSELECT\n    f.fiskeridir_vessel_id AS \"id: FiskeridirVesselId\",\n    f.total_living_weight,\n    f.gear_group_ids AS \"gear_groups!: Vec<GearGroup>\",\n    f.fiskeridir_length_group_id AS \"length_group: VesselLengthGroup\",\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'total_living_weight',\n                v.total_living_weight,\n                'species_group_id',\n                v.species_group_id\n            )\n        ),\n        '[]'\n    )::TEXT AS \"catches!\",\n    COALESCE(ANY_VALUE (permissions), '{}') AS \"permissions!\"\nFROM\n    vessel_catch_aggregates v\n    INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    LEFT JOIN permissions p ON p.fiskeridir_vessel_id = v.fiskeridir_vessel_id\nWHERE\n    f.total_living_weight > 0.0\n    AND v.total_living_weight > 0.0\nGROUP BY\n    f.fiskeridir_vessel_id\nORDER BY\n    f.fiskeridir_vessel_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "total_living_weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "gear_groups!: Vec<GearGroup>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 3,
+        "name": "length_group: VesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "catches!",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "permissions!",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "bfe79e8ffbe0dc7336d79b9469d78906d1b98c4f9dcb4668053907e7516f996b"
+}

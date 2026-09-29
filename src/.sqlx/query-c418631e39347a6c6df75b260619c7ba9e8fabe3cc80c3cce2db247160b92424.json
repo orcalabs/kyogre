@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    COALESCE(ARRAY_AGG(f2.fiskeridir_vessel_id), '{}') AS \"ids!: Vec<FiskeridirVesselId>\"\nFROM\n    fiskeridir_vessels f\n    INNER JOIN fiskeridir_vessels f2 ON f.gear_group_ids && f2.gear_group_ids\n    AND f.fiskeridir_length_group_id = f2.fiskeridir_length_group_id\n    AND f2.fiskeridir_vessel_id != $1\nWHERE\n    f.fiskeridir_vessel_id = $1\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "ids!: Vec<FiskeridirVesselId>",
+        "type_info": "Int8Array"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "c418631e39347a6c6df75b260619c7ba9e8fabe3cc80c3cce2db247160b92424"
+}

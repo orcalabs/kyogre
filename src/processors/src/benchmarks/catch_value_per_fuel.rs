@@ -25,6 +25,12 @@ impl TripBenchmark for CatchValuePerFuel {
             _ => None,
         };
 
+        output.catch_value_per_fuel_liter_estimated_only =
+            match output.fuel_consumption_liter_estimated_only {
+                Some(fuel) if fuel > 0.0 => Some(trip.total_catch_value / fuel),
+                _ => None,
+            };
+
         Ok(())
     }
 }
