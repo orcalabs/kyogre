@@ -120,6 +120,11 @@ pub enum BuyerLocationType {
     OrdinaryFacility = 6,
     #[strum(serialize = "NET_PEN_T", to_string = "NetPen")]
     NetPen = 7,
+    #[strum(
+        serialize = "FROZEN_STORAGE_FACILITY_T",
+        to_string = "FrozenStorageFacility"
+    )]
+    FrozenStorageFacility = 8,
 }
 
 #[derive(Debug, Clone, Copy, Serialize)]
