@@ -177,6 +177,7 @@ impl From<AisPosition> for kyogre_core::AisPosition {
             speed_over_ground,
             true_heading,
             distance_to_shore: distance_to_shore(latitude, longitude),
+            active_gear: None,
         }
     }
 }
