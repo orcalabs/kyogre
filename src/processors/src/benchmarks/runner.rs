@@ -1,6 +1,7 @@
 use crate::{
     CatchValuePerFuel, Eeoi, FuelConsumption, Result, WeightPerDistance, WeightPerFuel,
     WeightPerHour,
+    benchmarks::{carbon_intensity::CarbonIntensity, fui::Fui},
 };
 use kyogre_core::{
     BenchmarkTrip, FiskeridirVesselId, ProcessingStatus, TripBenchmark, TripBenchmarkOutbound,
@@ -157,6 +158,11 @@ impl Worker {
             percentage_of_trip_covered_by_measurements: None,
             weight_per_fuel_liter_estimated_only: None,
             catch_value_per_fuel_liter_estimated_only: None,
+            eeoi_estimated_only: None,
+            carbon_intensity: None,
+            carbon_intensity_estimated_only: None,
+            fui: None,
+            fui_estimated_only: None,
         };
 
         for b in benchmarks {
@@ -179,6 +185,8 @@ fn enabled_benchmarks() -> Vec<Box<dyn TripBenchmark>> {
         Box::<WeightPerFuel>::default(),
         Box::<CatchValuePerFuel>::default(),
         Box::<Eeoi>::default(),
+        Box::<CarbonIntensity>::default(),
+        Box::<Fui>::default(),
         // `Sustainability` needs to be last because it depends on benchmarks above.
         // TODO
         // Box::<Sustainability>::default(),

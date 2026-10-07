@@ -1,13 +1,14 @@
+use crate::extractors::OptionBwProfile;
 use crate::{Database, error::Result, extractors::BwProfile, response::Response};
 use actix_web::web;
 use chrono::{DateTime, Utc};
 use fiskeridir_rs::SpeciesGroup;
 use fiskeridir_rs::{CallSign, GearGroup, VesselLengthGroup};
 use kyogre_core::{
-    AverageEeoiQuery, AverageFuiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
-    AverageVesselsBenchmarks, DateTimeRange, EeoiQuery, FiskeridirVesselId, FuiQuery, Mean,
-    OptionalDateTimeRange, Ordering, PerVesselBenchmarkParams, SumVesselBenchmark,
-    TripBenchmarksQuery, TripId, TripWithBenchmark,
+    AverageCarbonIntensityQuery, AverageEeoiQuery, AverageTripBenchmarks,
+    AverageTripBenchmarksQuery, AverageVesselsBenchmarks, CarbonIntensityQuery, DateTimeRange,
+    EeoiQuery, FiskeridirVesselId, Mean, OptionalDateTimeRange, Ordering, PerVesselBenchmarkParams,
+    SumVesselBenchmark, TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -32,7 +33,7 @@ pub struct EeoiParams {
 
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct FuiParams {
+pub struct CarbonIntensityParams {
     #[serde(flatten)]
     pub range: OptionalDateTimeRange,
 }
@@ -53,7 +54,7 @@ pub struct AverageTripBenchmarksParams {
 #[serde_as]
 #[derive(Default, Debug, Deserialize, Serialize, OaSchema)]
 #[serde(rename_all = "camelCase")]
-pub struct AverageFuiParams {
+pub struct AverageCarbonIntensityParams {
     #[serde(flatten)]
     pub range: DateTimeRange,
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
@@ -137,31 +138,35 @@ pub async fn benchmarks<T: Database>(
     Ok(Response::new(benchmarks))
 }
 
-/// Returns the FUI of the logged in user for the given period.
+/// Returns the carbon intensity of the logged in user for the given period.
 #[oasgen(skip(db), tags("Trip"))]
 #[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
-pub async fn fui<T: Database>(
+pub async fn carbon_intensity<T: Database>(
     db: web::Data<T>,
     profile: BwProfile,
-    params: Query<FuiParams>,
+    params: Query<CarbonIntensityParams>,
 ) -> Result<Response<Option<f64>>> {
     let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().into_query(call_sign.clone());
 
-    let fui = db.fui(query).await?;
-    Ok(Response::new(fui))
+    let carbon_intensity = db.carbon_intensity(query).await?;
+    Ok(Response::new(carbon_intensity))
 }
 
-/// Returns the average FUI of all vessels matching the given parameters.
+/// Returns the average carbon intensity of all vessels matching the given parameters.
 #[oasgen(skip(db), tags("Trip"))]
 #[tracing::instrument(skip(db))]
-pub async fn average_fui<T: Database>(
+pub async fn average_carbon_intensity<T: Database>(
     db: web::Data<T>,
-    params: Query<AverageFuiParams>,
+    profile: OptionBwProfile,
+    params: Query<AverageCarbonIntensityParams>,
 ) -> Result<Response<Option<f64>>> {
     let query = params.into_inner().into();
-    let fui = db.average_fui(query).await?;
-    Ok(Response::new(fui))
+    let call_sign = profile.call_sign(db.as_ref()).await?;
+    let carbon_intensity = db
+        .average_carbon_intensity(call_sign.as_ref(), query)
+        .await?;
+    Ok(Response::new(carbon_intensity))
 }
 
 /// Returns the EEOI of the logged in user for the given period.
@@ -186,10 +191,12 @@ pub async fn eeoi<T: Database>(
 #[tracing::instrument(skip(db))]
 pub async fn average_eeoi<T: Database>(
     db: web::Data<T>,
+    profile: OptionBwProfile,
     params: Query<AverageEeoiParams>,
 ) -> Result<Response<Option<f64>>> {
+    let call_sign = profile.call_sign(db.as_ref()).await?;
     let query = params.into_inner().into();
-    let eeoi = db.average_eeoi(query).await?;
+    let eeoi = db.average_eeoi(call_sign.as_ref(), query).await?;
     Ok(Response::new(eeoi))
 }
 
@@ -218,6 +225,8 @@ pub struct TripBenchmark {
     pub weight_per_fuel: Option<f64>,
     pub catch_value_per_fuel: Option<f64>,
     pub eeoi: Option<f64>,
+    pub fui: Option<f64>,
+    pub carbon_intensity: Option<f64>,
     // TODO
     // pub sustainability: f64,
 }
@@ -250,6 +259,8 @@ impl From<TripWithBenchmark> for TripBenchmark {
             catch_value_per_fuel_liter,
             fuel_consumption_liter,
             eeoi,
+            carbon_intensity,
+            fui,
         } = v;
 
         let period = period_precision.unwrap_or(period);
@@ -264,6 +275,8 @@ impl From<TripWithBenchmark> for TripBenchmark {
             weight_per_fuel: weight_per_fuel_liter,
             catch_value_per_fuel: catch_value_per_fuel_liter,
             eeoi,
+            fui,
+            carbon_intensity,
         }
     }
 }
@@ -280,11 +293,11 @@ impl TripBenchmarksParams {
     }
 }
 
-impl FuiParams {
-    fn into_query(self, call_sign: CallSign) -> FuiQuery {
+impl CarbonIntensityParams {
+    fn into_query(self, call_sign: CallSign) -> CarbonIntensityQuery {
         let Self { range } = self;
 
-        FuiQuery { call_sign, range }
+        CarbonIntensityQuery { call_sign, range }
     }
 }
 
@@ -334,9 +347,9 @@ impl From<AverageEeoiParams> for AverageEeoiQuery {
     }
 }
 
-impl From<AverageFuiParams> for AverageFuiQuery {
-    fn from(v: AverageFuiParams) -> Self {
-        let AverageFuiParams {
+impl From<AverageCarbonIntensityParams> for AverageCarbonIntensityQuery {
+    fn from(v: AverageCarbonIntensityParams) -> Self {
+        let AverageCarbonIntensityParams {
             range,
             gear_groups,
             length_group,

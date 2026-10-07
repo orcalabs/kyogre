@@ -716,11 +716,15 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> PinBoxStream<'_, VesselEvent> {
         self.vessel_events_impl(vessel_id, query).convert().boxed()
     }
-    async fn fui(&self, query: FuiQuery) -> WebApiResult<Option<f64>> {
-        Ok(retry(|| self.fui_impl(&query)).await?)
+    async fn carbon_intensity(&self, query: CarbonIntensityQuery) -> WebApiResult<Option<f64>> {
+        Ok(retry(|| self.carbon_intensity_impl(&query)).await?)
     }
-    async fn average_fui(&self, query: AverageFuiQuery) -> WebApiResult<Option<f64>> {
-        Ok(retry(|| self.average_fui_impl(&query)).await?)
+    async fn average_carbon_intensity(
+        &self,
+        call_sign: Option<&CallSign>,
+        query: AverageCarbonIntensityQuery,
+    ) -> WebApiResult<Option<f64>> {
+        Ok(retry(|| self.average_carbon_intensity_impl(call_sign, &query)).await?)
     }
     async fn live_fuel(&self, query: &LiveFuelQuery) -> WebApiResult<LiveFuel> {
         Ok(retry(|| async {
@@ -763,8 +767,12 @@ impl WebApiOutboundPort for PostgresAdapter {
     ) -> WebApiResult<AverageTripBenchmarks> {
         Ok(retry(|| self.average_trip_benchmarks_impl(&query)).await?)
     }
-    async fn average_eeoi(&self, query: AverageEeoiQuery) -> WebApiResult<Option<f64>> {
-        Ok(retry(|| self.average_eeoi_impl(&query)).await?)
+    async fn average_eeoi(
+        &self,
+        call_sign: Option<&CallSign>,
+        query: AverageEeoiQuery,
+    ) -> WebApiResult<Option<f64>> {
+        Ok(retry(|| self.average_eeoi_impl(call_sign, &query)).await?)
     }
     fn current_positions(
         &self,

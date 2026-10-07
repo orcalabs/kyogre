@@ -3,9 +3,10 @@ use crate::{PostgresAdapter, error::Result, models::TripBenchmarkOutput};
 use fiskeridir_rs::{CallSign, SpeciesGroup};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
-    AverageEeoiQuery, AverageFuiQuery, AverageTripBenchmarks, AverageTripBenchmarksQuery,
-    BarentswatchUserId, DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone,
-    EngineType, FiskeridirVesselId, FuiQuery, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi,
+    AverageCarbonIntensityQuery, AverageEeoiQuery, AverageTripBenchmarks,
+    AverageTripBenchmarksQuery, BarentswatchUserId, CarbonIntensityQuery,
+    DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone, EngineType,
+    FiskeridirVesselId, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi,
     PerVesselBenchmarkParams, ProcessingStatus, SumVesselBenchmark, TripBenchmarksQuery, TripId,
     TripWithBenchmark,
 };
@@ -172,31 +173,37 @@ GROUP BY
             })
             .await?;
 
-        let own_fui = self
-            .fui_impl(&FuiQuery {
+        let own_carbon_intensity = self
+            .carbon_intensity_impl(&CarbonIntensityQuery {
                 call_sign: call_sign.clone(),
                 range: query.range.clone().into(),
             })
             .await?;
 
         let average_eeoi = self
-            .average_eeoi_impl(&AverageEeoiQuery {
-                range: query.range.clone().into(),
-                gear_groups: vec![],
-                length_group: None,
-                vessel_ids: vessels.clone(),
-                species_group_id: None,
-            })
+            .average_eeoi_impl(
+                Some(call_sign),
+                &AverageEeoiQuery {
+                    range: query.range.clone().into(),
+                    gear_groups: vec![],
+                    length_group: None,
+                    vessel_ids: vessels.clone(),
+                    species_group_id: None,
+                },
+            )
             .await?;
 
-        let average_fui = self
-            .average_fui_impl(&AverageFuiQuery {
-                range: query.range.clone().into(),
-                gear_groups: vec![],
-                length_group: None,
-                vessel_ids: vessels.clone(),
-                species_group_id: None,
-            })
+        let average_carbon_intensity = self
+            .average_carbon_intensity_impl(
+                Some(call_sign),
+                &AverageCarbonIntensityQuery {
+                    range: query.range.clone().into(),
+                    gear_groups: vec![],
+                    length_group: None,
+                    vessel_ids: vessels.clone(),
+                    species_group_id: None,
+                },
+            )
             .await?;
 
         let out = sqlx::query_as!(
@@ -238,7 +245,13 @@ WITH
             MAX(average_weight_per_distance) AS highest_average_weight_per_distance,
             MAX(average_weight_per_fuel_liter) AS highest_average_weight_per_fuel_liter,
             MAX(average_catch_value_per_fuel_liter) AS highest_average_catch_value_per_fuel_liter,
-            MAX(average_living_weight) AS highest_average_living_weight
+            MAX(average_living_weight) AS highest_average_living_weight,
+            AVG(average_weight_per_hour) AS average_weight_per_hour,
+            AVG(average_fuel_consumption_liter) AS average_fuel_consumption_liter,
+            AVG(average_weight_per_distance) AS average_weight_per_distance,
+            AVG(average_weight_per_fuel_liter) AS average_weight_per_fuel_liter,
+            AVG(average_catch_value_per_fuel_liter) AS average_catch_value_per_fuel_liter,
+            AVG(average_living_weight) AS average_living_weight
         FROM
             (
                 SELECT
@@ -311,7 +324,8 @@ FROM
                 .highest_average_catch_value_per_fuel_liter,
             highest_average_living_weight: a.highest_average_living_weight,
             average_eeoi,
-            average_fui,
+            average_carbon_intensity,
+            average_fui: average_carbon_intensity.map(|a| a / DIESEL_LITER_CARBON_FACTOR),
             own_average_fuel_consumption_liter: a.own_average_fuel_consumption_liter,
             own_average_weight_per_hour: a.own_average_weight_per_hour,
             own_average_weight_per_distance: a.own_average_weight_per_distance,
@@ -319,7 +333,14 @@ FROM
             own_average_catch_value_per_fuel_liter: a.own_average_catch_value_per_fuel_liter,
             own_average_living_weight: a.own_average_living_weight,
             own_eeoi,
-            own_fui,
+            own_carbon_intensity,
+            own_fui: own_carbon_intensity.map(|a| a / DIESEL_LITER_CARBON_FACTOR),
+            average_fuel_consumption_liter: a.average_fuel_consumption_liter,
+            average_weight_per_hour: a.average_weight_per_hour,
+            average_weight_per_distance: a.average_weight_per_distance,
+            average_weight_per_fuel_liter: a.average_weight_per_fuel_liter,
+            average_catch_value_per_fuel_liter: a.average_catch_value_per_fuel_liter,
+            average_living_weight: a.average_living_weight,
         }))
     }
     pub(crate) async fn add_benchmark_output(
@@ -443,7 +464,9 @@ SELECT
     t.benchmark_fuel_consumption_liter AS fuel_consumption_liter,
     t.benchmark_weight_per_fuel_liter AS weight_per_fuel_liter,
     t.benchmark_catch_value_per_fuel_liter AS catch_value_per_fuel_liter,
-    t.benchmark_eeoi AS eeoi
+    t.benchmark_eeoi AS eeoi,
+    t.benchmark_carbon_intensity AS carbon_intensity,
+    t.benchmark_fui AS fui
 FROM
     vessel_id v
     INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -477,7 +500,10 @@ ORDER BY
         Ok(trips)
     }
 
-    pub(crate) async fn fui_impl(&self, query: &FuiQuery) -> Result<Option<f64>> {
+    pub(crate) async fn carbon_intensity_impl(
+        &self,
+        query: &CarbonIntensityQuery,
+    ) -> Result<Option<f64>> {
         let result = sqlx::query!(
             r#"
 WITH
@@ -496,7 +522,7 @@ SELECT
             SUM(t.landing_total_living_weight)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
         )
         ELSE NULL
-    END AS fui
+    END AS carbon_intensity
 FROM
     vessel_id v
     INNER JOIN trips_detailed t ON v.fiskeridir_vessel_id = t.fiskeridir_vessel_id
@@ -519,7 +545,7 @@ WHERE
         .fetch_optional(&self.pool)
         .await?;
 
-        Ok(result.and_then(|v| v.fui))
+        Ok(result.and_then(|v| v.carbon_intensity))
     }
 
     pub(crate) async fn eeoi_impl(&self, query: &EeoiQuery) -> Result<Option<f64>> {
@@ -567,95 +593,45 @@ WHERE
 
         Ok(result.and_then(|v| v.eeoi))
     }
-    pub(crate) async fn average_fui_impl(&self, query: &AverageFuiQuery) -> Result<Option<f64>> {
+    pub(crate) async fn average_carbon_intensity_impl(
+        &self,
+        call_sign: Option<&CallSign>,
+        query: &AverageCarbonIntensityQuery,
+    ) -> Result<Option<f64>> {
         let result = sqlx::query!(
             r#"
 
 WITH
-    fuis AS (
+    logged_in_vessel_id AS (
+        SELECT
+            fiskeridir_vessel_id
+        FROM
+            active_vessels
+        WHERE
+            call_sign = $1
+            AND $1 IS NOT NULL
+    ),
+    carbon_intensities AS (
         SELECT
             CASE
                 WHEN SUM(t.landing_total_living_weight) > 0
-                AND SUM(t.distance) > $1 THEN (SUM(t.benchmark_fuel_consumption_liter) * $2)::DOUBLE PRECISION / (
+                AND SUM(t.distance) > $2 THEN (
+                    SUM(
+                        CASE
+                            WHEN t.fiskeridir_vessel_id = (
+                                SELECT
+                                    fiskeridir_vessel_id
+                                FROM
+                                    logged_in_vessel_id
+                            ) THEN t.benchmark_fuel_consumption_liter
+                            ELSE t.benchmark_fuel_consumption_liter_estimated_only
+                        END
+                    ) * $3
+                )::DOUBLE PRECISION / (
                     SUM(t.landing_total_living_weight)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
                 )
                 ELSE NULL
-            END AS fui
-        FROM
-            trips_detailed t
-        WHERE
-            t.stop_timestamp BETWEEN $3 AND $4
-            AND (
-                $5::INT IS NULL
-                OR t.fiskeridir_length_group_id = $5
-            )
-            AND (
-                $6::INT[] IS NULL
-                OR t.haul_gear_group_ids && $6
-            )
-            AND (
-                $7::BIGINT[] IS NULL
-                OR t.fiskeridir_vessel_id = ANY ($7)
-            )
-            AND (
-                $8::INT IS NULL
-                OR t.landing_largest_quantum_species_group_id = $8
-            )
-        GROUP BY
-            t.fiskeridir_vessel_id
-    ),
-    ranked_data AS (
-        SELECT
-            fui,
-            percent_rank() OVER (
-                ORDER BY
-                    fui
-            ) AS percent
-        FROM
-            fuis
-    )
-SELECT
-    AVG(fui) AS fui
-FROM
-    ranked_data
-WHERE
-    percent BETWEEN 0.05 AND 0.95
-    OR (
-        SELECT
-            COUNT(*)
-        FROM
-            ranked_data
-    ) <= 2
-            "#,
-            MIN_EEOI_DISTANCE,
-            DIESEL_LITER_CARBON_FACTOR,
-            query.range.start(),
-            query.range.end(),
-            query.length_group as Option<VesselLengthGroup>,
-            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
-            query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
-            query.species_group_id as Option<SpeciesGroup>
-        )
-        .fetch_optional(&self.pool)
-        .await?;
-
-        Ok(result.and_then(|v| v.fui))
-    }
-
-    pub(crate) async fn average_eeoi_impl(&self, query: &AverageEeoiQuery) -> Result<Option<f64>> {
-        let result = sqlx::query!(
-            r#"
-
-WITH
-    eeois AS (
-        SELECT
-            CASE
-                WHEN SUM(t.landing_total_living_weight) > 0
-                AND SUM(t.distance) > $1 THEN (SUM(t.benchmark_fuel_consumption_liter) * $2)::DOUBLE PRECISION / (
-                    SUM(t.landing_total_living_weight * t.distance * $3)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
-                )
-                ELSE NULL
-            END AS eeoi
+            END AS carbon_intensity
         FROM
             trips_detailed t
         WHERE
@@ -675,6 +651,107 @@ WITH
             AND (
                 $9::INT IS NULL
                 OR t.landing_largest_quantum_species_group_id = $9
+            )
+        GROUP BY
+            t.fiskeridir_vessel_id
+    ),
+    ranked_data AS (
+        SELECT
+            carbon_intensity,
+            percent_rank() OVER (
+                ORDER BY
+                    carbon_intensity
+            ) AS percent
+        FROM
+            carbon_intensities
+    )
+SELECT
+    AVG(carbon_intensity) AS carbon_intensity
+FROM
+    ranked_data
+WHERE
+    percent BETWEEN 0.05 AND 0.95
+    OR (
+        SELECT
+            COUNT(*)
+        FROM
+            ranked_data
+    ) <= 2
+            "#,
+            call_sign.map(|c| c.as_ref()),
+            MIN_EEOI_DISTANCE,
+            DIESEL_LITER_CARBON_FACTOR,
+            query.range.start(),
+            query.range.end(),
+            query.length_group as Option<VesselLengthGroup>,
+            query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
+            query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
+            query.species_group_id as Option<SpeciesGroup>
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(result.and_then(|v| v.carbon_intensity))
+    }
+
+    pub(crate) async fn average_eeoi_impl(
+        &self,
+        call_sign: Option<&CallSign>,
+        query: &AverageEeoiQuery,
+    ) -> Result<Option<f64>> {
+        let result = sqlx::query!(
+            r#"
+
+WITH
+    logged_in_vessel_id AS (
+        SELECT
+            fiskeridir_vessel_id
+        FROM
+            active_vessels
+        WHERE
+            call_sign = $1
+            AND $1 IS NOT NULL
+    ),
+    eeois AS (
+        SELECT
+            CASE
+                WHEN SUM(t.landing_total_living_weight) > 0
+                AND SUM(t.distance) > $2 THEN (
+                    SUM(
+                        CASE
+                            WHEN t.fiskeridir_vessel_id = (
+                                SELECT
+                                    fiskeridir_vessel_id
+                                FROM
+                                    logged_in_vessel_id
+                            ) THEN t.benchmark_fuel_consumption_liter
+                            ELSE t.benchmark_fuel_consumption_liter_estimated_only
+                        END
+                    ) * $3
+                )::DOUBLE PRECISION / (
+                    SUM(t.landing_total_living_weight * t.distance * $4)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+                )
+                ELSE NULL
+            END AS eeoi
+        FROM
+            trips_detailed t
+        WHERE
+            t.stop_timestamp BETWEEN $5 AND $6
+            AND (
+                $7::INT IS NULL
+                OR t.fiskeridir_length_group_id = $7
+            )
+            AND (
+                $8::INT[] IS NULL
+                OR t.haul_gear_group_ids && $8
+            )
+            AND (
+                $9::BIGINT[] IS NULL
+                OR t.fiskeridir_vessel_id = ANY ($9)
+            )
+            AND (
+                $10::INT IS NULL
+                OR t.landing_largest_quantum_species_group_id = $10
             )
         GROUP BY
             t.fiskeridir_vessel_id
@@ -702,6 +779,7 @@ WHERE
             ranked_data
     ) <= 2
             "#,
+            call_sign.map(|c| c.as_ref()),
             MIN_EEOI_DISTANCE,
             DIESEL_LITER_CARBON_FACTOR,
             METERS_TO_NAUTICAL_MILES,

@@ -35,13 +35,13 @@ pub struct AverageEeoiQuery {
 }
 
 #[derive(Debug, Clone)]
-pub struct FuiQuery {
+pub struct CarbonIntensityQuery {
     pub call_sign: CallSign,
     pub range: OptionalDateTimeRange,
 }
 
 #[derive(Debug, Clone)]
-pub struct AverageFuiQuery {
+pub struct AverageCarbonIntensityQuery {
     pub range: DateTimeRange,
     pub gear_groups: Vec<GearGroup>,
     pub length_group: Option<VesselLengthGroup>,
