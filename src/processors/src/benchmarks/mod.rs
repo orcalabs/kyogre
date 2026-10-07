@@ -1,6 +1,8 @@
+mod carbon_intensity;
 mod catch_value_per_fuel;
 mod eeoi;
 mod fuel_consumption;
+mod fui;
 mod runner;
 mod weight_per_distance;
 mod weight_per_fuel;

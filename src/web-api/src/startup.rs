@@ -164,8 +164,8 @@ where
                 get().to(routes::v1::trip::benchmarks::average::<T>),
             )
             .route(
-                "/trip/benchmarks/average_fui",
-                get().to(routes::v1::trip::benchmarks::average_fui::<T>),
+                "/trip/benchmarks/average_carbon_intensity",
+                get().to(routes::v1::trip::benchmarks::average_carbon_intensity::<T>),
             )
             .route(
                 "/trip/benchmarks/average_eeoi",
@@ -310,10 +310,10 @@ where
                         .to(routes::v1::trip::benchmarks::benchmarks::<T>),
                 )
                 .route(
-                    "/trip/benchmarks/fui",
+                    "/trip/benchmarks/carbon_intensity",
                     get()
                         .guard(guard.clone())
-                        .to(routes::v1::trip::benchmarks::fui::<T>),
+                        .to(routes::v1::trip::benchmarks::carbon_intensity::<T>),
                 )
                 .route(
                     "/trip/benchmarks/eeoi",

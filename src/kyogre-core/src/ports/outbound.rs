@@ -77,7 +77,7 @@ pub trait WebApiOutboundPort {
         query: TripBenchmarksQuery,
     ) -> WebApiResult<Vec<TripWithBenchmark>>;
     async fn eeoi(&self, query: EeoiQuery) -> WebApiResult<Option<f64>>;
-    async fn fui(&self, query: FuiQuery) -> WebApiResult<Option<f64>>;
+    async fn carbon_intensity(&self, query: CarbonIntensityQuery) -> WebApiResult<Option<f64>>;
     fn detailed_trips(
         &self,
         query: TripsQuery,
@@ -109,8 +109,16 @@ pub trait WebApiOutboundPort {
         call_sign: &CallSign,
         query: &PerVesselBenchmarkParams,
     ) -> WebApiResult<Vec<SumVesselBenchmark>>;
-    async fn average_eeoi(&self, query: AverageEeoiQuery) -> WebApiResult<Option<f64>>;
-    async fn average_fui(&self, query: AverageFuiQuery) -> WebApiResult<Option<f64>>;
+    async fn average_eeoi(
+        &self,
+        call_sign: Option<&CallSign>,
+        query: AverageEeoiQuery,
+    ) -> WebApiResult<Option<f64>>;
+    async fn average_carbon_intensity(
+        &self,
+        call_sign: Option<&CallSign>,
+        query: AverageCarbonIntensityQuery,
+    ) -> WebApiResult<Option<f64>>;
     async fn live_fuel(&self, query: &LiveFuelQuery) -> WebApiResult<LiveFuel>;
     async fn fuel_estimation(&self, query: &FuelQuery) -> WebApiResult<f64>;
     async fn fuel_estimation_by_org(

@@ -11,6 +11,13 @@ pub struct AverageVesselsBenchmarks {
     pub highest_average_catch_value_per_fuel_liter: Option<f64>,
     pub highest_average_living_weight: Option<f64>,
 
+    pub average_fuel_consumption_liter: Option<f64>,
+    pub average_weight_per_hour: Option<f64>,
+    pub average_weight_per_distance: Option<f64>,
+    pub average_weight_per_fuel_liter: Option<f64>,
+    pub average_catch_value_per_fuel_liter: Option<f64>,
+    pub average_living_weight: Option<f64>,
+
     pub own_average_fuel_consumption_liter: Option<f64>,
     pub own_average_weight_per_hour: Option<f64>,
     pub own_average_weight_per_distance: Option<f64>,
@@ -37,6 +44,11 @@ pub struct TripBenchmarkOutput {
     pub benchmark_catch_value_per_fuel_liter: Option<f64>,
     pub benchmark_catch_value_per_fuel_liter_estimated_only: Option<f64>,
     pub benchmark_eeoi: Option<f64>,
+    pub benchmark_eeoi_estimated_only: Option<f64>,
+    pub benchmark_fui: Option<f64>,
+    pub benchmark_fui_estimated_only: Option<f64>,
+    pub benchmark_carbon_intensity: Option<f64>,
+    pub benchmark_carbon_intensity_estimated_only: Option<f64>,
     #[unnest_update(sql_type = "INT", type_conversion = "type_to_i32")]
     pub benchmark_status: ProcessingStatus,
     // We do not update this (rows are only updated if this matches the value in the existing row),
@@ -60,6 +72,11 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
             percentage_of_trip_covered_by_measurements,
             weight_per_fuel_liter_estimated_only,
             catch_value_per_fuel_liter_estimated_only,
+            carbon_intensity,
+            fui,
+            carbon_intensity_estimated_only,
+            fui_estimated_only,
+            eeoi_estimated_only,
         } = v;
 
         Self {
@@ -78,6 +95,11 @@ impl From<&kyogre_core::TripBenchmarkOutput> for TripBenchmarkOutput {
             benchmark_fuel_consumption_liter_estimated_only: *fuel_consumption_liter_estimated_only,
             benchmark_percentage_of_trip_covered_by_measurements:
                 *percentage_of_trip_covered_by_measurements,
+            benchmark_fui: *carbon_intensity,
+            benchmark_carbon_intensity: *fui,
+            benchmark_eeoi_estimated_only: *eeoi_estimated_only,
+            benchmark_fui_estimated_only: *fui_estimated_only,
+            benchmark_carbon_intensity_estimated_only: *carbon_intensity_estimated_only,
         }
     }
 }

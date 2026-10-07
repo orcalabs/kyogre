@@ -16,6 +16,8 @@ pub enum TripBenchmarkId {
     WeightPerFuel = 5,
     CatchValuePerFuel = 6,
     Eeoi = 7,
+    CarbonIntensity = 8,
+    Fui = 9,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -38,8 +40,16 @@ pub struct AverageVesselsBenchmarks {
     pub highest_average_weight_per_fuel_liter: Option<f64>,
     pub highest_average_catch_value_per_fuel_liter: Option<f64>,
     pub highest_average_living_weight: Option<f64>,
+
+    pub average_fuel_consumption_liter: Option<f64>,
+    pub average_weight_per_hour: Option<f64>,
+    pub average_weight_per_distance: Option<f64>,
+    pub average_weight_per_fuel_liter: Option<f64>,
+    pub average_catch_value_per_fuel_liter: Option<f64>,
+    pub average_living_weight: Option<f64>,
     pub average_eeoi: Option<f64>,
     pub average_fui: Option<f64>,
+    pub average_carbon_intensity: Option<f64>,
 
     pub own_average_fuel_consumption_liter: Option<f64>,
     pub own_average_weight_per_hour: Option<f64>,
@@ -49,6 +59,7 @@ pub struct AverageVesselsBenchmarks {
     pub own_average_living_weight: Option<f64>,
     pub own_eeoi: Option<f64>,
     pub own_fui: Option<f64>,
+    pub own_carbon_intensity: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -78,6 +89,8 @@ pub struct TripWithBenchmark {
     pub catch_value_per_fuel_liter: Option<f64>,
     pub fuel_consumption_liter: Option<f64>,
     pub eeoi: Option<f64>,
+    pub carbon_intensity: Option<f64>,
+    pub fui: Option<f64>,
     // TODO
     // pub sustainability: f64,
 }
@@ -95,6 +108,11 @@ pub struct TripBenchmarkOutput {
     pub catch_value_per_fuel_liter: Option<f64>,
     pub catch_value_per_fuel_liter_estimated_only: Option<f64>,
     pub eeoi: Option<f64>,
+    pub eeoi_estimated_only: Option<f64>,
+    pub carbon_intensity: Option<f64>,
+    pub carbon_intensity_estimated_only: Option<f64>,
+    pub fui: Option<f64>,
+    pub fui_estimated_only: Option<f64>,
     pub status: ProcessingStatus,
     pub benchmark_state_counter: i32,
 }
