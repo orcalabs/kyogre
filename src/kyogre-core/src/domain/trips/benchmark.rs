@@ -41,25 +41,27 @@ pub struct AverageVesselsBenchmarks {
     pub highest_average_catch_value_per_fuel_liter: Option<f64>,
     pub highest_average_living_weight: Option<f64>,
 
-    pub average_fuel_consumption_liter: Option<f64>,
-    pub average_weight_per_hour: Option<f64>,
-    pub average_weight_per_distance: Option<f64>,
-    pub average_weight_per_fuel_liter: Option<f64>,
-    pub average_catch_value_per_fuel_liter: Option<f64>,
-    pub average_living_weight: Option<f64>,
-    pub average_eeoi: Option<f64>,
-    pub average_fui: Option<f64>,
-    pub average_carbon_intensity: Option<f64>,
+    pub all: AverageStats,
+    pub own: AverageStats,
+}
 
-    pub own_average_fuel_consumption_liter: Option<f64>,
-    pub own_average_weight_per_hour: Option<f64>,
-    pub own_average_weight_per_distance: Option<f64>,
-    pub own_average_weight_per_fuel_liter: Option<f64>,
-    pub own_average_catch_value_per_fuel_liter: Option<f64>,
-    pub own_average_living_weight: Option<f64>,
-    pub own_eeoi: Option<f64>,
-    pub own_fui: Option<f64>,
-    pub own_carbon_intensity: Option<f64>,
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct AverageStats {
+    pub fuel_consumption_liter: Option<f64>,
+    pub weight_per_hour: Option<f64>,
+    pub weight_per_distance: Option<f64>,
+    pub weight_per_fuel_liter: Option<f64>,
+    pub catch_value_per_fuel_liter: Option<f64>,
+    pub living_weight: Option<f64>,
+    pub eeoi: Option<f64>,
+    pub fui: Option<f64>,
+    pub carbon_intensity: Option<f64>,
+    pub num_trips: Option<u64>,
+    pub num_hauls: Option<u64>,
+    pub value_nok: Option<f64>,
+    pub trip_duration_seconds: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
