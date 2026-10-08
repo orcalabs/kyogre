@@ -24,6 +24,16 @@ pub struct AverageVesselsBenchmarks {
     pub own_average_weight_per_fuel_liter: Option<f64>,
     pub own_average_catch_value_per_fuel_liter: Option<f64>,
     pub own_average_living_weight: Option<f64>,
+
+    pub average_num_trips: Option<i64>,
+    pub average_num_hauls: Option<i64>,
+    pub average_value_nok: Option<f64>,
+    pub average_trip_duration_seconds: Option<i64>,
+
+    pub own_num_trips: Option<i64>,
+    pub own_num_hauls: Option<i64>,
+    pub own_value_nok: Option<f64>,
+    pub own_trip_duration_seconds: Option<i64>,
 }
 
 #[derive(Debug, Clone, UnnestUpdate)]
