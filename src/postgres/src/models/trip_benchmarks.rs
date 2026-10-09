@@ -30,6 +30,7 @@ pub struct AverageVesselsBenchmarks {
     pub average_value_nok: Option<f64>,
     pub average_trip_duration_seconds: Option<i64>,
 
+    pub own_total_living_weight: Option<f64>,
     pub own_num_trips: Option<i64>,
     pub own_num_hauls: Option<i64>,
     pub own_value_nok: Option<f64>,

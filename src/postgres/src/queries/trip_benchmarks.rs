@@ -226,6 +226,7 @@ WITH
             AVG(benchmark_weight_per_fuel_liter) AS own_average_weight_per_fuel_liter,
             AVG(benchmark_catch_value_per_fuel_liter) AS own_average_catch_value_per_fuel_liter,
             AVG(landing_total_living_weight) AS own_average_living_weight,
+            SUM(landing_total_living_weight) AS own_total_living_weight,
             COUNT(*)::BIGINT AS own_num_trips,
             SUM(CARDINALITY(haul_ids))::BIGINT AS own_num_hauls,
             SUM(landing_total_price_for_fisher) AS own_value_nok,
@@ -347,6 +348,7 @@ FROM
             highest_average_catch_value_per_fuel_liter: a
                 .highest_average_catch_value_per_fuel_liter,
             highest_average_living_weight: a.highest_average_living_weight,
+            own_total_living_weight: a.own_total_living_weight,
             own: kyogre_core::AverageStats {
                 fuel_consumption_liter: a.own_average_fuel_consumption_liter,
                 weight_per_hour: a.own_average_weight_per_hour,
