@@ -230,6 +230,10 @@ WITH
             COUNT(*)::BIGINT AS own_num_trips,
             SUM(CARDINALITY(haul_ids))::BIGINT AS own_num_hauls,
             SUM(landing_total_price_for_fisher) AS own_value_nok,
+            BOOL_OR(price_for_fisher_is_estimated) AS own_trips_has_price_estimation,
+            SUM(
+                benchmark_percentage_of_trip_covered_by_measurements
+            ) / COUNT(*) AS own_fuel_measurement_coverage_percentage,
             SUM(
                 EXTRACT(
                     EPOCH
@@ -349,6 +353,8 @@ FROM
                 .highest_average_catch_value_per_fuel_liter,
             highest_average_living_weight: a.highest_average_living_weight,
             own_total_living_weight: a.own_total_living_weight,
+            own_trips_has_price_estimation: a.own_trips_has_price_estimation,
+            own_fuel_measurement_coverage_percentage: a.own_fuel_measurement_coverage_percentage,
             own: kyogre_core::AverageStats {
                 fuel_consumption_liter: a.own_average_fuel_consumption_liter,
                 weight_per_hour: a.own_average_weight_per_hour,
