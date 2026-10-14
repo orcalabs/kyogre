@@ -41,6 +41,8 @@ pub struct AverageVesselsBenchmarks {
     pub highest_average_catch_value_per_fuel_liter: Option<f64>,
     pub highest_average_living_weight: Option<f64>,
 
+    pub own_fuel_measurement_coverage_percentage: Option<f64>,
+    pub own_trips_has_price_estimation: Option<bool>,
     pub own_total_living_weight: Option<f64>,
 
     pub all: AverageStats,
