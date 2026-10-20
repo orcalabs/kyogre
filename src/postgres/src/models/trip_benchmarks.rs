@@ -10,6 +10,7 @@ pub struct AverageVesselsBenchmarks {
     pub highest_average_weight_per_fuel_liter: Option<f64>,
     pub highest_average_catch_value_per_fuel_liter: Option<f64>,
     pub highest_average_living_weight: Option<f64>,
+    pub other_average_total_living_weight: Option<f64>,
 
     pub average_fuel_consumption_liter: Option<f64>,
     pub average_weight_per_hour: Option<f64>,
