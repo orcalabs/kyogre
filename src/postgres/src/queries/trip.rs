@@ -1424,9 +1424,22 @@ WITH
             AND le.species_fiskeridir_id IS NOT NULL
     ),
     trips_with_largest_species_group_quantum AS (
-        SELECT DISTINCT
-            ON (trip_id) trip_id,
-            species_group_id AS landing_largest_quantum_species_group_id
+        SELECT
+            trip_id,
+            (
+                ARRAY_AGG(
+                    species_group_id
+                    ORDER BY
+                        living_weight DESC
+                )
+            ) [1] AS landing_largest_quantum_species_group_id,
+            (
+                ARRAY_AGG(
+                    species_group_id
+                    ORDER BY
+                        living_weight DESC
+                )
+            ) [1:2] AS landing_two_highest_species_group_quantum
         FROM
             (
                 SELECT
@@ -1439,9 +1452,8 @@ WITH
                     trip_id,
                     species_group_id
             ) q
-        ORDER BY
-            trip_id,
-            living_weight DESC
+        GROUP BY
+            trip_id
     )
 UPDATE trips_detailed
 SET
@@ -1453,7 +1465,8 @@ SET
     landing_total_product_weight = COALESCE(q.product_weight, 0),
     landing_total_price_for_fisher = COALESCE(q.final_price_for_fisher, 0),
     price_for_fisher_is_estimated = COALESCE(q.price_for_fisher_is_estimated, FALSE),
-    landing_largest_quantum_species_group_id = tq.landing_largest_quantum_species_group_id
+    landing_largest_quantum_species_group_id = tq.landing_largest_quantum_species_group_id,
+    landing_two_highest_species_group_quantum = tq.landing_two_highest_species_group_quantum
 FROM
     trips_with_largest_species_group_quantum tq
     INNER JOIN (

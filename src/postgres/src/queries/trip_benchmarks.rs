@@ -144,12 +144,17 @@ WHERE
     start_timestamp >= $1
     AND stop_timestamp <= $2
     AND fiskeridir_vessel_id = ANY ($3)
+    AND (
+        $4::INT[] IS NULL
+        OR landing_two_highest_species_group_quantum && $4
+    )
 GROUP BY
     fiskeridir_vessel_id
             "#,
             query.range.start(),
             query.range.end(),
-            &vessels as &[FiskeridirVesselId]
+            &vessels as &[FiskeridirVesselId],
+            &query.species_group_ids as &Option<Vec<SpeciesGroup>>
         )
         .fetch_all(&self.pool)
         .await?;
@@ -170,6 +175,7 @@ GROUP BY
             .eeoi_impl(&EeoiQuery {
                 call_sign: call_sign.clone(),
                 range: query.range.clone().into(),
+                species_group_ids: query.species_group_ids.clone(),
             })
             .await?;
 
@@ -177,6 +183,7 @@ GROUP BY
             .carbon_intensity_impl(&CarbonIntensityQuery {
                 call_sign: call_sign.clone(),
                 range: query.range.clone().into(),
+                species_group_ids: query.species_group_ids.clone(),
             })
             .await?;
 
@@ -189,6 +196,7 @@ GROUP BY
                     length_group: None,
                     vessel_ids: vessels.clone(),
                     species_group_id: None,
+                    species_group_ids: query.species_group_ids.clone(),
                 },
             )
             .await?;
@@ -202,6 +210,7 @@ GROUP BY
                     length_group: None,
                     vessel_ids: vessels.clone(),
                     species_group_id: None,
+                    species_group_ids: query.species_group_ids.clone(),
                 },
             )
             .await?;
@@ -252,6 +261,10 @@ WITH
                 FROM
                     logged_in_vessel_id
             )
+            AND (
+                $4::INT[] IS NULL
+                OR landing_two_highest_species_group_quantum && $4
+            )
     ),
     other_vessels AS (
         SELECT
@@ -267,6 +280,7 @@ WITH
             AVG(average_weight_per_fuel_liter) AS average_weight_per_fuel_liter,
             AVG(average_catch_value_per_fuel_liter) AS average_catch_value_per_fuel_liter,
             AVG(average_living_weight) AS average_living_weight,
+            AVG(other_average_total_living_weight) AS other_average_total_living_weight,
             AVG(num_trips)::BIGINT AS average_num_trips,
             AVG(num_hauls)::BIGINT AS average_num_hauls,
             AVG(trip_duration_seconds)::BIGINT AS average_trip_duration_seconds,
@@ -310,6 +324,7 @@ WITH
                         END
                     ) AS average_catch_value_per_fuel_liter,
                     AVG(landing_total_living_weight) AS average_living_weight,
+                    SUM(landing_total_living_weight) AS other_average_total_living_weight,
                     SUM(landing_total_price_for_fisher) AS value_nok,
                     COUNT(*) AS num_trips,
                     SUM(CARDINALITY(haul_ids)) AS num_hauls,
@@ -325,7 +340,11 @@ WITH
                 WHERE
                     start_timestamp >= $1
                     AND stop_timestamp <= $2
-                    AND fiskeridir_vessel_id = ANY ($4)
+                    AND (
+                        $4::INT[] IS NULL
+                        OR landing_two_highest_species_group_quantum && $4
+                    )
+                    AND fiskeridir_vessel_id = ANY ($5)
                 GROUP BY
                     fiskeridir_vessel_id
             ) q
@@ -339,6 +358,7 @@ FROM
             query.range.start(),
             query.range.end(),
             call_sign.as_ref(),
+            &query.species_group_ids as &Option<Vec<SpeciesGroup>>,
             &vessels as &[FiskeridirVesselId]
         )
         .fetch_optional(&self.pool)
@@ -352,6 +372,7 @@ FROM
             highest_average_catch_value_per_fuel_liter: a
                 .highest_average_catch_value_per_fuel_liter,
             highest_average_living_weight: a.highest_average_living_weight,
+            other_average_total_living_weight: a.other_average_total_living_weight,
             own_total_living_weight: a.own_total_living_weight,
             own_trips_has_price_estimation: a.own_trips_has_price_estimation,
             own_fuel_measurement_coverage_percentage: a.own_fuel_measurement_coverage_percentage,
@@ -579,12 +600,17 @@ WHERE
         $5::TIMESTAMPTZ IS NULL
         OR t.stop_timestamp <= $5
     )
+    AND (
+        $6::INT[] IS NULL
+        OR landing_two_highest_species_group_quantum && $6
+    )
             "#,
             query.call_sign.as_ref(),
             MIN_EEOI_DISTANCE,
             DIESEL_LITER_CARBON_FACTOR,
             query.range.start(),
             query.range.end(),
+            &query.species_group_ids as &Option<Vec<SpeciesGroup>>
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -624,6 +650,10 @@ WHERE
         $6::TIMESTAMPTZ IS NULL
         OR t.stop_timestamp <= $6
     )
+    AND (
+        $7::INT[] IS NULL
+        OR landing_two_highest_species_group_quantum && $7
+    )
             "#,
             query.call_sign.as_ref(),
             MIN_EEOI_DISTANCE,
@@ -631,6 +661,7 @@ WHERE
             METERS_TO_NAUTICAL_MILES,
             query.range.start(),
             query.range.end(),
+            &query.species_group_ids as &Option<Vec<SpeciesGroup>>
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -797,6 +828,10 @@ WITH
                 $10::INT IS NULL
                 OR t.landing_largest_quantum_species_group_id = $10
             )
+            AND (
+                $11::INT[] IS NULL
+                OR landing_two_highest_species_group_quantum && $11
+            )
         GROUP BY
             t.fiskeridir_vessel_id
     ),
@@ -832,7 +867,8 @@ WHERE
             query.length_group as Option<VesselLengthGroup>,
             query.gear_groups.as_slice().empty_to_none() as Option<&[GearGroup]>,
             query.vessel_ids.as_slice().empty_to_none() as Option<&[FiskeridirVesselId]>,
-            query.species_group_id as Option<SpeciesGroup>
+            query.species_group_id as Option<SpeciesGroup>,
+            &query.species_group_ids as &Option<Vec<SpeciesGroup>>
         )
         .fetch_optional(&self.pool)
         .await?;

@@ -297,7 +297,11 @@ impl CarbonIntensityParams {
     fn into_query(self, call_sign: CallSign) -> CarbonIntensityQuery {
         let Self { range } = self;
 
-        CarbonIntensityQuery { call_sign, range }
+        CarbonIntensityQuery {
+            call_sign,
+            range,
+            species_group_ids: None,
+        }
     }
 }
 
@@ -305,7 +309,11 @@ impl EeoiParams {
     fn into_query(self, call_sign: CallSign) -> EeoiQuery {
         let Self { range } = self;
 
-        EeoiQuery { call_sign, range }
+        EeoiQuery {
+            call_sign,
+            range,
+            species_group_ids: None,
+        }
     }
 }
 
@@ -343,6 +351,7 @@ impl From<AverageEeoiParams> for AverageEeoiQuery {
             length_group,
             vessel_ids: vessel_ids.unwrap_or_default(),
             species_group_id,
+            species_group_ids: None,
         }
     }
 }
@@ -363,6 +372,7 @@ impl From<AverageCarbonIntensityParams> for AverageCarbonIntensityQuery {
             length_group,
             vessel_ids: vessel_ids.unwrap_or_default(),
             species_group_id,
+            species_group_ids: None,
         }
     }
 }
