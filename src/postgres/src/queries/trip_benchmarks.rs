@@ -229,13 +229,20 @@ WITH
     ),
     logged_in_user_values AS (
         SELECT
-            AVG(benchmark_fuel_consumption_liter) AS own_average_fuel_consumption_liter,
-            AVG(benchmark_weight_per_hour) AS own_average_weight_per_hour,
-            AVG(benchmark_weight_per_distance) AS own_average_weight_per_distance,
-            AVG(benchmark_weight_per_fuel_liter) AS own_average_weight_per_fuel_liter,
-            AVG(benchmark_catch_value_per_fuel_liter) AS own_average_catch_value_per_fuel_liter,
-            AVG(landing_total_living_weight) AS own_average_living_weight,
-            SUM(landing_total_living_weight) AS own_total_living_weight,
+            SUM(benchmark_fuel_consumption_liter) AS own_sum_fuel_consumption_liter,
+            SUM(landing_total_living_weight) / (
+                SUM(
+                    EXTRACT(
+                        EPOCH
+                        FROM
+                            UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
+                    )
+                ) * 60 * 60
+            ) AS own_sum_weight_per_hour,
+            SUM(landing_total_living_weight) / SUM((distance * $6)) AS own_sum_weight_per_distance,
+            SUM(landing_total_living_weight) / SUM(benchmark_fuel_consumption_liter) AS own_sum_weight_per_fuel_liter,
+            SUM(landing_total_price_for_fisher) / SUM(benchmark_fuel_consumption_liter) AS own_sum_catch_value_per_fuel_liter,
+            SUM(landing_total_living_weight) AS own_sum_living_weight,
             COUNT(*)::BIGINT AS own_num_trips,
             SUM(CARDINALITY(haul_ids))::BIGINT AS own_num_hauls,
             SUM(landing_total_price_for_fisher) AS own_value_nok,
@@ -268,19 +275,18 @@ WITH
     ),
     other_vessels AS (
         SELECT
-            MAX(average_weight_per_hour) AS highest_average_weight_per_hour,
-            MAX(average_fuel_consumption_liter) AS highest_average_fuel_consumption_liter,
-            MAX(average_weight_per_distance) AS highest_average_weight_per_distance,
-            MAX(average_weight_per_fuel_liter) AS highest_average_weight_per_fuel_liter,
-            MAX(average_catch_value_per_fuel_liter) AS highest_average_catch_value_per_fuel_liter,
-            MAX(average_living_weight) AS highest_average_living_weight,
-            AVG(average_weight_per_hour) AS average_weight_per_hour,
-            AVG(average_fuel_consumption_liter) AS average_fuel_consumption_liter,
-            AVG(average_weight_per_distance) AS average_weight_per_distance,
-            AVG(average_weight_per_fuel_liter) AS average_weight_per_fuel_liter,
-            AVG(average_catch_value_per_fuel_liter) AS average_catch_value_per_fuel_liter,
-            AVG(average_living_weight) AS average_living_weight,
-            AVG(other_average_total_living_weight) AS other_average_total_living_weight,
+            MAX(sum_weight_per_hour) AS highest_weight_per_hour,
+            MAX(sum_fuel_consumption_liter) AS highest_fuel_consumption_liter,
+            MAX(sum_weight_per_distance) AS highest_weight_per_distance,
+            MAX(sum_weight_per_fuel_liter) AS highest_weight_per_fuel_liter,
+            MAX(sum_catch_value_per_fuel_liter) AS highest_catch_value_per_fuel_liter,
+            MAX(sum_living_weight) AS highest_living_weight,
+            AVG(sum_weight_per_hour) AS average_weight_per_hour,
+            AVG(sum_fuel_consumption_liter) AS average_fuel_consumption_liter,
+            AVG(sum_weight_per_distance) AS average_weight_per_distance,
+            AVG(sum_weight_per_fuel_liter) AS average_weight_per_fuel_liter,
+            AVG(sum_catch_value_per_fuel_liter) AS average_catch_value_per_fuel_liter,
+            AVG(sum_living_weight) AS average_living_weight,
             AVG(num_trips)::BIGINT AS average_num_trips,
             AVG(num_hauls)::BIGINT AS average_num_hauls,
             AVG(trip_duration_seconds)::BIGINT AS average_trip_duration_seconds,
@@ -288,7 +294,7 @@ WITH
         FROM
             (
                 SELECT
-                    AVG(
+                    SUM(
                         CASE
                             WHEN fiskeridir_vessel_id = (
                                 SELECT
@@ -298,33 +304,40 @@ WITH
                             ) THEN benchmark_fuel_consumption_liter
                             ELSE benchmark_fuel_consumption_liter_estimated_only
                         END
-                    ) AS average_fuel_consumption_liter,
-                    AVG(benchmark_weight_per_hour) AS average_weight_per_hour,
-                    AVG(benchmark_weight_per_distance) AS average_weight_per_distance,
-                    AVG(
+                    ) AS sum_fuel_consumption_liter,
+                    SUM(landing_total_living_weight) / (
+                        SUM(
+                            EXTRACT(
+                                EPOCH
+                                FROM
+                                    UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
+                            )
+                        ) * 60 * 60
+                    ) AS sum_weight_per_hour,
+                    SUM(landing_total_living_weight) / SUM((distance * $6)) AS sum_weight_per_distance,
+                    SUM(landing_total_living_weight) / SUM(
                         CASE
                             WHEN fiskeridir_vessel_id = (
                                 SELECT
                                     fiskeridir_vessel_id
                                 FROM
                                     logged_in_vessel_id
-                            ) THEN benchmark_weight_per_fuel_liter
-                            ELSE benchmark_weight_per_fuel_liter_estimated_only
+                            ) THEN benchmark_fuel_consumption_liter
+                            ELSE benchmark_fuel_consumption_liter_estimated_only
                         END
-                    ) AS average_weight_per_fuel_liter,
-                    AVG(
+                    ) AS sum_weight_per_fuel_liter,
+                    SUM(landing_total_price_for_fisher) / SUM(
                         CASE
                             WHEN fiskeridir_vessel_id = (
                                 SELECT
                                     fiskeridir_vessel_id
                                 FROM
                                     logged_in_vessel_id
-                            ) THEN benchmark_catch_value_per_fuel_liter
-                            ELSE benchmark_catch_value_per_fuel_liter_estimated_only
+                            ) THEN benchmark_fuel_consumption_liter
+                            ELSE benchmark_fuel_consumption_liter_estimated_only
                         END
-                    ) AS average_catch_value_per_fuel_liter,
-                    AVG(landing_total_living_weight) AS average_living_weight,
-                    SUM(landing_total_living_weight) AS other_average_total_living_weight,
+                    ) AS sum_catch_value_per_fuel_liter,
+                    SUM(landing_total_living_weight) AS sum_living_weight,
                     SUM(landing_total_price_for_fisher) AS value_nok,
                     COUNT(*) AS num_trips,
                     SUM(CARDINALITY(haul_ids)) AS num_hauls,
@@ -359,30 +372,28 @@ FROM
             query.range.end(),
             call_sign.as_ref(),
             &query.species_group_ids as &Option<Vec<SpeciesGroup>>,
-            &vessels as &[FiskeridirVesselId]
+            &vessels as &[FiskeridirVesselId],
+            METERS_TO_NAUTICAL_MILES
         )
         .fetch_optional(&self.pool)
         .await?;
 
         Ok(out.map(|a| kyogre_core::AverageVesselsBenchmarks {
-            highest_average_fuel_consumption_liter: a.highest_average_fuel_consumption_liter,
-            highest_average_weight_per_hour: a.highest_average_weight_per_hour,
-            highest_average_weight_per_distance: a.highest_average_weight_per_distance,
-            highest_average_weight_per_fuel_liter: a.highest_average_weight_per_fuel_liter,
-            highest_average_catch_value_per_fuel_liter: a
-                .highest_average_catch_value_per_fuel_liter,
-            highest_average_living_weight: a.highest_average_living_weight,
-            other_average_total_living_weight: a.other_average_total_living_weight,
-            own_total_living_weight: a.own_total_living_weight,
+            highest_fuel_consumption_liter: a.highest_fuel_consumption_liter,
+            highest_weight_per_hour: a.highest_weight_per_hour,
+            highest_weight_per_distance: a.highest_weight_per_distance,
+            highest_weight_per_fuel_liter: a.highest_weight_per_fuel_liter,
+            highest_catch_value_per_fuel_liter: a.highest_catch_value_per_fuel_liter,
+            highest_living_weight: a.highest_living_weight,
             own_trips_has_price_estimation: a.own_trips_has_price_estimation,
             own_fuel_measurement_coverage_percentage: a.own_fuel_measurement_coverage_percentage,
-            own: kyogre_core::AverageStats {
-                fuel_consumption_liter: a.own_average_fuel_consumption_liter,
-                weight_per_hour: a.own_average_weight_per_hour,
-                weight_per_distance: a.own_average_weight_per_distance,
-                weight_per_fuel_liter: a.own_average_weight_per_fuel_liter,
-                catch_value_per_fuel_liter: a.own_average_catch_value_per_fuel_liter,
-                living_weight: a.own_average_living_weight,
+            own: kyogre_core::Stats {
+                fuel_consumption_liter: a.own_sum_fuel_consumption_liter,
+                weight_per_hour: a.own_sum_weight_per_hour,
+                weight_per_distance: a.own_sum_weight_per_distance,
+                weight_per_fuel_liter: a.own_sum_weight_per_fuel_liter,
+                catch_value_per_fuel_liter: a.own_sum_catch_value_per_fuel_liter,
+                living_weight: a.own_sum_living_weight,
                 eeoi: own_eeoi,
                 carbon_intensity: own_carbon_intensity,
                 fui: own_carbon_intensity.map(|a| a / DIESEL_LITER_CARBON_FACTOR),
@@ -391,7 +402,7 @@ FROM
                 value_nok: a.own_value_nok,
                 trip_duration_seconds: a.own_trip_duration_seconds.map(|t| t as u64),
             },
-            all: kyogre_core::AverageStats {
+            all: kyogre_core::Stats {
                 eeoi: average_eeoi,
                 carbon_intensity: average_carbon_intensity,
                 fui: average_carbon_intensity.map(|a| a / DIESEL_LITER_CARBON_FACTOR),
