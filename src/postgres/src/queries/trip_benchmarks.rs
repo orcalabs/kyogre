@@ -247,7 +247,7 @@ WITH
                 EXTRACT(
                     EPOCH
                     FROM
-                        UPPER(period_precision) - LOWER(period_precision)
+                        UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
                 )
             )::BIGINT AS own_trip_duration_seconds
         FROM
@@ -332,7 +332,7 @@ WITH
                         EXTRACT(
                             EPOCH
                             FROM
-                                UPPER(period_precision) - LOWER(period_precision)
+                                UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
                         )::BIGINT
                     ) AS trip_duration_seconds
                 FROM
