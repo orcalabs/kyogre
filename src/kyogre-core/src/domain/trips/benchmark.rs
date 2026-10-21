@@ -25,8 +25,8 @@ pub enum TripBenchmarkId {
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct SumVesselBenchmark {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
-    pub sum_weight_per_hour: Option<f64>,
-    pub sum_weight_per_distance: Option<f64>,
+    pub average_weight_per_hour: Option<f64>,
+    pub average_weight_per_distance: Option<f64>,
     pub sum_living_weight: Option<f64>,
 }
 
