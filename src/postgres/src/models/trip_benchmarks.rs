@@ -4,13 +4,12 @@ use unnest_insert::UnnestUpdate;
 
 #[derive(Debug, Clone)]
 pub struct AverageVesselsBenchmarks {
-    pub highest_average_fuel_consumption_liter: Option<f64>,
-    pub highest_average_weight_per_hour: Option<f64>,
-    pub highest_average_weight_per_distance: Option<f64>,
-    pub highest_average_weight_per_fuel_liter: Option<f64>,
-    pub highest_average_catch_value_per_fuel_liter: Option<f64>,
-    pub highest_average_living_weight: Option<f64>,
-    pub other_average_total_living_weight: Option<f64>,
+    pub highest_fuel_consumption_liter: Option<f64>,
+    pub highest_weight_per_hour: Option<f64>,
+    pub highest_weight_per_distance: Option<f64>,
+    pub highest_weight_per_fuel_liter: Option<f64>,
+    pub highest_catch_value_per_fuel_liter: Option<f64>,
+    pub highest_living_weight: Option<f64>,
 
     pub average_fuel_consumption_liter: Option<f64>,
     pub average_weight_per_hour: Option<f64>,
@@ -21,19 +20,18 @@ pub struct AverageVesselsBenchmarks {
 
     pub own_trips_has_price_estimation: Option<bool>,
     pub own_fuel_measurement_coverage_percentage: Option<f64>,
-    pub own_average_fuel_consumption_liter: Option<f64>,
-    pub own_average_weight_per_hour: Option<f64>,
-    pub own_average_weight_per_distance: Option<f64>,
-    pub own_average_weight_per_fuel_liter: Option<f64>,
-    pub own_average_catch_value_per_fuel_liter: Option<f64>,
-    pub own_average_living_weight: Option<f64>,
+    pub own_sum_fuel_consumption_liter: Option<f64>,
+    pub own_sum_weight_per_hour: Option<f64>,
+    pub own_sum_weight_per_distance: Option<f64>,
+    pub own_sum_weight_per_fuel_liter: Option<f64>,
+    pub own_sum_catch_value_per_fuel_liter: Option<f64>,
+    pub own_sum_living_weight: Option<f64>,
 
     pub average_num_trips: Option<i64>,
     pub average_num_hauls: Option<i64>,
     pub average_value_nok: Option<f64>,
     pub average_trip_duration_seconds: Option<i64>,
 
-    pub own_total_living_weight: Option<f64>,
     pub own_num_trips: Option<i64>,
     pub own_num_hauls: Option<i64>,
     pub own_value_nok: Option<f64>,
