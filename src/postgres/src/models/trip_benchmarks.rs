@@ -4,7 +4,7 @@ use unnest_insert::UnnestUpdate;
 
 #[derive(Debug, Clone)]
 pub struct AverageVesselsBenchmarks {
-    pub highest_fuel_consumption_liter: Option<f64>,
+    pub lowest_fuel_consumption_liter: Option<f64>,
     pub highest_weight_per_hour: Option<f64>,
     pub highest_weight_per_distance: Option<f64>,
     pub highest_weight_per_fuel_liter: Option<f64>,

@@ -282,7 +282,7 @@ WITH
     other_vessels AS (
         SELECT
             MAX(sum_weight_per_hour) AS highest_weight_per_hour,
-            MAX(sum_fuel_consumption_liter) AS highest_fuel_consumption_liter,
+            MIN(sum_fuel_consumption_liter) AS lowest_fuel_consumption_liter,
             MAX(sum_weight_per_distance) AS highest_weight_per_distance,
             MAX(sum_weight_per_fuel_liter) AS highest_weight_per_fuel_liter,
             MAX(sum_catch_value_per_fuel_liter) AS highest_catch_value_per_fuel_liter,
@@ -364,7 +364,7 @@ FROM
         let per_vessel = per_vessel?.unwrap_or_default();
 
         Ok(out.map(|a| kyogre_core::AverageVesselsBenchmarks {
-            highest_fuel_consumption_liter: a.highest_fuel_consumption_liter,
+            lowest_fuel_consumption_liter: a.lowest_fuel_consumption_liter,
             highest_weight_per_hour: a.highest_weight_per_hour,
             highest_weight_per_distance: a.highest_weight_per_distance,
             highest_weight_per_fuel_liter: a.highest_weight_per_fuel_liter,
