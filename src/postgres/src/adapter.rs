@@ -676,14 +676,6 @@ impl LiveFuelInbound for PostgresAdapter {
 
 #[async_trait]
 impl WebApiOutboundPort for PostgresAdapter {
-    async fn per_vessel_benchmarks_sum(
-        &self,
-        user_id: &BarentswatchUserId,
-        call_sign: &CallSign,
-        query: &PerVesselBenchmarkParams,
-    ) -> WebApiResult<Vec<SumVesselBenchmark>> {
-        Ok(retry(|| self.per_vessel_benchmarks_sum_impl(user_id, call_sign, query)).await?)
-    }
     async fn per_vessel_benchmarks_avg(
         &self,
         user_id: &BarentswatchUserId,

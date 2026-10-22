@@ -23,11 +23,18 @@ pub enum TripBenchmarkId {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
-pub struct SumVesselBenchmark {
+pub struct PerVesselStats {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
-    pub average_weight_per_hour: Option<f64>,
-    pub average_weight_per_distance: Option<f64>,
-    pub sum_living_weight: Option<f64>,
+    pub weight_per_hour: Option<f64>,
+    pub weight_per_distance: Option<f64>,
+    pub living_weight: Option<f64>,
+    pub fuel_consumption_liter: Option<f64>,
+    pub weight_per_fuel_liter: Option<f64>,
+    pub catch_value_per_fuel_liter: Option<f64>,
+    pub num_trips: Option<u64>,
+    pub num_hauls: Option<u64>,
+    pub value_nok: Option<f64>,
+    pub trip_duration_seconds: Option<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -46,6 +53,8 @@ pub struct AverageVesselsBenchmarks {
 
     pub all: Stats,
     pub own: Stats,
+
+    pub per_vessel: Vec<PerVesselStats>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

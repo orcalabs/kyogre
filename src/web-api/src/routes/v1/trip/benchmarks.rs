@@ -8,7 +8,7 @@ use kyogre_core::{
     AverageCarbonIntensityQuery, AverageEeoiQuery, AverageTripBenchmarks,
     AverageTripBenchmarksQuery, AverageVesselsBenchmarks, CarbonIntensityQuery, DateTimeRange,
     EeoiQuery, FiskeridirVesselId, Mean, OptionalDateTimeRange, Ordering, PerVesselBenchmarkParams,
-    SumVesselBenchmark, TripBenchmarksQuery, TripId, TripWithBenchmark,
+    TripBenchmarksQuery, TripId, TripWithBenchmark,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -79,21 +79,6 @@ pub struct AverageEeoiParams {
     pub vessel_ids: Option<Vec<FiskeridirVesselId>>,
     #[serde_as(as = "Option<DisplayFromStr>")]
     pub species_group_id: Option<SpeciesGroup>,
-}
-
-#[oasgen(skip(db), tags("Trip"))]
-#[tracing::instrument(skip(db))]
-pub async fn per_vessel_benchmarks_sum<T: Database + Send + Sync + 'static>(
-    db: web::Data<T>,
-    profile: BwProfile,
-    params: Query<PerVesselBenchmarkParams>,
-) -> Result<Response<Vec<SumVesselBenchmark>>> {
-    let query = params.into_inner();
-    let call_sign = profile.call_sign(db.as_ref()).await?;
-    Ok(Response::new(
-        db.per_vessel_benchmarks_sum(&profile.user.id, &call_sign, &query)
-            .await?,
-    ))
 }
 
 #[oasgen(skip(db), tags("Trip"))]
