@@ -230,18 +230,21 @@ WITH
     logged_in_user_values AS (
         SELECT
             SUM(benchmark_fuel_consumption_liter) AS own_sum_fuel_consumption_liter,
-            SUM(landing_total_living_weight) / (
-                SUM(
-                    EXTRACT(
-                        EPOCH
-                        FROM
-                            UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
-                    )
-                ) * 60 * 60
+            SUM(landing_total_living_weight) / NULLIF(
+                (
+                    SUM(
+                        EXTRACT(
+                            EPOCH
+                            FROM
+                                UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
+                        )
+                    ) / (60 * 60)
+                ),
+                0.0
             ) AS own_sum_weight_per_hour,
-            SUM(landing_total_living_weight) / SUM((distance * $6)) AS own_sum_weight_per_distance,
-            SUM(landing_total_living_weight) / SUM(benchmark_fuel_consumption_liter) AS own_sum_weight_per_fuel_liter,
-            SUM(landing_total_price_for_fisher) / SUM(benchmark_fuel_consumption_liter) AS own_sum_catch_value_per_fuel_liter,
+            SUM(landing_total_living_weight) / NULLIF(SUM((distance * $6)), 0.0) AS own_sum_weight_per_distance,
+            SUM(landing_total_living_weight) / NULLIF(SUM(benchmark_fuel_consumption_liter), 0.0) AS own_sum_weight_per_fuel_liter,
+            SUM(landing_total_price_for_fisher) / NULLIF(SUM(benchmark_fuel_consumption_liter), 0.0) AS own_sum_catch_value_per_fuel_liter,
             SUM(landing_total_living_weight) AS own_sum_living_weight,
             COUNT(*)::BIGINT AS own_num_trips,
             SUM(CARDINALITY(haul_ids))::BIGINT AS own_num_hauls,
@@ -249,7 +252,7 @@ WITH
             BOOL_OR(price_for_fisher_is_estimated) AS own_trips_has_price_estimation,
             SUM(
                 benchmark_percentage_of_trip_covered_by_measurements
-            ) / COUNT(*) AS own_fuel_measurement_coverage_percentage,
+            ) / NULLIF(COUNT(*), 0) AS own_fuel_measurement_coverage_percentage,
             SUM(
                 EXTRACT(
                     EPOCH
@@ -305,37 +308,46 @@ WITH
                             ELSE benchmark_fuel_consumption_liter_estimated_only
                         END
                     ) AS sum_fuel_consumption_liter,
-                    SUM(landing_total_living_weight) / (
-                        SUM(
-                            EXTRACT(
-                                EPOCH
-                                FROM
-                                    UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
-                            )
-                        ) * 60 * 60
+                    SUM(landing_total_living_weight) / NULLIF(
+                        (
+                            SUM(
+                                EXTRACT(
+                                    EPOCH
+                                    FROM
+                                        UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
+                                )
+                            ) / (60 * 60)
+                        ),
+                        0.0
                     ) AS sum_weight_per_hour,
-                    SUM(landing_total_living_weight) / SUM((distance * $6)) AS sum_weight_per_distance,
-                    SUM(landing_total_living_weight) / SUM(
-                        CASE
-                            WHEN fiskeridir_vessel_id = (
-                                SELECT
-                                    fiskeridir_vessel_id
-                                FROM
-                                    logged_in_vessel_id
-                            ) THEN benchmark_fuel_consumption_liter
-                            ELSE benchmark_fuel_consumption_liter_estimated_only
-                        END
+                    SUM(landing_total_living_weight) / NULLIF(SUM((distance * $6)), 0.0) AS sum_weight_per_distance,
+                    SUM(landing_total_living_weight) / NULLIF(
+                        SUM(
+                            CASE
+                                WHEN fiskeridir_vessel_id = (
+                                    SELECT
+                                        fiskeridir_vessel_id
+                                    FROM
+                                        logged_in_vessel_id
+                                ) THEN benchmark_fuel_consumption_liter
+                                ELSE benchmark_fuel_consumption_liter_estimated_only
+                            END
+                        ),
+                        0.0
                     ) AS sum_weight_per_fuel_liter,
-                    SUM(landing_total_price_for_fisher) / SUM(
-                        CASE
-                            WHEN fiskeridir_vessel_id = (
-                                SELECT
-                                    fiskeridir_vessel_id
-                                FROM
-                                    logged_in_vessel_id
-                            ) THEN benchmark_fuel_consumption_liter
-                            ELSE benchmark_fuel_consumption_liter_estimated_only
-                        END
+                    SUM(landing_total_price_for_fisher) / NULLIF(
+                        SUM(
+                            CASE
+                                WHEN fiskeridir_vessel_id = (
+                                    SELECT
+                                        fiskeridir_vessel_id
+                                    FROM
+                                        logged_in_vessel_id
+                                ) THEN benchmark_fuel_consumption_liter
+                                ELSE benchmark_fuel_consumption_liter_estimated_only
+                            END
+                        ),
+                        0.0
                     ) AS sum_catch_value_per_fuel_liter,
                     SUM(landing_total_living_weight) AS sum_living_weight,
                     SUM(landing_total_price_for_fisher) AS value_nok,
