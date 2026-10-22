@@ -103,12 +103,6 @@ pub trait WebApiOutboundPort {
         call_sign: &CallSign,
         query: &PerVesselBenchmarkParams,
     ) -> WebApiResult<Option<AverageVesselsBenchmarks>>;
-    async fn per_vessel_benchmarks_sum(
-        &self,
-        user_id: &BarentswatchUserId,
-        call_sign: &CallSign,
-        query: &PerVesselBenchmarkParams,
-    ) -> WebApiResult<Vec<SumVesselBenchmark>>;
     async fn average_eeoi(
         &self,
         call_sign: Option<&CallSign>,

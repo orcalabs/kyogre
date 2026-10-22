@@ -7,7 +7,7 @@ use kyogre_core::{
     AverageTripBenchmarksQuery, BarentswatchUserId, CarbonIntensityQuery,
     DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone, EngineType,
     FiskeridirVesselId, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi,
-    PerVesselBenchmarkParams, ProcessingStatus, SumVesselBenchmark, TripBenchmarksQuery, TripId,
+    PerVesselBenchmarkParams, PerVesselStats, ProcessingStatus, TripBenchmarksQuery, TripId,
     TripWithBenchmark,
 };
 
@@ -120,46 +120,6 @@ WHERE
         vessels.push(logged_in_vessel);
 
         Ok(vessels)
-    }
-    pub(crate) async fn per_vessel_benchmarks_sum_impl(
-        &self,
-        user_id: &BarentswatchUserId,
-        call_sign: &CallSign,
-        query: &PerVesselBenchmarkParams,
-    ) -> Result<Vec<SumVesselBenchmark>> {
-        let vessels = self
-            .similar_or_following_vessels(user_id, call_sign, query)
-            .await?;
-        let out = sqlx::query_as!(
-            SumVesselBenchmark,
-            r#"
-SELECT
-    fiskeridir_vessel_id AS "fiskeridir_vessel_id!: FiskeridirVesselId",
-    AVG(benchmark_weight_per_hour) AS average_weight_per_hour,
-    AVG(benchmark_weight_per_distance) AS average_weight_per_distance,
-    SUM(landing_total_living_weight) AS sum_living_weight
-FROM
-    trips_detailed
-WHERE
-    start_timestamp >= $1
-    AND stop_timestamp <= $2
-    AND fiskeridir_vessel_id = ANY ($3)
-    AND (
-        $4::INT[] IS NULL
-        OR landing_two_highest_species_group_quantum && $4
-    )
-GROUP BY
-    fiskeridir_vessel_id
-            "#,
-            query.range.start(),
-            query.range.end(),
-            &vessels as &[FiskeridirVesselId],
-            &query.species_group_ids as &Option<Vec<SpeciesGroup>>
-        )
-        .fetch_all(&self.pool)
-        .await?;
-
-        Ok(out)
     }
     pub(crate) async fn per_vessel_benchmarks_avg_impl(
         &self,
@@ -276,6 +236,85 @@ WITH
                 OR landing_two_highest_species_group_quantum && $4
             )
     ),
+    other_vessel_trips AS (
+        SELECT
+            fiskeridir_vessel_id,
+            SUM(
+                CASE
+                    WHEN fiskeridir_vessel_id = (
+                        SELECT
+                            fiskeridir_vessel_id
+                        FROM
+                            logged_in_vessel_id
+                    ) THEN benchmark_fuel_consumption_liter
+                    ELSE benchmark_fuel_consumption_liter_estimated_only
+                END
+            ) AS sum_fuel_consumption_liter,
+            SUM(landing_total_living_weight) / NULLIF(
+                (
+                    SUM(
+                        EXTRACT(
+                            EPOCH
+                            FROM
+                                UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
+                        )
+                    ) / (60 * 60)
+                ),
+                0.0
+            ) AS sum_weight_per_hour,
+            SUM(landing_total_living_weight) / NULLIF(SUM((distance * $6)), 0.0) AS sum_weight_per_distance,
+            SUM(landing_total_living_weight) / NULLIF(
+                SUM(
+                    CASE
+                        WHEN fiskeridir_vessel_id = (
+                            SELECT
+                                fiskeridir_vessel_id
+                            FROM
+                                logged_in_vessel_id
+                        ) THEN benchmark_fuel_consumption_liter
+                        ELSE benchmark_fuel_consumption_liter_estimated_only
+                    END
+                ),
+                0.0
+            ) AS sum_weight_per_fuel_liter,
+            SUM(landing_total_price_for_fisher) / NULLIF(
+                SUM(
+                    CASE
+                        WHEN fiskeridir_vessel_id = (
+                            SELECT
+                                fiskeridir_vessel_id
+                            FROM
+                                logged_in_vessel_id
+                        ) THEN benchmark_fuel_consumption_liter
+                        ELSE benchmark_fuel_consumption_liter_estimated_only
+                    END
+                ),
+                0.0
+            ) AS sum_catch_value_per_fuel_liter,
+            SUM(landing_total_living_weight) AS sum_living_weight,
+            SUM(landing_total_price_for_fisher) AS value_nok,
+            COUNT(*) AS num_trips,
+            SUM(CARDINALITY(haul_ids)) AS num_hauls,
+            SUM(
+                EXTRACT(
+                    EPOCH
+                    FROM
+                        UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
+                )::BIGINT
+            ) AS trip_duration_seconds
+        FROM
+            trips_detailed
+        WHERE
+            start_timestamp >= $1
+            AND stop_timestamp <= $2
+            AND (
+                $4::INT[] IS NULL
+                OR landing_two_highest_species_group_quantum && $4
+            )
+            AND fiskeridir_vessel_id = ANY ($5)
+        GROUP BY
+            fiskeridir_vessel_id
+    ),
     other_vessels AS (
         SELECT
             MAX(sum_weight_per_hour) AS highest_weight_per_hour,
@@ -295,90 +334,48 @@ WITH
             AVG(trip_duration_seconds)::BIGINT AS average_trip_duration_seconds,
             AVG(value_nok) AS average_value_nok
         FROM
-            (
-                SELECT
-                    SUM(
-                        CASE
-                            WHEN fiskeridir_vessel_id = (
-                                SELECT
-                                    fiskeridir_vessel_id
-                                FROM
-                                    logged_in_vessel_id
-                            ) THEN benchmark_fuel_consumption_liter
-                            ELSE benchmark_fuel_consumption_liter_estimated_only
-                        END
-                    ) AS sum_fuel_consumption_liter,
-                    SUM(landing_total_living_weight) / NULLIF(
-                        (
-                            SUM(
-                                EXTRACT(
-                                    EPOCH
-                                    FROM
-                                        UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
-                                )
-                            ) / (60 * 60)
-                        ),
-                        0.0
-                    ) AS sum_weight_per_hour,
-                    SUM(landing_total_living_weight) / NULLIF(SUM((distance * $6)), 0.0) AS sum_weight_per_distance,
-                    SUM(landing_total_living_weight) / NULLIF(
-                        SUM(
-                            CASE
-                                WHEN fiskeridir_vessel_id = (
-                                    SELECT
-                                        fiskeridir_vessel_id
-                                    FROM
-                                        logged_in_vessel_id
-                                ) THEN benchmark_fuel_consumption_liter
-                                ELSE benchmark_fuel_consumption_liter_estimated_only
-                            END
-                        ),
-                        0.0
-                    ) AS sum_weight_per_fuel_liter,
-                    SUM(landing_total_price_for_fisher) / NULLIF(
-                        SUM(
-                            CASE
-                                WHEN fiskeridir_vessel_id = (
-                                    SELECT
-                                        fiskeridir_vessel_id
-                                    FROM
-                                        logged_in_vessel_id
-                                ) THEN benchmark_fuel_consumption_liter
-                                ELSE benchmark_fuel_consumption_liter_estimated_only
-                            END
-                        ),
-                        0.0
-                    ) AS sum_catch_value_per_fuel_liter,
-                    SUM(landing_total_living_weight) AS sum_living_weight,
-                    SUM(landing_total_price_for_fisher) AS value_nok,
-                    COUNT(*) AS num_trips,
-                    SUM(CARDINALITY(haul_ids)) AS num_hauls,
-                    SUM(
-                        EXTRACT(
-                            EPOCH
-                            FROM
-                                UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
-                        )::BIGINT
-                    ) AS trip_duration_seconds
-                FROM
-                    trips_detailed
-                WHERE
-                    start_timestamp >= $1
-                    AND stop_timestamp <= $2
-                    AND (
-                        $4::INT[] IS NULL
-                        OR landing_two_highest_species_group_quantum && $4
+            other_vessel_trips
+    ),
+    other_vessel_stats AS (
+        SELECT
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'fiskeridirVesselId',
+                        fiskeridir_vessel_id,
+                        'weightPerHour',
+                        sum_weight_per_hour,
+                        'fuelConsumptionLiter',
+                        sum_fuel_consumption_liter,
+                        'weightPerDistance',
+                        sum_weight_per_distance,
+                        'weightPerFuelLiter',
+                        sum_weight_per_fuel_liter,
+                        'catchValuePerFuelLiter',
+                        sum_catch_value_per_fuel_liter,
+                        'livingWeight',
+                        sum_living_weight,
+                        'numTrips',
+                        num_trips::BIGINT,
+                        'numHauls',
+                        num_hauls::BIGINT,
+                        'tripDurationSeconds',
+                        trip_duration_seconds::BIGINT,
+                        'valueNok',
+                        value_nok
                     )
-                    AND fiskeridir_vessel_id = ANY ($5)
-                GROUP BY
-                    fiskeridir_vessel_id
-            ) q
+                ),
+                '[]'
+            )::TEXT AS "per_vessel!"
+        FROM
+            other_vessel_trips
     )
 SELECT
     *
 FROM
     other_vessels o
     INNER JOIN logged_in_user_values l ON TRUE
+    INNER JOIN other_vessel_stats v ON TRUE
             "#,
             query.range.start(),
             query.range.end(),
@@ -389,6 +386,18 @@ FROM
         )
         .fetch_optional(&self.pool)
         .await?;
+
+        let per_vessel: std::result::Result<Option<Vec<PerVesselStats>>, serde_json::Error> =
+            if let Some(a) = &out
+                && let Some(p) = &a.per_vessel
+            {
+                let stats: Vec<PerVesselStats> = serde_json::from_str(p)?;
+                Ok(Some(stats))
+            } else {
+                Ok(None)
+            };
+
+        let per_vessel = per_vessel?.unwrap_or_default();
 
         Ok(out.map(|a| kyogre_core::AverageVesselsBenchmarks {
             highest_fuel_consumption_liter: a.highest_fuel_consumption_liter,
@@ -429,6 +438,7 @@ FROM
                 value_nok: a.average_value_nok,
                 trip_duration_seconds: a.average_trip_duration_seconds.map(|t| t as u64),
             },
+            per_vessel,
         }))
     }
     pub(crate) async fn add_benchmark_output(

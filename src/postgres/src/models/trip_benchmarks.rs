@@ -36,6 +36,8 @@ pub struct AverageVesselsBenchmarks {
     pub own_num_hauls: Option<i64>,
     pub own_value_nok: Option<f64>,
     pub own_trip_duration_seconds: Option<i64>,
+
+    pub per_vessel: Option<String>,
 }
 
 #[derive(Debug, Clone, UnnestUpdate)]
