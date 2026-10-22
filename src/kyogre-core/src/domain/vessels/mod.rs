@@ -135,7 +135,6 @@ pub struct VesselCatchAggregate {
     pub catches: Vec<VesselSpeciesCatch>,
     pub gear_groups: Vec<GearGroup>,
     pub length_group: VesselLengthGroup,
-    pub permissions: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

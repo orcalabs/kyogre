@@ -20,8 +20,20 @@ impl PostgresAdapter {
         &self,
         updates: Vec<kyogre_core::VesselCatchSimilarity>,
     ) -> Result<()> {
-        self.unnest_insert_from::<_, _, VesselCatchSimilarity>(updates, &self.pool)
+        let mut tx = self.pool.begin().await?;
+
+        sqlx::query!(
+            r#"
+DELETE FROM vessel_catch_similarity_distances
+            "#
+        )
+        .execute(&mut *tx)
+        .await?;
+
+        self.unnest_insert_from::<_, _, VesselCatchSimilarity>(updates, &mut *tx)
             .await?;
+
+        tx.commit().await?;
         Ok(())
     }
     pub(crate) fn vessel_catch_aggregates_impl(
@@ -30,23 +42,6 @@ impl PostgresAdapter {
         sqlx::query_as!(
             VesselCatchAggregate,
             r#"
-WITH
-    vessels AS (
-        SELECT DISTINCT
-            fiskeridir_vessel_id
-        FROM
-            vessel_catch_aggregates
-    ),
-    permissions AS (
-        SELECT
-            ARRAY_AGG(permission_type) AS permissions,
-            p.fiskeridir_vessel_id
-        FROM
-            vessels v
-            INNER JOIN vessel_permissions p ON p.fiskeridir_vessel_id = v.fiskeridir_vessel_id
-        GROUP BY
-            p.fiskeridir_vessel_id
-    )
 SELECT
     f.fiskeridir_vessel_id AS "id: FiskeridirVesselId",
     f.total_living_weight,
@@ -62,12 +57,10 @@ SELECT
             )
         ),
         '[]'
-    )::TEXT AS "catches!",
-    COALESCE(ANY_VALUE (permissions), '{}') AS "permissions!"
+    )::TEXT AS "catches!"
 FROM
     vessel_catch_aggregates v
     INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-    LEFT JOIN permissions p ON p.fiskeridir_vessel_id = v.fiskeridir_vessel_id
 WHERE
     f.total_living_weight > 0.0
     AND v.total_living_weight > 0.0

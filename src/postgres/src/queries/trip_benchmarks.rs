@@ -54,42 +54,8 @@ WHERE
             .await?
             .ids
         } else {
-            let permissions = sqlx::query!(
+            sqlx::query!(
                 r#"
-SELECT
-    COALESCE(ARRAY_AGG(permission_type), '{}') AS "permissions!"
-FROM
-    vessel_permissions p
-WHERE
-    fiskeridir_vessel_id = $1
-                "#,
-                logged_in_vessel as FiskeridirVesselId
-            )
-            .fetch_one(&self.pool)
-            .await?
-            .permissions;
-
-            if permissions.is_empty() {
-                sqlx::query!(
-                    r#"
-SELECT
-    COALESCE(ARRAY_AGG(f2.fiskeridir_vessel_id), '{}') AS "ids!: Vec<FiskeridirVesselId>"
-FROM
-    fiskeridir_vessels f
-    INNER JOIN fiskeridir_vessels f2 ON f.gear_group_ids && f2.gear_group_ids
-    AND f.fiskeridir_length_group_id = f2.fiskeridir_length_group_id
-    AND f2.fiskeridir_vessel_id != $1
-WHERE
-    f.fiskeridir_vessel_id = $1
-                "#,
-                    logged_in_vessel as FiskeridirVesselId
-                )
-                .fetch_one(&self.pool)
-                .await?
-                .ids
-            } else {
-                sqlx::query!(
-                    r#"
 SELECT
     COALESCE(
         ARRAY_AGG(
@@ -107,14 +73,12 @@ WHERE
         vessel_one = $1
         OR vessel_two = $1
     )
-    AND distance < 0.4
                 "#,
-                    logged_in_vessel as FiskeridirVesselId,
-                )
-                .fetch_one(&self.pool)
-                .await?
-                .ids
-            }
+                logged_in_vessel as FiskeridirVesselId,
+            )
+            .fetch_one(&self.pool)
+            .await?
+            .ids
         };
 
         vessels.push(logged_in_vessel);
@@ -223,7 +187,7 @@ WITH
         FROM
             trips_detailed
         WHERE
-            start_timestamp >= $1
+            stop_timestamp >= $1
             AND stop_timestamp <= $2
             AND fiskeridir_vessel_id = (
                 SELECT
@@ -305,7 +269,7 @@ WITH
         FROM
             trips_detailed
         WHERE
-            start_timestamp >= $1
+            stop_timestamp >= $1
             AND stop_timestamp <= $2
             AND (
                 $4::INT[] IS NULL

@@ -35,7 +35,6 @@ pub struct VesselCatchAggregate {
     pub length_group: VesselLengthGroup,
     pub total_living_weight: f64,
     pub catches: String,
-    pub permissions: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -483,7 +482,6 @@ impl TryFrom<VesselCatchAggregate> for kyogre_core::VesselCatchAggregate {
             catches,
             gear_groups,
             length_group,
-            permissions,
         } = value;
 
         Ok(Self {
@@ -492,7 +490,6 @@ impl TryFrom<VesselCatchAggregate> for kyogre_core::VesselCatchAggregate {
             catches: serde_json::from_str(&catches)?,
             gear_groups,
             length_group,
-            permissions,
         })
     }
 }

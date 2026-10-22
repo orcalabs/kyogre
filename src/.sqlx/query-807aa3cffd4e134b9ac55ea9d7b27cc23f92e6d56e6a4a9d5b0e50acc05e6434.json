@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nDELETE FROM vessel_catch_similarity_distances\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "807aa3cffd4e134b9ac55ea9d7b27cc23f92e6d56e6a4a9d5b0e50acc05e6434"
+}
