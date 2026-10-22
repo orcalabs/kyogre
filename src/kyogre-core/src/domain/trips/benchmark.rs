@@ -41,7 +41,7 @@ pub struct PerVesselStats {
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct AverageVesselsBenchmarks {
-    pub highest_fuel_consumption_liter: Option<f64>,
+    pub lowest_fuel_consumption_liter: Option<f64>,
     pub highest_weight_per_hour: Option<f64>,
     pub highest_weight_per_distance: Option<f64>,
     pub highest_weight_per_fuel_liter: Option<f64>,
