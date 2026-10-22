@@ -68,14 +68,6 @@ fn calculate_vessel_similarities(vessels: &[VesselCatchAggregate]) -> Vec<Vessel
             let vessel_one = &vessels[i];
             let vessel_two = &vessels[j];
 
-            let mut common_permission = false;
-            for g in &vessel_one.permissions {
-                if vessel_two.permissions.contains(g) {
-                    common_permission = true;
-                    break;
-                }
-            }
-
             let mut common_gear_group = false;
             for g in &vessel_one.gear_groups {
                 if vessel_two.gear_groups.contains(g) {
@@ -84,20 +76,19 @@ fn calculate_vessel_similarities(vessels: &[VesselCatchAggregate]) -> Vec<Vessel
                 }
             }
 
-            if vessel_one.length_group != vessel_two.length_group
-                || !common_gear_group
-                || !common_permission
-            {
+            if vessel_one.length_group != vessel_two.length_group || !common_gear_group {
                 continue;
             }
 
             let distance = jensen_shannon_distance(vessel_one, vessel_two);
 
-            similarities.push(VesselCatchSimilarity {
-                vessel_one: vessel_one.id,
-                vessel_two: vessel_two.id,
-                distance,
-            });
+            if distance <= 0.4 {
+                similarities.push(VesselCatchSimilarity {
+                    vessel_one: vessel_one.id,
+                    vessel_two: vessel_two.id,
+                    distance,
+                });
+            }
         }
     }
 
