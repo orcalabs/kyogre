@@ -345,6 +345,12 @@ where
                         .guard(guard.clone())
                         .to(routes::v1::bunkering::delete_bunkering::<T>),
                 )
+                .route(
+                    "/landing_catch_weights",
+                    get()
+                        .guard(guard.clone())
+                        .to(routes::v1::landing::landing_catch_weights::<T>),
+                )
         }
 
         let mut server = oasgen::Server::actix().service(scope);

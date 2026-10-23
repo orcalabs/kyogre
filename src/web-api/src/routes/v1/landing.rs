@@ -5,8 +5,9 @@ use fiskeridir_rs::{
 };
 use futures::TryStreamExt;
 use kyogre_core::{
-    ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingMatrixQuery, Landings,
-    LandingsQuery, LandingsSorting, OptionalDateTimeRange, Ordering, Pagination, TripId,
+    ActiveLandingFilter, CatchLocationId, FiskeridirVesselId, LandingCatchWeight,
+    LandingMatrixQuery, Landings, LandingsQuery, LandingsSorting, OptionalDateTimeRange, Ordering,
+    Pagination, TripId,
 };
 use oasgen::{OaSchema, oasgen};
 use serde::{Deserialize, Serialize};
@@ -17,6 +18,7 @@ use tracing::error;
 use crate::{
     Cache, Database,
     error::Result,
+    extractors::BwProfile,
     response::{Response, ResponseOrStream, StreamResponse},
     routes::utils::*,
     stream_response,
@@ -45,6 +47,15 @@ pub struct LandingsParams {
 
 #[serde_as]
 #[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LandingCatchWeightsParams {
+    #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
+    pub gear_group_ids: Option<Vec<GearGroup>>,
+    pub range: OptionalDateTimeRange,
+}
+
+#[serde_as]
+#[derive(Default, Debug, Clone, Deserialize, Serialize, OaSchema)]
 #[serde(default, rename_all = "camelCase")]
 pub struct LandingMatrixParams {
     pub months: Option<Vec<u32>>,
@@ -56,6 +67,22 @@ pub struct LandingMatrixParams {
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub vessel_length_groups: Option<Vec<VesselLengthGroup>>,
     pub fiskeridir_vessel_ids: Option<Vec<FiskeridirVesselId>>,
+}
+
+#[oasgen(skip(db), tags("Landing"))]
+#[tracing::instrument(skip(db))]
+pub async fn landing_catch_weights<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    params: Query<LandingCatchWeightsParams>,
+) -> Result<ResponseOrStream<LandingCatchWeight>> {
+    let call_sign = profile.call_sign(db.as_ref()).await?;
+
+    let response = stream_response! {
+        db.landing_catch_weights(&call_sign, params.gear_group_ids.as_deref(), &params.range)
+    };
+
+    Ok(response.into())
 }
 
 /// Returns all landings matching the provided parameters.

@@ -1,7 +1,7 @@
 use crate::*;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, OrgId};
+use fiskeridir_rs::{CallSign, DataFileId, GearGroup, OrgId};
 use futures::Stream;
 use std::pin::Pin;
 
@@ -92,6 +92,12 @@ pub trait WebApiOutboundPort {
     ) -> WebApiResult<Option<CurrentTrip>>;
     async fn hauls_matrix(&self, query: &HaulsMatrixQuery) -> WebApiResult<HaulsMatrix>;
     fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing>;
+    fn landing_catch_weights(
+        &self,
+        call_sign: &CallSign,
+        gear_group_ids: Option<&[GearGroup]>,
+        range: &OptionalDateTimeRange,
+    ) -> PinBoxStream<'_, LandingCatchWeight>;
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> WebApiResult<LandingMatrix>;
     async fn average_trip_benchmarks(
         &self,
