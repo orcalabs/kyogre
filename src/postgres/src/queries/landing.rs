@@ -5,14 +5,14 @@ use std::{
     sync::OnceLock,
 };
 
-use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, NaiveTime, TimeZone, Utc};
 use fiskeridir_rs::{
     CallSign, DeliveryPointId, Gear, GearGroup, LandingId, SpeciesGroup, VesselLengthGroup,
 };
 use futures::{Stream, TryStreamExt, future::ready};
 use kyogre_core::{
-    BoxIterator, DeletedLandingType, EmptyVecToNone, FiskeridirVesselId, LandingsQuery, Range,
-    TripAssemblerId, TripId, VesselEventType,
+    BoxIterator, DeletedLandingType, EmptyVecToNone, FiskeridirVesselId, LandingsQuery,
+    OptionalDateTimeRange, Range, TripAssemblerId, TripId, VesselEventType,
 };
 use tracing::error;
 
@@ -29,6 +29,52 @@ static CHUNK_SIZE: usize = 100_000;
 pub static LANDINGS_VERIFY_CHUNK_SIZE: OnceLock<usize> = OnceLock::new();
 
 impl PostgresAdapter {
+    pub(crate) fn landing_catch_weights_impl(
+        &self,
+        call_sign: &CallSign,
+        gear_group_ids: Option<&[GearGroup]>,
+        range: &OptionalDateTimeRange,
+    ) -> impl Stream<Item = Result<kyogre_core::LandingCatchWeight>> + '_ {
+        sqlx::query_as!(
+            kyogre_core::LandingCatchWeight,
+            r#"
+WITH
+    vessel_id AS (
+        SELECT
+            fiskeridir_vessel_id
+        FROM
+            active_vessels
+        WHERE
+            call_sign = $1
+    )
+SELECT
+    COALESCE(SUM(living_weight), 0.0) AS "living_weight!",
+    species_group_id AS "species_group_id: SpeciesGroup"
+FROM
+    vessel_id v
+    INNER JOIN landings l ON v.fiskeridir_vessel_id = l.fiskeridir_vessel_id
+    INNER JOIN landing_entries le ON l.landing_id = le.landing_id
+WHERE
+    (
+        $2::INT[] IS NULL
+        OR l.gear_group_id = ANY ($2)
+    )
+    AND l.landing_timestamp >= $3
+    AND l.landing_timestamp <= $4
+GROUP BY
+    species_group_id
+            "#,
+            call_sign,
+            gear_group_ids as Option<&[GearGroup]>,
+            range
+                .start()
+                .unwrap_or_else(|| Utc::now() - Duration::days(30)),
+            range.end().unwrap_or_else(Utc::now),
+        )
+        .fetch(&self.pool)
+        .map_err(|e| e.into())
+    }
+
     pub(crate) fn landings_impl(
         &self,
         query: LandingsQuery,

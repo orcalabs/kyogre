@@ -44,6 +44,14 @@ pub struct Landing {
     pub version: i32,
 }
 
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LandingCatchWeight {
+    pub living_weight: f64,
+    pub species_group_id: SpeciesGroup,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LandingCatch {
     pub living_weight: f64,

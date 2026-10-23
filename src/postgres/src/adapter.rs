@@ -5,7 +5,7 @@ use crate::{
 use async_channel::Receiver;
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
-use fiskeridir_rs::{CallSign, DataFileId, OrgId, VesselPermission};
+use fiskeridir_rs::{CallSign, DataFileId, GearGroup, OrgId, VesselPermission};
 use futures::{Stream, StreamExt, TryStreamExt};
 use kyogre_core::*;
 use orca_core::{Environment, PsqlLogStatements, PsqlSettings};
@@ -891,6 +891,17 @@ impl WebApiOutboundPort for PostgresAdapter {
 
     fn landings(&self, query: LandingsQuery) -> PinBoxStream<'_, Landing> {
         self.landings_impl(query).try_convert().boxed()
+    }
+
+    fn landing_catch_weights(
+        &self,
+        call_sign: &CallSign,
+        gear_group_ids: Option<&[GearGroup]>,
+        range: &OptionalDateTimeRange,
+    ) -> PinBoxStream<'_, LandingCatchWeight> {
+        self.landing_catch_weights_impl(call_sign, gear_group_ids, range)
+            .map_err(|e| e.into())
+            .boxed()
     }
 
     async fn landing_matrix(&self, query: &LandingMatrixQuery) -> WebApiResult<LandingMatrix> {
