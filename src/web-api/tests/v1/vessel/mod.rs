@@ -79,6 +79,7 @@ async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_g
                 v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.document_info.version_number = 1;
                 v.landing.gear.group = GearGroup::Seine;
+                v.landing.landing_timestamp = Utc::now();
             })
             .new_cycle()
             .landings(1)
@@ -86,6 +87,7 @@ async fn test_vessel_removes_gear_group_when_last_landing_is_replaced_with_new_g
                 v.landing.document_info.version_number = 2;
                 v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.gear.group = GearGroup::Net;
+                v.landing.landing_timestamp = Utc::now();
             })
             .build()
             .await;
@@ -143,6 +145,7 @@ async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_ne
                 v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.document_info.version_number = 1;
                 v.landing.product.species.group_code = SpeciesGroup::AtlanticCod;
+                v.landing.landing_timestamp = Utc::now();
             })
             .new_cycle()
             .landings(1)
@@ -150,6 +153,7 @@ async fn test_vessel_removes_species_group_when_last_landing_is_replaced_with_ne
                 v.landing.document_info.version_number = 2;
                 v.landing.id = "1-7-0-0".parse().unwrap();
                 v.landing.product.species.group_code = SpeciesGroup::Saithe;
+                v.landing.landing_timestamp = Utc::now();
             })
             .build()
             .await;

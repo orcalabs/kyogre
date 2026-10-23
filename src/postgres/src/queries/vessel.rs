@@ -784,6 +784,7 @@ FROM
             LEFT JOIN landing_entries e ON l.landing_id = e.landing_id
         WHERE
             fiskeridir_vessel_id = ANY ($1)
+            AND landing_timestamp > '2023-01-01 00:00:00'
         GROUP BY
             fiskeridir_vessel_id
     ) q
