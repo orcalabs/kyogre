@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nSELECT\n    f.fiskeridir_vessel_id AS \"id: FiskeridirVesselId\",\n    f.total_living_weight,\n    f.gear_group_ids AS \"gear_groups!: Vec<GearGroup>\",\n    ANY_VALUE (a.orca_vessel_length_group_id) AS \"length_group!: OrcaVesselLengthGroup\",\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'total_living_weight',\n                v.total_living_weight,\n                'species_group_id',\n                v.species_group_id\n            )\n        ),\n        '[]'\n    )::TEXT AS \"catches!\"\nFROM\n    vessel_catch_aggregates v\n    INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id\n    INNER JOIN all_vessels a ON a.fiskeridir_vessel_id = f.fiskeridir_vessel_id\nWHERE\n    f.total_living_weight > 0.0\n    AND v.total_living_weight > 0.0\n    AND a.orca_vessel_length_group_id IS NOT NULL\nGROUP BY\n    f.fiskeridir_vessel_id\nORDER BY\n    f.fiskeridir_vessel_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "total_living_weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "gear_groups!: Vec<GearGroup>",
+        "type_info": "Int4Array"
+      },
+      {
+        "ordinal": 3,
+        "name": "length_group!: OrcaVesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "catches!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "16ea47528bc2e825297259aeeedab27ccbed547270d97b44c1394e0ae9fb16fa"
+}

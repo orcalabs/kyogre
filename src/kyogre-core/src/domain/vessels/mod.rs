@@ -9,7 +9,7 @@ use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use serde_with::{DisplayFromStr, serde_as};
-use strum::{AsRefStr, Display, EnumIter, EnumString};
+use strum::{AsRefStr, Display, EnumCount, EnumIter, EnumString};
 
 mod benchmark;
 
@@ -21,6 +21,37 @@ pub static TEST_SIGNED_IN_VESSEL_CALLSIGN: &str = "LK17";
 /// These have been observed in data from Fiskeridirektoratet, and we assume that they are safe to
 /// ignore.
 pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
+
+#[repr(i32)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    FromPrimitive,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
+    EnumIter,
+    EnumCount,
+    Serialize_repr,
+    Deserialize_repr,
+    Display,
+    AsRefStr,
+    EnumString,
+)]
+pub enum OrcaVesselLengthGroup {
+    UnderEleven = 1,
+    ElevenToFifteen = 2,
+    FifteenToTwentyOne = 3,
+    TwentyTwoToTwentyEight = 4,
+    TwentyEightToFifty = 5,
+    FiftyAndAbove = 6,
+    Unknown = 7,
+}
 
 #[serde_as]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
@@ -134,7 +165,7 @@ pub struct VesselCatchAggregate {
     pub total_living_weight: f64,
     pub catches: Vec<VesselSpeciesCatch>,
     pub gear_groups: Vec<GearGroup>,
-    pub length_group: VesselLengthGroup,
+    pub length_group: OrcaVesselLengthGroup,
 }
 
 #[derive(Debug, Clone, Deserialize)]
