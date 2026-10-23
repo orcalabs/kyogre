@@ -29,6 +29,7 @@ impl TripComputationStep for TripFuelConsumption {
                     .await?,
             ),
             FuelImplDiscriminants::Holtrop => None,
+            FuelImplDiscriminants::Holtrop2 => None,
         };
 
         let vessel = VesselFuelInfo::from_core(vessel, max_cargo_weight, shared.fuel_mode);

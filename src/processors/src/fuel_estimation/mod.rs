@@ -24,9 +24,11 @@ static FUEL_ESTIMATE_COMMIT_SIZE: usize = 50;
 pub static METER_PER_SECONDS_TO_KNOTS: f64 = 1.943844;
 
 mod holtrop;
+mod holtrop2;
 mod normal;
 
 pub use holtrop::*;
+pub use holtrop2::*;
 pub use normal::*;
 
 #[cfg(not(feature = "test"))]
@@ -36,6 +38,7 @@ static REQUIRED_TRIPS_TO_ESTIMATE_FUEL: u32 = 5;
 #[strum_discriminants(derive(Deserialize))]
 pub enum FuelImpl {
     Holtrop(Holtrop),
+    Holtrop2(Holtrop2),
     Maru(Maru),
 }
 
@@ -65,6 +68,37 @@ impl FuelImpl {
                     FuelImpl::Maru(Maru)
                 }
             },
+            FuelImplDiscriminants::Holtrop2 => match (
+                vessel.draught,
+                vessel.length,
+                vessel.breadth,
+                vessel.main_sfc,
+            ) {
+                (Some(draught), Some(length), Some(breadth), Some(main_sfc)) => FuelImpl::Holtrop2(
+                    HoltropBuilder2::new(draught, length, breadth, main_sfc, ScrewType::default())
+                        .rated_power_kw(3877.64)
+                        .service_speed_knots(12.0)
+                        .propellor_diameter(3.6)
+                        .block_coefficient(0.62)
+                        .prismatic_coefficient(0.64)
+                        .midship_section_coefficient(0.97)
+                        .waterplane_area_coefficient(0.83)
+                        .wetted_surface_m2(1120.0)
+                        .lcb_percent_lwl(0.0)
+                        .build(),
+                ),
+                _ => {
+                    warn!(
+                        "lacking vessel information for fuel estimation, vessel_id: {}, draught: {:?}, length: {:?}, breadth: {:?}, main_sfc: {:?}",
+                        vessel.vessel_id,
+                        vessel.draught,
+                        vessel.length,
+                        vessel.breadth,
+                        vessel.main_sfc
+                    );
+                    FuelImpl::Maru(Maru)
+                }
+            },
         }
     }
 }
@@ -80,6 +114,7 @@ impl FuelComputation for FuelImpl {
         match self {
             FuelImpl::Holtrop(holtrop) => holtrop.fuel_liter(first, second, vessel, time_ms),
             FuelImpl::Maru(normal_fuel) => normal_fuel.fuel_liter(first, second, vessel, time_ms),
+            FuelImpl::Holtrop2(holtrop2) => holtrop2.fuel_liter(first, second, vessel, time_ms),
         }
     }
 
@@ -87,6 +122,7 @@ impl FuelComputation for FuelImpl {
         match self {
             FuelImpl::Holtrop(holtrop) => holtrop.mode(),
             FuelImpl::Maru(normal_fuel) => normal_fuel.mode(),
+            FuelImpl::Holtrop2(holtrop2) => holtrop2.mode(),
         }
     }
 }
@@ -125,9 +161,24 @@ pub trait FuelComputation: Send + Sync + 'static {
     }
     fn haul_factor(&self, first: &FuelItem, second: &FuelItem) -> f64 {
         match (first.active_gear, second.active_gear) {
-            (Some(a), Some(b)) => (a.haul_load_factor() + b.haul_load_factor()) / 2.,
-            (Some(v), None) | (None, Some(v)) => v.haul_load_factor(),
+            (Some(a), Some(b)) => (self.haul_load_factor(a) + self.haul_load_factor(b)) / 2.,
+            (Some(v), None) | (None, Some(v)) => self.haul_load_factor(v),
             (None, None) => 1.,
+        }
+    }
+
+    fn haul_load_factor(&self, gear: Gear) -> f64 {
+        if gear.is_active_gear() {
+            match gear {
+                Gear::BottomTrawl => match self.mode() {
+                    FuelImplDiscriminants::Holtrop | FuelImplDiscriminants::Holtrop2 => 110.,
+                    FuelImplDiscriminants::Maru => 80.,
+                },
+                Gear::MidwaterTrawl => 2.5,
+                _ => 10.,
+            }
+        } else {
+            1.
         }
     }
 }
@@ -573,7 +624,13 @@ async fn process_day(
 
     let mut start_idx = 0;
 
-    let mut fuel_impl = FuelImpl::new(vessel);
+    let mut fuel_impl = if vessel.vessel_id.into_inner() == 2001015304 {
+        let mut vessel = vessel.clone();
+        vessel.mode = FuelImplDiscriminants::Holtrop2;
+        FuelImpl::new(&vessel)
+    } else {
+        FuelImpl::new(vessel)
+    };
     while start_idx < len - 1 {
         let start = &positions[start_idx];
 
@@ -832,5 +889,6 @@ pub async fn max_cargo_weight(
                 .await?,
         )),
         FuelImplDiscriminants::Holtrop => Ok(None),
+        FuelImplDiscriminants::Holtrop2 => Ok(None),
     }
 }

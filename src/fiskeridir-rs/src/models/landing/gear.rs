@@ -243,18 +243,6 @@ impl Gear {
     pub fn is_active_gear(&self) -> bool {
         GearGroup::active().contains(&self.gear_group())
     }
-
-    pub fn haul_load_factor(&self) -> f64 {
-        if self.is_active_gear() {
-            match self {
-                Self::BottomTrawl => 80.,
-                Self::MidwaterTrawl => 2.5,
-                _ => 10.,
-            }
-        } else {
-            1.
-        }
-    }
 }
 
 impl GearGroup {

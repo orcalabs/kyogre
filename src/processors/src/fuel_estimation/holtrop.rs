@@ -29,10 +29,10 @@ static SHAFT_EFFICIENCY: f64 = 0.95;
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ScrewType {
+    #[default]
     Twin,
     SingleOpenStern,
     SingleConventionalStern,
-    #[default]
     Unknown,
 }
 
@@ -166,7 +166,7 @@ impl HoltropBuilder {
             length: self.length,
             breadth: self.breadth,
             speed_meter_per_second: 0.,
-            propellor_diameter: self.propellor_diameter.unwrap_or(0.4),
+            propellor_diameter: self.propellor_diameter.unwrap_or(3.6),
             prismatic_coefficient: self.prismatic_coefficient.unwrap_or(PRISMATIC_COEFFICIENT),
             block_coefficient,
             propellor_efficency: self.propellor_efficency.unwrap_or(PROPELLOR_EFFICENCY),

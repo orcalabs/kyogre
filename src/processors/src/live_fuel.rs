@@ -104,7 +104,10 @@ impl LiveFuel {
             }
         }
 
-        let vessel = VesselFuelInfo::from_live(vessel, None, self.mode);
+        let mut vessel = VesselFuelInfo::from_live(vessel, None, self.mode);
+        if vessel.vessel_id.into_inner() == 2001015304 {
+            vessel.mode = FuelImplDiscriminants::Holtrop2;
+        }
         let mut fuel_impl = FuelImpl::new(&vessel);
         Ok(hour_split
             .into_values()
