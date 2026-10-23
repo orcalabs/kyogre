@@ -93,8 +93,8 @@ FROM
     )
 WHERE
     start_diff + end_diff < interval '10 minutes'
-    AND start_fuel_liter - end_fuel_liter > 500
-    AND start_fuel_liter - end_fuel_liter < 10000
+    AND end_fuel_liter - start_fuel_liter > 500
+    AND end_fuel_liter - start_fuel_liter < 10000
         "#,
         call_sign,
     )
@@ -180,7 +180,7 @@ WHERE
 
         let id = i + 1;
         let duration = (haul.end_ts - haul.start_ts).as_seconds_f64() / 3600.;
-        let fuel = (haul.start_fuel_liter - haul.end_fuel_liter) as f64;
+        let fuel = (haul.end_fuel_liter - haul.start_fuel_liter) as f64;
         let estimate = fuel_estimate.fuel_liter;
         let diff = estimate - fuel;
         let diff_percent = diff * 100. / fuel;
