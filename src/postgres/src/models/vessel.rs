@@ -9,7 +9,7 @@ use fiskeridir_rs::{
 };
 use kyogre_core::{
     AisVessel, Draught, EngineType, FisheryId, FiskeridirVessel, FiskeridirVesselId, Mmsi, Month,
-    TripAssemblerId, VesselCurrentTrip, VesselSource,
+    OrcaVesselLengthGroup, TripAssemblerId, VesselCurrentTrip, VesselSource,
 };
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
@@ -32,7 +32,7 @@ pub struct VesselCatchSimilarity {
 pub struct VesselCatchAggregate {
     pub id: FiskeridirVesselId,
     pub gear_groups: Vec<GearGroup>,
-    pub length_group: VesselLengthGroup,
+    pub length_group: OrcaVesselLengthGroup,
     pub total_living_weight: f64,
     pub catches: String,
 }

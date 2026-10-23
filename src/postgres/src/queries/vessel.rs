@@ -11,7 +11,7 @@ use futures::{Stream, TryStreamExt};
 use kyogre_core::Draught;
 use kyogre_core::{
     ActiveVesselConflict, EngineType, FisheryId, FiskeridirVesselId, HasTrack, Mmsi,
-    TripAssemblerId, Vessel, VesselSource,
+    OrcaVesselLengthGroup, TripAssemblerId, Vessel, VesselSource,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -46,7 +46,7 @@ SELECT
     f.fiskeridir_vessel_id AS "id: FiskeridirVesselId",
     f.total_living_weight,
     f.gear_group_ids AS "gear_groups!: Vec<GearGroup>",
-    f.fiskeridir_length_group_id AS "length_group: VesselLengthGroup",
+    ANY_VALUE (a.orca_vessel_length_group_id) AS "length_group!: OrcaVesselLengthGroup",
     COALESCE(
         JSONB_AGG(
             JSONB_BUILD_OBJECT(
@@ -61,9 +61,11 @@ SELECT
 FROM
     vessel_catch_aggregates v
     INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    INNER JOIN all_vessels a ON a.fiskeridir_vessel_id = f.fiskeridir_vessel_id
 WHERE
     f.total_living_weight > 0.0
     AND v.total_living_weight > 0.0
+    AND a.orca_vessel_length_group_id IS NOT NULL
 GROUP BY
     f.fiskeridir_vessel_id
 ORDER BY
