@@ -68,15 +68,12 @@ fn calculate_vessel_similarities(vessels: &[VesselCatchAggregate]) -> Vec<Vessel
             let vessel_one = &vessels[i];
             let vessel_two = &vessels[j];
 
-            let mut common_gear_group = false;
-            for g in &vessel_one.gear_groups {
-                if vessel_two.gear_groups.contains(g) {
-                    common_gear_group = true;
-                    break;
-                }
-            }
+            let mut g1 = vessel_one.gear_groups.clone();
+            let mut g2 = vessel_two.gear_groups.clone();
+            g1.sort();
+            g2.sort();
 
-            if vessel_one.length_group != vessel_two.length_group || !common_gear_group {
+            if vessel_one.length_group != vessel_two.length_group || g1 != g2 {
                 continue;
             }
 
