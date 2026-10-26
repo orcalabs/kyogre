@@ -49,7 +49,7 @@ WITH
     )
 SELECT
     COALESCE(SUM(living_weight), 0.0) AS "living_weight!",
-    species_group_id AS "species_group_id: SpeciesGroup"
+    species_fiskeridir_id
 FROM
     vessel_id v
     INNER JOIN landings l ON v.fiskeridir_vessel_id = l.fiskeridir_vessel_id
@@ -62,7 +62,7 @@ WHERE
     AND l.landing_timestamp >= $3
     AND l.landing_timestamp <= $4
 GROUP BY
-    species_group_id
+    species_fiskeridir_id
             "#,
             call_sign,
             gear_group_ids as Option<&[GearGroup]>,

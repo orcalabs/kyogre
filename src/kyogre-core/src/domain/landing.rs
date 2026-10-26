@@ -49,7 +49,7 @@ pub struct Landing {
 #[serde(rename_all = "camelCase")]
 pub struct LandingCatchWeight {
     pub living_weight: f64,
-    pub species_group_id: SpeciesGroup,
+    pub species_fiskeridir_id: i64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
