@@ -51,6 +51,7 @@ pub struct LandingsParams {
 pub struct LandingCatchWeightsParams {
     #[serde_as(as = "Option<Vec<DisplayFromStr>>")]
     pub gear_group_ids: Option<Vec<GearGroup>>,
+    #[serde(flatten)]
     pub range: OptionalDateTimeRange,
 }
 
