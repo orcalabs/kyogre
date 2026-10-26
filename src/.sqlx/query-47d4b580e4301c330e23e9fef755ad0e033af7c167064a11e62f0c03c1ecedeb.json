@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    vessel_id AS (\n        SELECT\n            fiskeridir_vessel_id\n        FROM\n            active_vessels\n        WHERE\n            call_sign = $1\n    )\nSELECT\n    COALESCE(SUM(living_weight), 0.0) AS \"living_weight!\",\n    species_fiskeridir_id\nFROM\n    vessel_id v\n    INNER JOIN landings l ON v.fiskeridir_vessel_id = l.fiskeridir_vessel_id\n    INNER JOIN landing_entries le ON l.landing_id = le.landing_id\nWHERE\n    (\n        $2::INT[] IS NULL\n        OR l.gear_group_id = ANY ($2)\n    )\n    AND l.landing_timestamp >= $3\n    AND l.landing_timestamp <= $4\nGROUP BY\n    species_fiskeridir_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "living_weight!",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "species_fiskeridir_id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int4Array",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      false
+    ]
+  },
+  "hash": "47d4b580e4301c330e23e9fef755ad0e033af7c167064a11e62f0c03c1ecedeb"
+}
