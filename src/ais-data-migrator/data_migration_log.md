@@ -3,6 +3,13 @@ Each entry should start with a heading with the date the migration was done foll
 to indicate why it was done.
 This document exists incase we find some "holes" in our AIS data that might overlap with migration dates.
 
+# 2026-10-26
+
+start_threshold: 2026-10-26T13:00:00.000+0100
+end_threshold: 2026-10-26T17:10:00.000+0100
+
+Reason: Upgraded Postgres from 17 to 18.
+
 # 2026-09-30
 
 start_threshold: 2026-09-21T00:00:00+0200
