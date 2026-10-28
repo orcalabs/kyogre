@@ -1,0 +1,66 @@
+services:
+  postgres:
+    image: postgis/postgis:18-3.6-alpine
+    shm_size: 1g
+    environment:
+      - POSTGRES_PASSWORD=test123
+    ports:
+      - 5432:5432
+    command: |
+      postgres -c shared_preload_libraries='auto_explain'
+               -c max_locks_per_transaction=2048
+               -c auto_explain.log_min_duration=10ms
+               -c auto_explain.log_analyze=on
+               -c auto_explain.log_buffers=on
+               -c auto_explain.log_wal=on
+               -c auto_explain.log_timing=on
+               -c auto_explain.log_settings=on
+               -c auto_explain.log_nested_statements=on
+               -c auto_explain.log_triggers=on
+
+  ais-consumer:
+    image: ghcr.io/orcalabs/kyogre/ais-consumer:latest
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=on_premise
+      - KYOGRE_AIS_CONSUMER__OAUTH__CLIENT_ID=${AIS_CLIENT_ID}
+      - KYOGRE_AIS_CONSUMER__OAUTH__CLIENT_SECRET=${AIS_CLIENT_SECRET}
+      - HONEYCOMB_API_KEY=${HONEYCOMB_API_KEY}
+
+  engine:
+    image: ghcr.io/orcalabs/kyogre/engine:latest
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=on_premise
+      - HONEYCOMB_API_KEY=${HONEYCOMB_API_KEY}
+      - KYOGRE_ENGINE__SCRAPER__FISHING_FACILITY_HISTORIC__CLIENT_ID=${BARENTSWATCH_CLIENT_ID}
+      - KYOGRE_ENGINE__SCRAPER__FISHING_FACILITY_HISTORIC__CLIENT_SECRET=${BARENTSWATCH_CLIENT_SECRET}
+      - KYOGRE_ENGINE__SCRAPER__FISHING_FACILITY__CLIENT_ID=${BARENTSWATCH_CLIENT_ID}
+      - KYOGRE_ENGINE__SCRAPER__FISHING_FACILITY__CLIENT_SECRET=${BARENTSWATCH_CLIENT_SECRET}
+      - KYOGRE_ENGINE__SCRAPER__RAFISKLAGET_WEEKLY_SALES__CLIENT_ID=${RAFISKLAGET_WEEKLY_SALES_CLIENT_ID}
+      - KYOGRE_ENGINE__SCRAPER__RAFISKLAGET_WEEKLY_SALES__CLIENT_SECRET=${RAFISKLAGET_WEEKLY_SALES_CLIENT_SECRET}
+
+  duckdb:
+    image: ghcr.io/orcalabs/kyogre/duckdb:latest
+    ports:
+      - 5000:5000
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=on_premise
+      - HONEYCOMB_API_KEY=${HONEYCOMB_API_KEY}
+
+  processors:
+    image: ghcr.io/orcalabs/kyogre/processors:latest
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=on_premise
+      - HONEYCOMB_API_KEY=${HONEYCOMB_API_KEY}
+
+  api:
+    image: ghcr.io/orcalabs/kyogre/fishery-api:latest
+    environment:
+      - RUST_BACKTRACE=1
+      - APP_ENVIRONMENT=on_premise
+      - HONEYCOMB_API_KEY=${HONEYCOMB_API_KEY}
+    ports:
+      - 8080:8080

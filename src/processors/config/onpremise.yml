@@ -1,0 +1,12 @@
+log_level: Info
+num_fuel_estimation_workers: 2
+current_positions_batch_size: 100
+fuel_estimation_mode: Maru
+tracing_mode: Regular
+postgres:
+  ip: postgres
+  port: 5432
+  db_name: kyogre
+  max_connections: 10
+  log_statements: Disable
+  application_name: kyogre-processors
