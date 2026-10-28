@@ -1,0 +1,30 @@
+log_level: Info
+api:
+  ip: 0.0.0.0
+  port: 8080
+postgres:
+  ip: postgres
+  port: 5432
+  db_name: kyogre
+  max_connections: 10
+  log_statements: Disable
+  application_name: kyogre-api
+telemetry:
+  ip: api.honeycomb.io
+  port: 443
+bw_settings:
+  audience: api
+  issuers:
+    https://id.pilot.bwlab.no:
+      jwks_url: https://id.pilot.bwlab.no/.well-known/openid-configuration/jwks
+      profiles_url: https://www.pilot.bwlab.no/bwapi/v2/user/profiles
+    https://id.barentswatch.no:
+      jwks_url: https://id.barentswatch.no/.well-known/openid-configuration/jwks
+      profiles_url: https://www.barentswatch.no/bwapi/v2/user/profiles
+duck_db_api:
+  ip: duckdb
+  port: 5000
+auth0:
+  jwk_url: https://dev-orcalabs.eu.auth0.com/.well-known/jwks.json
+  authorization_url: https://dev-orcalabs.eu.auth0.com/authorize
+  audience: https://api.dev.datafangst.orcalabs.no/

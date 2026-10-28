@@ -1,0 +1,31 @@
+name: Deploy on premise
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy on premise
+        run: |
+          export AIS_CLIENT_ID="$(cat /home/jon/secrets/ais_consumer_client_id)"
+          export AIS_CLIENT_SECRET="$(cat /home/jon/secrets/ais_consumer_client_secret)"
+          export HONEYCOMB_API_KEY=$(cat /home/jon/secrets/honeycomb_api_key)
+          export BARENTSWATCH_CLIENT_ID=$(cat /home/jon/secrets/barentswatch_client_id)
+          export BARENTSWATCH_CLIENT_SECRET=$(cat /home/jon/secrets/barentswatch_client_secret)
+          export RAFISKLAGET_WEEKLY_SALES_CLIENT_ID=$(cat /home/jon/secrets/rafisklaget_weekly_sales_client_id)
+          export RAFISKLAGET_WEEKLY_SALES_CLIENT_SECRET=$(cat /home/jon/secrets/rafisklaget_weekly_sales_client_secret)
+
+          docker-compose -f onpremise.yml pull
+          docker-compose -f onpremise.yml up -d
+          docker image prune -f -a
