@@ -3,6 +3,13 @@ Each entry should start with a heading with the date the migration was done foll
 to indicate why it was done.
 This document exists incase we find some "holes" in our AIS data that might overlap with migration dates.
 
+# 2026-10-28
+
+start_threshold: 2026-10-27T14:40:00.000+0100
+end_threshold: 2026-10-28T08:10:00.000+0100
+
+Reason: Stopped ais-consumer due to pg_dump.
+
 # 2026-10-26
 
 start_threshold: 2026-10-26T13:00:00.000+0100
