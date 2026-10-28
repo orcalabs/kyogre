@@ -591,7 +591,6 @@ async fn process_vessel_impl(
     Ok(())
 }
 
-#[instrument(skip(adapter))]
 async fn process_day(
     vessel: &VesselFuelInfo,
     adapter: &dyn FuelEstimation,
