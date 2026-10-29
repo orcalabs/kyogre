@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgis/postgis:18-3.6-alpine
     shm_size: 1g
+    restart: unless-stopped
     environment:
       - POSTGRES_PASSWORD=test123
     ports:
@@ -20,6 +21,7 @@ services:
 
   ais-consumer:
     image: ghcr.io/orcalabs/kyogre/ais-consumer:latest
+    restart: unless-stopped
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=on_premise
@@ -29,6 +31,7 @@ services:
 
   engine:
     image: ghcr.io/orcalabs/kyogre/engine:latest
+    restart: unless-stopped
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=on_premise
@@ -42,6 +45,7 @@ services:
 
   duckdb:
     image: ghcr.io/orcalabs/kyogre/duckdb:latest
+    restart: unless-stopped
     ports:
       - 5000:5000
     environment:
@@ -51,6 +55,7 @@ services:
 
   processors:
     image: ghcr.io/orcalabs/kyogre/processors:latest
+    restart: unless-stopped
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=on_premise
@@ -58,6 +63,7 @@ services:
 
   api:
     image: ghcr.io/orcalabs/kyogre/fishery-api:latest
+    restart: unless-stopped
     environment:
       - RUST_BACKTRACE=1
       - APP_ENVIRONMENT=on_premise
