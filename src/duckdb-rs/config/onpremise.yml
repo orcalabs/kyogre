@@ -6,6 +6,8 @@ telemetry:
 postgres:
   port: 5432
   ip: postgres
+  username: postgres
+  password: test123
   db_name: kyogre
   max_connections: 10
   log_statements: Disable
