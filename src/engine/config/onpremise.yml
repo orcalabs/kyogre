@@ -4,6 +4,8 @@ tracing_mode: Regular
 fuel_estimation_mode: Maru
 postgres:
   ip: postgres
+  username: postgres
+  password: test123
   port: 5432
   db_name: kyogre
   max_connections: 10

@@ -6,6 +6,8 @@ oauth:
   scope: "ais"
 postgres:
   ip: postgres
+  username: postgres
+  password: test123
   max_connections: 1
   port: 5432
   db_name: kyogre
