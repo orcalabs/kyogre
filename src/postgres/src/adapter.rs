@@ -107,7 +107,10 @@ impl PostgresAdapter {
         }
 
         let no_plan_cache_pool = match environment {
-            Environment::Development | Environment::Production | Environment::Local => {
+            Environment::Development
+            | Environment::Production
+            | Environment::Local
+            | Environment::OnPremise => {
                 let opts = opts
                     .clone()
                     .options([("plan_cache_mode", "force_custom_plan")]);
@@ -122,7 +125,7 @@ impl PostgresAdapter {
 
                 Some(pool)
             }
-            Environment::OnPremise | Environment::Test => None,
+            Environment::Test => None,
         };
 
         let pool = PgPoolOptions::new()
