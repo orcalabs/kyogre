@@ -3,3 +3,4 @@ _build
 shell.nix
 src/*/config/*.secret.yml
 *.xls
+*.dump
