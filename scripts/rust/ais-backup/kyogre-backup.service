@@ -1,0 +1,10 @@
+[Unit]
+Description=Kyogre backup
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=markus
+EnvironmentFile=/home/markus/Documents/orca/kyogre/scripts/rust/ais-backup/secrets.env
+ExecStart=/home/markus/.cargo/bin/ais-backup
