@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    to_update AS (\n        SELECT\n            *\n        FROM\n            UNNEST($1::BIGINT[], $2::INT[], $3::INT[], $4::INT[]) AS u (vessel_id, \"group\", \"year\", length_group)\n    )\nINSERT INTO\n    vessel_yearly_groupings (\n        fiskeridir_vessel_id,\n        \"year\",\n        vessel_grouping_length_combination_id\n    )\nSELECT\n    t.vessel_id,\n    t.\"year\",\n    v.vessel_grouping_length_combination_id\nFROM\n    to_update t\n    INNER JOIN vessel_grouping_length_combinations v ON t.\"group\" = v.vessel_grouping_id\n    AND v.orca_vessel_length_group_id = t.length_group\nON CONFLICT (fiskeridir_vessel_id, \"year\") DO UPDATE\nSET\n    vessel_grouping_length_combination_id = EXCLUDED.vessel_grouping_length_combination_id\n         ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8Array",
+        "Int4Array",
+        "Int4Array",
+        "Int4Array"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6d1625f3b00e09e60f220cb2c8d4305dfb701424c8d33fdb0bc66bda9d24689a"
+}

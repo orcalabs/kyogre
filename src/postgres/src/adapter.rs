@@ -517,11 +517,11 @@ impl VesselAggregate for PostgresAdapter {
             .try_convert_collect()
             .await
     }
-    async fn update_vessel_catch_similarities(
+    async fn update_vessel_yearly_grouping(
         &self,
-        updates: Vec<VesselCatchSimilarity>,
+        updates: Vec<UpdateVesselYearlyGrouping>,
     ) -> CoreResult<()> {
-        self.update_vessel_catch_similarities_impl(updates).await?;
+        self.update_vessel_yearly_grouping_impl(updates).await?;
         Ok(())
     }
 }
