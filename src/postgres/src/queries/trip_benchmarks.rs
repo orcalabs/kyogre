@@ -1,5 +1,6 @@
 use crate::models::AverageVesselsBenchmarks;
 use crate::{PostgresAdapter, error::Result, models::TripBenchmarkOutput};
+use chrono::Datelike;
 use fiskeridir_rs::{CallSign, SpeciesGroup};
 use fiskeridir_rs::{GearGroup, VesselLengthGroup};
 use kyogre_core::{
@@ -38,8 +39,8 @@ WHERE
             return Ok(vec![]);
         };
 
-        let mut vessels = if query.use_following_list.unwrap_or(false) {
-            sqlx::query!(
+        let vessels = if query.use_following_list.unwrap_or(false) {
+            let mut ids = sqlx::query!(
                 r#"
 SELECT
     COALESCE(ARRAY_AGG(fiskeridir_vessel_id), '{}') AS "ids!: Vec<FiskeridirVesselId>"
@@ -52,36 +53,30 @@ WHERE
             )
             .fetch_one(&self.pool)
             .await?
-            .ids
+            .ids;
+            ids.push(logged_in_vessel);
+            ids
         } else {
+            let years: Vec<i32> = (query.range.start().year()..=query.range.end().year()).collect();
             sqlx::query!(
                 r#"
 SELECT
-    COALESCE(
-        ARRAY_AGG(
-            CASE
-                WHEN vessel_one = $1 THEN vessel_two
-                WHEN vessel_two = $1 THEN vessel_one
-            END
-        ),
-        '{}'
-    ) AS "ids!: Vec<FiskeridirVesselId>"
+    COALESCE(ARRAY_AGG(v2.fiskeridir_vessel_id), '{}') AS "ids!: Vec<FiskeridirVesselId>"
 FROM
-    vessel_catch_similarity_distances v
+    vessel_yearly_groupings v
+    INNER JOIN vessel_yearly_groupings v2 ON v.year = v2.year
+    AND v.vessel_grouping_length_combination_id = v2.vessel_grouping_length_combination_id
 WHERE
-    (
-        vessel_one = $1
-        OR vessel_two = $1
-    )
+    v.fiskeridir_vessel_id = $1
+    AND v.year = ANY ($2)
                 "#,
                 logged_in_vessel as FiskeridirVesselId,
+                &years
             )
             .fetch_one(&self.pool)
             .await?
             .ids
         };
-
-        vessels.push(logged_in_vessel);
 
         Ok(vessels)
     }
@@ -139,6 +134,8 @@ WHERE
             )
             .await?;
 
+        let years: Vec<i32> = (query.range.start().year()..=query.range.end().year()).collect();
+
         let out = sqlx::query_as!(
             AverageVesselsBenchmarks,
             r#"
@@ -183,7 +180,18 @@ WITH
                     FROM
                         UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
                 )
-            )::BIGINT AS own_trip_duration_seconds
+            )::BIGINT AS own_trip_duration_seconds,
+            (
+                SELECT
+                    COALESCE(ARRAY_AGG(g.description), '{}')
+                FROM
+                    logged_in_vessel_id l
+                    INNER JOIN vessel_yearly_groupings v ON v.fiskeridir_vessel_id = l.fiskeridir_vessel_id
+                    INNER JOIN vessel_grouping_length_combinations c ON c.vessel_grouping_length_combination_id = v.vessel_grouping_length_combination_id
+                    INNER JOIN vessel_groupings g ON g.vessel_grouping_id = c.vessel_grouping_id
+                WHERE
+                    v.year = ANY ($7::INT[])
+            ) AS vessel_groupings
         FROM
             trips_detailed
         WHERE
@@ -346,7 +354,8 @@ FROM
             call_sign.as_ref(),
             &query.species_group_ids as &Option<Vec<SpeciesGroup>>,
             &vessels as &[FiskeridirVesselId],
-            METERS_TO_NAUTICAL_MILES
+            METERS_TO_NAUTICAL_MILES,
+            &years
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -403,6 +412,7 @@ FROM
                 trip_duration_seconds: a.average_trip_duration_seconds.map(|t| t as u64),
             },
             per_vessel,
+            vessel_groupings: a.vessel_groupings,
         }))
     }
     pub(crate) async fn add_benchmark_output(

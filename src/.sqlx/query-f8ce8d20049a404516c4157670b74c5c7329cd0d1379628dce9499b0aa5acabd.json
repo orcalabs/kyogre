@@ -1,0 +1,202 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    logged_in_vessel_id AS (\n        SELECT\n            fiskeridir_vessel_id\n        FROM\n            all_vessels\n        WHERE\n            call_sign = $3\n    ),\n    logged_in_user_values AS (\n        SELECT\n            SUM(benchmark_fuel_consumption_liter) AS own_sum_fuel_consumption_liter,\n            SUM(landing_total_living_weight) / NULLIF(\n                (\n                    SUM(\n                        EXTRACT(\n                            EPOCH\n                            FROM\n                                UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))\n                        )\n                    ) / (60 * 60)\n                ),\n                0.0\n            ) AS own_sum_weight_per_hour,\n            SUM(landing_total_living_weight) / NULLIF(SUM((distance * $6)), 0.0) AS own_sum_weight_per_distance,\n            SUM(landing_total_living_weight) / NULLIF(SUM(benchmark_fuel_consumption_liter), 0.0) AS own_sum_weight_per_fuel_liter,\n            SUM(landing_total_price_for_fisher) / NULLIF(SUM(benchmark_fuel_consumption_liter), 0.0) AS own_sum_catch_value_per_fuel_liter,\n            SUM(landing_total_living_weight) AS own_sum_living_weight,\n            COUNT(*)::BIGINT AS own_num_trips,\n            SUM(CARDINALITY(haul_ids))::BIGINT AS own_num_hauls,\n            SUM(landing_total_price_for_fisher) AS own_value_nok,\n            BOOL_OR(price_for_fisher_is_estimated) AS own_trips_has_price_estimation,\n            SUM(\n                benchmark_percentage_of_trip_covered_by_measurements\n            ) / NULLIF(COUNT(*), 0) AS own_fuel_measurement_coverage_percentage,\n            SUM(\n                EXTRACT(\n                    EPOCH\n                    FROM\n                        UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))\n                )\n            )::BIGINT AS own_trip_duration_seconds,\n            (\n                SELECT\n                    COALESCE(ARRAY_AGG(g.description), '{}')\n                FROM\n                    logged_in_vessel_id l\n                    INNER JOIN vessel_yearly_groupings v ON v.fiskeridir_vessel_id = l.fiskeridir_vessel_id\n                    INNER JOIN vessel_grouping_length_combinations c ON c.vessel_grouping_length_combination_id = v.vessel_grouping_length_combination_id\n                    INNER JOIN vessel_groupings g ON g.vessel_grouping_id = c.vessel_grouping_id\n                WHERE\n                    v.year = ANY ($7::INT[])\n            ) AS vessel_groupings\n        FROM\n            trips_detailed\n        WHERE\n            stop_timestamp >= $1\n            AND stop_timestamp <= $2\n            AND fiskeridir_vessel_id = (\n                SELECT\n                    fiskeridir_vessel_id\n                FROM\n                    logged_in_vessel_id\n            )\n            AND (\n                $4::INT[] IS NULL\n                OR landing_two_highest_species_group_quantum && $4\n            )\n    ),\n    other_vessel_trips AS (\n        SELECT\n            fiskeridir_vessel_id,\n            SUM(\n                CASE\n                    WHEN fiskeridir_vessel_id = (\n                        SELECT\n                            fiskeridir_vessel_id\n                        FROM\n                            logged_in_vessel_id\n                    ) THEN benchmark_fuel_consumption_liter\n                    ELSE benchmark_fuel_consumption_liter_estimated_only\n                END\n            ) AS sum_fuel_consumption_liter,\n            SUM(landing_total_living_weight) / NULLIF(\n                (\n                    SUM(\n                        EXTRACT(\n                            EPOCH\n                            FROM\n                                UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))\n                        )\n                    ) / (60 * 60)\n                ),\n                0.0\n            ) AS sum_weight_per_hour,\n            SUM(landing_total_living_weight) / NULLIF(SUM((distance * $6)), 0.0) AS sum_weight_per_distance,\n            SUM(landing_total_living_weight) / NULLIF(\n                SUM(\n                    CASE\n                        WHEN fiskeridir_vessel_id = (\n                            SELECT\n                                fiskeridir_vessel_id\n                            FROM\n                                logged_in_vessel_id\n                        ) THEN benchmark_fuel_consumption_liter\n                        ELSE benchmark_fuel_consumption_liter_estimated_only\n                    END\n                ),\n                0.0\n            ) AS sum_weight_per_fuel_liter,\n            SUM(landing_total_price_for_fisher) / NULLIF(\n                SUM(\n                    CASE\n                        WHEN fiskeridir_vessel_id = (\n                            SELECT\n                                fiskeridir_vessel_id\n                            FROM\n                                logged_in_vessel_id\n                        ) THEN benchmark_fuel_consumption_liter\n                        ELSE benchmark_fuel_consumption_liter_estimated_only\n                    END\n                ),\n                0.0\n            ) AS sum_catch_value_per_fuel_liter,\n            SUM(landing_total_living_weight) AS sum_living_weight,\n            SUM(landing_total_price_for_fisher) AS value_nok,\n            COUNT(*) AS num_trips,\n            SUM(CARDINALITY(haul_ids)) AS num_hauls,\n            SUM(\n                EXTRACT(\n                    EPOCH\n                    FROM\n                        UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))\n                )::BIGINT\n            ) AS trip_duration_seconds\n        FROM\n            trips_detailed\n        WHERE\n            stop_timestamp >= $1\n            AND stop_timestamp <= $2\n            AND (\n                $4::INT[] IS NULL\n                OR landing_two_highest_species_group_quantum && $4\n            )\n            AND fiskeridir_vessel_id = ANY ($5)\n        GROUP BY\n            fiskeridir_vessel_id\n    ),\n    other_vessels AS (\n        SELECT\n            MAX(sum_weight_per_hour) AS highest_weight_per_hour,\n            MIN(sum_fuel_consumption_liter) AS lowest_fuel_consumption_liter,\n            MAX(sum_weight_per_distance) AS highest_weight_per_distance,\n            MAX(sum_weight_per_fuel_liter) AS highest_weight_per_fuel_liter,\n            MAX(sum_catch_value_per_fuel_liter) AS highest_catch_value_per_fuel_liter,\n            MAX(sum_living_weight) AS highest_living_weight,\n            AVG(sum_weight_per_hour) AS average_weight_per_hour,\n            AVG(sum_fuel_consumption_liter) AS average_fuel_consumption_liter,\n            AVG(sum_weight_per_distance) AS average_weight_per_distance,\n            AVG(sum_weight_per_fuel_liter) AS average_weight_per_fuel_liter,\n            AVG(sum_catch_value_per_fuel_liter) AS average_catch_value_per_fuel_liter,\n            AVG(sum_living_weight) AS average_living_weight,\n            AVG(num_trips)::BIGINT AS average_num_trips,\n            AVG(num_hauls)::BIGINT AS average_num_hauls,\n            AVG(trip_duration_seconds)::BIGINT AS average_trip_duration_seconds,\n            AVG(value_nok) AS average_value_nok\n        FROM\n            other_vessel_trips\n    ),\n    other_vessel_stats AS (\n        SELECT\n            COALESCE(\n                JSONB_AGG(\n                    JSONB_BUILD_OBJECT(\n                        'fiskeridirVesselId',\n                        fiskeridir_vessel_id,\n                        'weightPerHour',\n                        sum_weight_per_hour,\n                        'fuelConsumptionLiter',\n                        sum_fuel_consumption_liter,\n                        'weightPerDistance',\n                        sum_weight_per_distance,\n                        'weightPerFuelLiter',\n                        sum_weight_per_fuel_liter,\n                        'catchValuePerFuelLiter',\n                        sum_catch_value_per_fuel_liter,\n                        'livingWeight',\n                        sum_living_weight,\n                        'numTrips',\n                        num_trips::BIGINT,\n                        'numHauls',\n                        num_hauls::BIGINT,\n                        'tripDurationSeconds',\n                        trip_duration_seconds::BIGINT,\n                        'valueNok',\n                        value_nok\n                    )\n                ),\n                '[]'\n            )::TEXT AS \"per_vessel!\"\n        FROM\n            other_vessel_trips\n    )\nSELECT\n    *\nFROM\n    other_vessels o\n    INNER JOIN logged_in_user_values l ON TRUE\n    INNER JOIN other_vessel_stats v ON TRUE\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "highest_weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 1,
+        "name": "lowest_fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 2,
+        "name": "highest_weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 3,
+        "name": "highest_weight_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "highest_catch_value_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "highest_living_weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 6,
+        "name": "average_weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 7,
+        "name": "average_fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 8,
+        "name": "average_weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 9,
+        "name": "average_weight_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 10,
+        "name": "average_catch_value_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 11,
+        "name": "average_living_weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 12,
+        "name": "average_num_trips",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "average_num_hauls",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 14,
+        "name": "average_trip_duration_seconds",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 15,
+        "name": "average_value_nok",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 16,
+        "name": "own_sum_fuel_consumption_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 17,
+        "name": "own_sum_weight_per_hour",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 18,
+        "name": "own_sum_weight_per_distance",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 19,
+        "name": "own_sum_weight_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 20,
+        "name": "own_sum_catch_value_per_fuel_liter",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 21,
+        "name": "own_sum_living_weight",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 22,
+        "name": "own_num_trips",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 23,
+        "name": "own_num_hauls",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 24,
+        "name": "own_value_nok",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 25,
+        "name": "own_trips_has_price_estimation",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 26,
+        "name": "own_fuel_measurement_coverage_percentage",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 27,
+        "name": "own_trip_duration_seconds",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 28,
+        "name": "vessel_groupings",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 29,
+        "name": "per_vessel!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Int4Array",
+        "Int8Array",
+        "Float8",
+        "Int4Array"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "f8ce8d20049a404516c4157670b74c5c7329cd0d1379628dce9499b0aa5acabd"
+}
