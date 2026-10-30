@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    grouped_catches AS (\n        SELECT\n            v.fiskeridir_vessel_id,\n            v.orca_gear_group_id,\n            v.year,\n            SUM(v.total_living_weight) AS total_living_weight\n        FROM\n            vessel_gear_catch_aggregates v\n        WHERE\n            v.total_living_weight > 0.0\n            AND NOT EXISTS (\n                SELECT\n                    1\n                FROM\n                    vessel_yearly_groupings g\n                WHERE\n                    g.fiskeridir_vessel_id = v.fiskeridir_vessel_id\n                    AND g.\"year\" = v.\"year\"\n                    AND g.\"year\" < $1\n            )\n        GROUP BY\n            v.fiskeridir_vessel_id,\n            v.orca_gear_group_id,\n            v.year\n    )\nSELECT\n    c.fiskeridir_vessel_id AS \"id: FiskeridirVesselId\",\n    ANY_VALUE (a.orca_vessel_length_group_id) AS \"length_group!: OrcaVesselLengthGroup\",\n    COALESCE(\n        JSONB_AGG(\n            JSONB_BUILD_OBJECT(\n                'total_living_weight',\n                c.total_living_weight,\n                'gear',\n                c.orca_gear_group_id,\n                'year',\n                c.year\n            )\n        ),\n        '[]'\n    )::TEXT AS \"catches!\"\nFROM\n    grouped_catches c\n    INNER JOIN all_vessels a ON a.fiskeridir_vessel_id = c.fiskeridir_vessel_id\nWHERE\n    a.orca_vessel_length_group_id IS NOT NULL\nGROUP BY\n    c.fiskeridir_vessel_id;\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id: FiskeridirVesselId",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "length_group!: OrcaVesselLengthGroup",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "catches!",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "4a107db3189cf977d56a084d8edee02c5195a5f80017945550b68afe9a021936"
+}

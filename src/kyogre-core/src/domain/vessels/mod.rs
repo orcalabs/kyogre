@@ -43,6 +43,74 @@ pub static IGNORED_CONFLICT_CALL_SIGNS: &[&str] = &["00000000", "0"];
     AsRefStr,
     EnumString,
 )]
+pub enum VesselGrouping {
+    TraalReke = 1,
+    TraalPelagisk = 2,
+    TraalHvitfisk = 3,
+    TraalHvitfiskReke = 4,
+    TraalNotPelagisk = 5,
+    NotPelagisk = 6,
+    Teine = 7,
+    Snurrevad = 8,
+    LineOgGarn = 9,
+    Konvensjonelle = 10,
+    Annet = 11,
+}
+
+#[repr(i32)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    FromPrimitive,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
+    EnumIter,
+    EnumCount,
+    Serialize_repr,
+    Deserialize_repr,
+    Display,
+    AsRefStr,
+    EnumString,
+)]
+pub enum OrcaGearGroup {
+    TraalReke = 1,
+    TraalPelagisk = 2,
+    TraalHvitfisk = 3,
+    Teine = 4,
+    Snurrevad = 5,
+    Not = 6,
+    Garn = 7,
+    Line = 8,
+    Annet = 9,
+}
+
+#[repr(i32)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[cfg_attr(feature = "sqlx", derive(sqlx::Type))]
+#[derive(
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    FromPrimitive,
+    Eq,
+    Hash,
+    Ord,
+    PartialOrd,
+    EnumIter,
+    EnumCount,
+    Serialize_repr,
+    Deserialize_repr,
+    Display,
+    AsRefStr,
+    EnumString,
+)]
 pub enum OrcaVesselLengthGroup {
     UnderEleven = 1,
     ElevenToFifteen = 2,
@@ -153,25 +221,25 @@ pub struct VesselEvent {
 }
 
 #[derive(Debug, Clone)]
-pub struct VesselCatchSimilarity {
-    pub vessel_one: FiskeridirVesselId,
-    pub vessel_two: FiskeridirVesselId,
-    pub distance: f64,
+pub struct UpdateVesselYearlyGrouping {
+    pub fiskeridir_vessel_id: FiskeridirVesselId,
+    pub grouping: VesselGrouping,
+    pub length_group: OrcaVesselLengthGroup,
+    pub year: u32,
 }
 
 #[derive(Debug, Clone)]
 pub struct VesselCatchAggregate {
     pub id: FiskeridirVesselId,
-    pub total_living_weight: f64,
-    pub catches: Vec<VesselSpeciesCatch>,
-    pub gear_groups: Vec<GearGroup>,
+    pub catches: Vec<VesselYearlyGearCatch>,
     pub length_group: OrcaVesselLengthGroup,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct VesselSpeciesCatch {
+pub struct VesselYearlyGearCatch {
     pub total_living_weight: f64,
-    pub species_group_id: SpeciesGroup,
+    pub gear: OrcaGearGroup,
+    pub year: u32,
 }
 
 #[derive(Copy, Debug, Clone, PartialEq, Eq)]

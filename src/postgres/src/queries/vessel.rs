@@ -3,74 +3,131 @@ use crate::{
     error::Result,
     models::{
         FiskeridirAisVesselCombination, NewMunicipality, NewOrg, NewOrgVessel, NewRegisterVessel,
-        VesselCatchAggregate, VesselCatchSimilarity,
+        VesselCatchAggregate,
     },
 };
+use chrono::{Datelike, Utc};
 use fiskeridir_rs::{CallSign, GearGroup, OrgId, SpeciesGroup, VesselLengthGroup};
 use futures::{Stream, TryStreamExt};
-use kyogre_core::Draught;
 use kyogre_core::{
     ActiveVesselConflict, EngineType, FisheryId, FiskeridirVesselId, HasTrack, Mmsi,
     OrcaVesselLengthGroup, TripAssemblerId, Vessel, VesselSource,
 };
+use kyogre_core::{Draught, VesselGrouping};
 use std::collections::{HashMap, HashSet};
 
 impl PostgresAdapter {
-    pub(crate) async fn update_vessel_catch_similarities_impl(
+    pub(crate) async fn update_vessel_yearly_grouping_impl(
         &self,
-        updates: Vec<kyogre_core::VesselCatchSimilarity>,
+        updates: Vec<kyogre_core::UpdateVesselYearlyGrouping>,
     ) -> Result<()> {
-        let mut tx = self.pool.begin().await?;
+        let mut id = Vec::with_capacity(updates.len());
+        let mut group = Vec::with_capacity(updates.len());
+        let mut year = Vec::with_capacity(updates.len());
+        let mut length_group = Vec::with_capacity(updates.len());
+
+        for u in updates {
+            id.push(u.fiskeridir_vessel_id);
+            group.push(u.grouping);
+            year.push(u.year as i32);
+            length_group.push(u.length_group);
+        }
 
         sqlx::query!(
             r#"
-DELETE FROM vessel_catch_similarity_distances
-            "#
+WITH
+    to_update AS (
+        SELECT
+            *
+        FROM
+            UNNEST($1::BIGINT[], $2::INT[], $3::INT[], $4::INT[]) AS u (vessel_id, "group", "year", length_group)
+    )
+INSERT INTO
+    vessel_yearly_groupings (
+        fiskeridir_vessel_id,
+        "year",
+        vessel_grouping_length_combination_id
+    )
+SELECT
+    t.vessel_id,
+    t."year",
+    v.vessel_grouping_length_combination_id
+FROM
+    to_update t
+    INNER JOIN vessel_grouping_length_combinations v ON t."group" = v.vessel_grouping_id
+    AND v.orca_vessel_length_group_id = t.length_group
+ON CONFLICT (fiskeridir_vessel_id, "year") DO UPDATE
+SET
+    vessel_grouping_length_combination_id = EXCLUDED.vessel_grouping_length_combination_id
+         "#,
+            &id as &[FiskeridirVesselId],
+            &group as &[VesselGrouping],
+            &year as &[i32],
+            &length_group as &[OrcaVesselLengthGroup],
         )
-        .execute(&mut *tx)
+        .execute(&self.pool)
         .await?;
 
-        self.unnest_insert_from::<_, _, VesselCatchSimilarity>(updates, &mut *tx)
-            .await?;
-
-        tx.commit().await?;
         Ok(())
     }
     pub(crate) fn vessel_catch_aggregates_impl(
         &self,
     ) -> impl Stream<Item = Result<VesselCatchAggregate>> + '_ {
+        let threshold = Utc::now().year() - 1;
         sqlx::query_as!(
             VesselCatchAggregate,
             r#"
+WITH
+    grouped_catches AS (
+        SELECT
+            v.fiskeridir_vessel_id,
+            v.orca_gear_group_id,
+            v.year,
+            SUM(v.total_living_weight) AS total_living_weight
+        FROM
+            vessel_gear_catch_aggregates v
+        WHERE
+            v.total_living_weight > 0.0
+            AND NOT EXISTS (
+                SELECT
+                    1
+                FROM
+                    vessel_yearly_groupings g
+                WHERE
+                    g.fiskeridir_vessel_id = v.fiskeridir_vessel_id
+                    AND g."year" = v."year"
+                    AND g."year" < $1
+            )
+        GROUP BY
+            v.fiskeridir_vessel_id,
+            v.orca_gear_group_id,
+            v.year
+    )
 SELECT
-    f.fiskeridir_vessel_id AS "id: FiskeridirVesselId",
-    f.total_living_weight,
-    f.gear_group_ids AS "gear_groups!: Vec<GearGroup>",
+    c.fiskeridir_vessel_id AS "id: FiskeridirVesselId",
     ANY_VALUE (a.orca_vessel_length_group_id) AS "length_group!: OrcaVesselLengthGroup",
     COALESCE(
         JSONB_AGG(
             JSONB_BUILD_OBJECT(
                 'total_living_weight',
-                v.total_living_weight,
-                'species_group_id',
-                v.species_group_id
+                c.total_living_weight,
+                'gear',
+                c.orca_gear_group_id,
+                'year',
+                c.year
             )
         ),
         '[]'
     )::TEXT AS "catches!"
 FROM
-    vessel_catch_aggregates v
-    INNER JOIN fiskeridir_vessels f ON v.fiskeridir_vessel_id = f.fiskeridir_vessel_id
-    INNER JOIN all_vessels a ON a.fiskeridir_vessel_id = f.fiskeridir_vessel_id
+    grouped_catches c
+    INNER JOIN all_vessels a ON a.fiskeridir_vessel_id = c.fiskeridir_vessel_id
 WHERE
-    f.total_living_weight > 0.0
-    AND v.total_living_weight > 0.0
-    AND a.orca_vessel_length_group_id IS NOT NULL
+    a.orca_vessel_length_group_id IS NOT NULL
 GROUP BY
-    f.fiskeridir_vessel_id
-ORDER BY
-    f.fiskeridir_vessel_id
-            "#
+    c.fiskeridir_vessel_id;
+            "#,
+            threshold
         )
         .fetch(&self.pool)
         .map_err(|e| e.into())

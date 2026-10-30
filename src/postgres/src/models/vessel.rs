@@ -14,26 +14,10 @@ use kyogre_core::{
 use serde::Deserialize;
 use unnest_insert::UnnestInsert;
 
-#[derive(Debug, Clone, UnnestInsert)]
-#[unnest_insert(
-    table_name = "vessel_catch_similarity_distances",
-    conflict = "vessel_one, vessel_two"
-)]
-pub struct VesselCatchSimilarity {
-    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
-    pub vessel_one: FiskeridirVesselId,
-    #[unnest_insert(sql_type = "BIGINT", type_conversion = "type_to_i64")]
-    pub vessel_two: FiskeridirVesselId,
-    #[unnest_insert(update)]
-    pub distance: f64,
-}
-
 #[derive(Debug, Clone, Deserialize)]
 pub struct VesselCatchAggregate {
     pub id: FiskeridirVesselId,
-    pub gear_groups: Vec<GearGroup>,
     pub length_group: OrcaVesselLengthGroup,
-    pub total_living_weight: f64,
     pub catches: String,
 }
 
@@ -478,34 +462,14 @@ impl TryFrom<VesselCatchAggregate> for kyogre_core::VesselCatchAggregate {
     fn try_from(value: VesselCatchAggregate) -> Result<Self, Self::Error> {
         let VesselCatchAggregate {
             id,
-            total_living_weight,
             catches,
-            gear_groups,
             length_group,
         } = value;
 
         Ok(Self {
             id,
-            total_living_weight,
             catches: serde_json::from_str(&catches)?,
-            gear_groups,
             length_group,
         })
-    }
-}
-
-impl From<kyogre_core::VesselCatchSimilarity> for VesselCatchSimilarity {
-    fn from(value: kyogre_core::VesselCatchSimilarity) -> Self {
-        let kyogre_core::VesselCatchSimilarity {
-            vessel_one,
-            vessel_two,
-            distance,
-        } = value;
-
-        Self {
-            vessel_one,
-            vessel_two,
-            distance,
-        }
     }
 }
