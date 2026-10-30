@@ -1,11 +1,9 @@
-use std::collections::{HashMap, HashSet};
-
 use crate::*;
 use async_trait::async_trait;
 use chrono::{Duration, NaiveTime};
-use fiskeridir_rs::SpeciesGroup;
 use machine::Schedule;
 use orca_core::Environment;
+use std::collections::{HashMap, HashSet};
 use tracing::error;
 
 pub struct ScrapeState;
@@ -28,13 +26,13 @@ impl machine::State for ScrapeState {
             .await
         {
             Ok(a) => {
-                let updates = calculate_vessel_similarities(&a);
+                let updates = calculate_vessel_grouping(&a);
                 if let Err(e) = shared_state
                     .vessel_aggregates
-                    .update_vessel_catch_similarities(updates)
+                    .update_vessel_yearly_grouping(updates)
                     .await
                 {
-                    error!("failed to update vessel catch similarities: {e:?}");
+                    error!("failed to update vessel yearly groupings: {e:?}");
                 }
             }
             Err(e) => {
@@ -59,84 +57,82 @@ impl machine::State for ScrapeState {
         }
     }
 }
+fn calculate_vessel_grouping(vessels: &[VesselCatchAggregate]) -> Vec<UpdateVesselYearlyGrouping> {
+    let mut updates = Vec::new();
 
-fn calculate_vessel_similarities(vessels: &[VesselCatchAggregate]) -> Vec<VesselCatchSimilarity> {
-    let mut similarities = Vec::new();
+    for v in vessels {
+        let composition = Composition::new(&v.catches);
+        for year in &composition.years {
+            let garn = composition.val(OrcaGearGroup::Garn, *year);
+            let line = composition.val(OrcaGearGroup::Line, *year);
+            let not = composition.val(OrcaGearGroup::Not, *year);
+            let traal_pelagisk = composition.val(OrcaGearGroup::TraalPelagisk, *year);
+            let traal_hvitfisk = composition.val(OrcaGearGroup::TraalHvitfisk, *year);
+            let traal_reke = composition.val(OrcaGearGroup::TraalReke, *year);
+            let snurrevad = composition.val(OrcaGearGroup::Snurrevad, *year);
+            let teine = composition.val(OrcaGearGroup::Teine, *year);
 
-    for i in 0..vessels.len() {
-        for j in (i + 1)..vessels.len() {
-            let vessel_one = &vessels[i];
-            let vessel_two = &vessels[j];
+            let grouping = if garn + line >= 0.7 {
+                VesselGrouping::LineOgGarn
+            } else if traal_pelagisk >= 0.8 {
+                VesselGrouping::TraalPelagisk
+            } else if not >= 0.8 {
+                VesselGrouping::NotPelagisk
+            } else if not + traal_pelagisk >= 0.8 {
+                VesselGrouping::TraalNotPelagisk
+            } else if traal_hvitfisk >= 0.85 && traal_reke <= 0.1 {
+                VesselGrouping::TraalHvitfisk
+            } else if traal_reke >= 0.85 {
+                VesselGrouping::TraalReke
+            } else if traal_reke + traal_hvitfisk >= 0.75 {
+                VesselGrouping::TraalHvitfiskReke
+            } else if snurrevad + not >= 0.7 {
+                VesselGrouping::Snurrevad
+            } else if teine >= 0.7 {
+                VesselGrouping::Teine
+            } else if snurrevad + line + garn + teine >= 0.7 {
+                VesselGrouping::Konvensjonelle
+            } else {
+                VesselGrouping::Annet
+            };
 
-            let mut g1 = vessel_one.gear_groups.clone();
-            let mut g2 = vessel_two.gear_groups.clone();
-            g1.sort();
-            g2.sort();
-
-            if vessel_one.length_group != vessel_two.length_group || g1 != g2 {
-                continue;
-            }
-
-            let distance = jensen_shannon_distance(vessel_one, vessel_two);
-
-            if distance <= 0.4 {
-                similarities.push(VesselCatchSimilarity {
-                    vessel_one: vessel_one.id,
-                    vessel_two: vessel_two.id,
-                    distance,
-                });
-            }
+            updates.push(UpdateVesselYearlyGrouping {
+                fiskeridir_vessel_id: v.id,
+                grouping,
+                year: *year,
+                length_group: v.length_group,
+            });
         }
     }
 
-    similarities
+    updates
 }
-// https://en.wikipedia.org/wiki/Jensen%E2%80%93Shannon_divergence
-fn jensen_shannon_distance(
-    vessel_one: &VesselCatchAggregate,
-    vessel_two: &VesselCatchAggregate,
-) -> f64 {
-    let catch_comp_1 = composition(vessel_one);
-    let catch_comp_2 = composition(vessel_two);
 
-    let species = catch_comp_1
-        .keys()
-        .cloned()
-        .chain(catch_comp_2.keys().cloned())
-        .collect::<HashSet<_>>();
+struct Composition {
+    vals: HashMap<(OrcaGearGroup, u32), f64>,
+    years: HashSet<u32>,
+}
+impl Composition {
+    fn new(catches: &[VesselYearlyGearCatch]) -> Self {
+        let total: HashMap<u32, f64> = catches.iter().fold(HashMap::new(), |mut acc, v| {
+            *acc.entry(v.year).or_insert(0.0) += v.total_living_weight;
+            acc
+        });
 
-    let mut kl_p_m = 0.0;
-    let mut kl_q_m = 0.0;
-
-    for species_group in species {
-        let p_i = catch_comp_1.get(&species_group).copied().unwrap_or(0.0);
-        let q_i = catch_comp_2.get(&species_group).copied().unwrap_or(0.0);
-
-        let m_i = (p_i + q_i) / 2.0;
-
-        if p_i > 0.0 {
-            kl_p_m += p_i * (p_i / m_i).ln();
-        }
-
-        if q_i > 0.0 {
-            kl_q_m += q_i * (q_i / m_i).ln();
+        Self {
+            vals: catches
+                .iter()
+                .map(|c| {
+                    (
+                        (c.gear, c.year),
+                        c.total_living_weight / total.get(&c.year).unwrap(),
+                    )
+                })
+                .collect(),
+            years: total.keys().copied().collect(),
         }
     }
-
-    let divergence = 0.5 * (kl_p_m + kl_q_m);
-
-    divergence.sqrt()
-}
-
-fn composition(vessel: &VesselCatchAggregate) -> HashMap<SpeciesGroup, f64> {
-    vessel
-        .catches
-        .iter()
-        .map(|catch| {
-            (
-                catch.species_group_id,
-                catch.total_living_weight / vessel.total_living_weight,
-            )
-        })
-        .collect()
+    fn val(&self, gear: OrcaGearGroup, year: u32) -> f64 {
+        *self.vals.get(&(gear, year)).unwrap_or(&0.0)
+    }
 }

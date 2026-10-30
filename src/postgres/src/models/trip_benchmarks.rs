@@ -38,6 +38,8 @@ pub struct AverageVesselsBenchmarks {
     pub own_trip_duration_seconds: Option<i64>,
 
     pub per_vessel: Option<String>,
+
+    pub vessel_groupings: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, UnnestUpdate)]

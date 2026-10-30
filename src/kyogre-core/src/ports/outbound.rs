@@ -253,9 +253,9 @@ pub trait MatrixCacheVersion: Send + Sync {
 #[async_trait]
 pub trait VesselAggregate: Send + Sync {
     async fn vessel_catch_aggregates(&self) -> CoreResult<Vec<VesselCatchAggregate>>;
-    async fn update_vessel_catch_similarities(
+    async fn update_vessel_yearly_grouping(
         &self,
-        updates: Vec<VesselCatchSimilarity>,
+        updates: Vec<UpdateVesselYearlyGrouping>,
     ) -> CoreResult<()>;
 }
 
