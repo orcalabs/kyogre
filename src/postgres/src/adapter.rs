@@ -102,9 +102,17 @@ impl PostgresAdapter {
             }
         }
 
-        if environment == Environment::Test {
-            opts = opts.ssl_mode(PgSslMode::Disable);
-        }
+        match environment {
+            Environment::Production | Environment::Development => {
+                opts = opts.ssl_mode(PgSslMode::Require);
+            }
+            Environment::OnPremise | Environment::Local => {
+                opts = opts.ssl_mode(PgSslMode::Prefer);
+            }
+            Environment::Test => {
+                opts = opts.ssl_mode(PgSslMode::Disable);
+            }
+        };
 
         let no_plan_cache_pool = match environment {
             Environment::Development
