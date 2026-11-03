@@ -1,4 +1,4 @@
-FROM postgis/postgis:17-3.5-alpine
+FROM postgis/postgis:18-3.6-alpine
 
 ARG MIGRATIONS_DIR_PATH
 ARG TEST_MIGRATIONS_DIR_PATH

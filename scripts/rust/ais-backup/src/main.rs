@@ -1,6 +1,11 @@
-use std::io::{Cursor, Write};
+use std::{
+    fs::File,
+    future::ready,
+    io::{Cursor, Write},
+    path::PathBuf,
+};
 
-use anyhow::{Context, Error, Result, bail};
+use anyhow::{Context, Error, Result, anyhow, bail};
 use azure_core::{
     credentials::Secret,
     http::{RequestContent, Url},
@@ -9,6 +14,7 @@ use azure_identity::ClientSecretCredential;
 use azure_storage_blob::{BlobContainerClient, models::BlobClientUploadOptions};
 use chrono::{DateTime, Duration, SecondsFormat, Utc};
 use csv::{Writer, WriterBuilder};
+use futures::TryStreamExt;
 use serde::{Deserialize, Serialize};
 use sqlx::{
     ConnectOptions, PgPool,
@@ -24,6 +30,15 @@ pub struct Manifest {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let backup_dir = std::env::var("LOCAL_BACKUP_DIR")
+        .ok()
+        .map(|v| {
+            let path = PathBuf::from(&v);
+            std::fs::create_dir_all(&path).context(v)?;
+            Ok::<_, Error>(path)
+        })
+        .transpose()?;
+
     let pool = create_postgres_pool().await?;
     let container = create_azure_container_client()?;
 
@@ -75,7 +90,8 @@ FROM
         let num_vessels = vessels.len();
 
         let (vessels_tx, vessels_rx) = async_channel::bounded(num_vessels);
-        let (writer_tx, writer_rx) = async_channel::bounded(1024);
+        let (historic_tx, historic_rx) = tokio::sync::oneshot::channel();
+        let (positions_tx, positions_rx) = async_channel::bounded(1024);
 
         for vessel in vessels {
             vessels_tx.try_send(vessel).unwrap();
@@ -84,10 +100,44 @@ FROM
 
         let mut set = JoinSet::new();
 
-        for _ in 0..8 {
-            let vessels_rx = vessels_rx.clone();
-            let writer_tx = writer_tx.clone();
+        set.spawn({
             let pool = pool.clone();
+            async move {
+                let mut historic_writer = csv_writer();
+
+                sqlx::query_as!(
+                    AisVesselHistoric,
+                    r#"
+SELECT
+    *
+FROM
+    ais_vessels_historic
+WHERE
+    message_timestamp >= $1
+    AND message_timestamp < $2
+ORDER BY
+    mmsi,
+    message_timestamp
+                    "#,
+                    start,
+                    end,
+                )
+                .fetch(&pool)
+                .map_err(Error::from)
+                .try_for_each(|v| ready(historic_writer.serialize(v).map_err(Error::from)))
+                .await
+                .with_context(|| format!("ais_vessels_historic, start: {start}, end: {end}"))?;
+
+                historic_tx
+                    .send(historic_writer)
+                    .map_err(|_| anyhow!("failed to send historic data through oneshot"))
+            }
+        });
+
+        for _ in 0..6 {
+            let pool = pool.clone();
+            let vessels_rx = vessels_rx.clone();
+            let positions_tx = positions_tx.clone();
             set.spawn(async move {
                 while let Ok(vessel) = vessels_rx.try_recv() {
                     let positions = sqlx::query_as!(
@@ -115,53 +165,23 @@ WHERE
                         )
                     })?;
 
-                    let historic = sqlx::query_as!(
-                        AisVesselHistoric,
-                        r#"
-SELECT
-    *
-FROM
-    ais_vessels_historic
-WHERE
-    mmsi = $1
-    AND message_timestamp >= $2
-    AND message_timestamp < $3
-                        "#,
-                        vessel.mmsi,
-                        start,
-                        end,
-                    )
-                    .fetch_all(&pool)
-                    .await
-                    .with_context(|| {
-                        format!(
-                            "ais_vessels_historic, mmsi: {}, start: {}, end: {}",
-                            vessel.mmsi, start, end,
-                        )
-                    })?;
-
-                    writer_tx.send((vessel, positions, historic)).await?;
+                    positions_tx.send((vessel, positions)).await?;
                 }
 
                 Ok::<(), Error>(())
             });
         }
-        drop(writer_tx);
+        drop(positions_tx);
 
         let mut vessels_writer = csv_writer();
         let mut positions_writer = csv_writer();
-        let mut historic_writer = csv_writer();
         let mut processed_vessels = 0;
 
-        while let Ok((vessel, positions, historic)) = writer_rx.recv().await {
+        while let Ok((vessel, positions)) = positions_rx.recv().await {
             vessels_writer.serialize(vessel)?;
             for position in positions {
                 positions_writer.serialize(position)?;
             }
-            for historic in historic {
-                historic_writer.serialize(historic)?;
-            }
-
             processed_vessels += 1;
         }
 
@@ -172,6 +192,8 @@ WHERE
         if processed_vessels != num_vessels {
             bail!("processed {processed_vessels} vessels, but expected {num_vessels}");
         }
+
+        let historic_writer = historic_rx.await?;
 
         let mut zip = ZipWriter::new(Cursor::new(vec![]));
 
@@ -189,6 +211,12 @@ WHERE
         let data = zip.finish()?.into_inner();
 
         let md5_checksum = md5::compute(&data);
+
+        if let Some(dir) = &backup_dir {
+            let mut file = File::create(dir.join(&archive_name))?;
+            file.write_all(&data)?;
+            file.sync_all()?;
+        }
 
         blob_client
             .upload(
