@@ -1,5 +1,6 @@
 use crate::*;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_repr::Deserialize_repr;
 use strum::Display;
@@ -40,6 +41,24 @@ pub struct PerVesselStats {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+pub struct PerTripStats {
+    pub trip_id: TripId,
+    pub start_timestamp: DateTime<Utc>,
+    pub end_timestamp: DateTime<Utc>,
+    pub weight_per_hour: Option<f64>,
+    pub weight_per_distance: Option<f64>,
+    pub living_weight: Option<f64>,
+    pub fuel_consumption_liter: Option<f64>,
+    pub weight_per_fuel_liter: Option<f64>,
+    pub catch_value_per_fuel_liter: Option<f64>,
+    pub num_hauls: Option<u64>,
+    pub value_nok: Option<f64>,
+    pub trip_duration_seconds: Option<u64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct AverageVesselsBenchmarks {
     pub lowest_fuel_consumption_liter: Option<f64>,
     pub highest_weight_per_hour: Option<f64>,
@@ -56,6 +75,7 @@ pub struct AverageVesselsBenchmarks {
     pub own: Stats,
 
     pub per_vessel: Vec<PerVesselStats>,
+    pub own_trip_stats: Vec<PerTripStats>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
