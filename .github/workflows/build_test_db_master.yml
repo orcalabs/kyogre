@@ -15,7 +15,7 @@ jobs:
 
     services:
       postgres:
-        image: postgis/postgis:17-3.5-alpine
+        image: postgis/postgis:18-3.6-alpine
         ports:
           - 5432:5432
         env:
@@ -44,13 +44,13 @@ jobs:
         with:
           tool: sqlx-cli
 
-      - name: install postgres 17
+      - name: install postgres 18
         if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'
         run: |
           sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
           sudo apt update
-          sudo apt install postgresql-client-17
+          sudo apt install postgresql-client-18
 
       - name: Setup rust
         if: steps.filter.outputs.migrations == 'true' || steps.filter.outputs.test_migrations == 'true'

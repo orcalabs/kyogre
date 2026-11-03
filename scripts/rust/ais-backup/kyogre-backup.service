@@ -6,5 +6,6 @@ After=network-online.target
 [Service]
 Type=oneshot
 User=markus
+Environment="LOCAL_BACKUP_DIR=/home/markus/Documents/orca/kyogre/scripts/rust/ais-backup/data"
 EnvironmentFile=/home/markus/Documents/orca/kyogre/scripts/rust/ais-backup/secrets.env
 ExecStart=/home/markus/.cargo/bin/ais-backup

@@ -31,6 +31,7 @@ dependencies = [
  "azure_storage_blob",
  "chrono",
  "csv",
+ "futures",
  "md5",
  "serde",
  "serde_json",

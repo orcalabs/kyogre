@@ -46,6 +46,8 @@ AZURE_CLIENT_SECRET=your-client-secret-value
 
 Update the `User=`, `EnvironmentFile=`, and `ExecStart=` values in `kyogre-backup.service` to match your Linux username and absolute repository path.
 
+If you want a local backup, edit the `LOCAL_BACKUP_DIR` `Environment` variable to your desired path, otherwise, remove it.
+
 Create system-level symlinks:
 
 ```bash
