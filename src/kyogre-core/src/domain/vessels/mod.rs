@@ -50,11 +50,12 @@ pub enum VesselGrouping {
     TraalHvitfiskReke = 4,
     TraalNotPelagisk = 5,
     NotPelagisk = 6,
-    Teine = 7,
-    Snurrevad = 8,
-    LineOgGarn = 9,
-    Konvensjonelle = 10,
-    Annet = 11,
+    NotHvitfisk = 7,
+    Teine = 8,
+    Snurrevad = 9,
+    LineOgGarn = 10,
+    Konvensjonelle = 11,
+    Annet = 12,
 }
 
 #[repr(i32)]
@@ -84,10 +85,11 @@ pub enum OrcaGearGroup {
     TraalHvitfisk = 3,
     Teine = 4,
     Snurrevad = 5,
-    Not = 6,
-    Garn = 7,
-    Line = 8,
-    Annet = 9,
+    NotPelagisk = 6,
+    NotHvitfisk = 7,
+    Garn = 8,
+    Line = 9,
+    Annet = 10,
 }
 
 #[repr(i32)]

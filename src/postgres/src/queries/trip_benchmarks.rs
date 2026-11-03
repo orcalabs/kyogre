@@ -7,7 +7,7 @@ use kyogre_core::{
     AverageCarbonIntensityQuery, AverageEeoiQuery, AverageTripBenchmarks,
     AverageTripBenchmarksQuery, BarentswatchUserId, CarbonIntensityQuery,
     DIESEL_LITER_CARBON_FACTOR, DateRange, EeoiQuery, EmptyVecToNone, EngineType,
-    FiskeridirVesselId, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi,
+    FiskeridirVesselId, METERS_TO_NAUTICAL_MILES, MIN_EEOI_DISTANCE, Mmsi, PerTripStats,
     PerVesselBenchmarkParams, PerVesselStats, ProcessingStatus, TripBenchmarksQuery, TripId,
     TripWithBenchmark,
 };
@@ -90,50 +90,6 @@ WHERE
             .similar_or_following_vessels(user_id, call_sign, query)
             .await?;
 
-        let own_eeoi = self
-            .eeoi_impl(&EeoiQuery {
-                call_sign: call_sign.clone(),
-                range: query.range.clone().into(),
-                species_group_ids: query.species_group_ids.clone(),
-            })
-            .await?;
-
-        let own_carbon_intensity = self
-            .carbon_intensity_impl(&CarbonIntensityQuery {
-                call_sign: call_sign.clone(),
-                range: query.range.clone().into(),
-                species_group_ids: query.species_group_ids.clone(),
-            })
-            .await?;
-
-        let average_eeoi = self
-            .average_eeoi_impl(
-                Some(call_sign),
-                &AverageEeoiQuery {
-                    range: query.range.clone().into(),
-                    gear_groups: vec![],
-                    length_group: None,
-                    vessel_ids: vessels.clone(),
-                    species_group_id: None,
-                    species_group_ids: query.species_group_ids.clone(),
-                },
-            )
-            .await?;
-
-        let average_carbon_intensity = self
-            .average_carbon_intensity_impl(
-                Some(call_sign),
-                &AverageCarbonIntensityQuery {
-                    range: query.range.clone().into(),
-                    gear_groups: vec![],
-                    length_group: None,
-                    vessel_ids: vessels.clone(),
-                    species_group_id: None,
-                    species_group_ids: query.species_group_ids.clone(),
-                },
-            )
-            .await?;
-
         let years: Vec<i32> = (query.range.start().year()..=query.range.end().year()).collect();
 
         let out = sqlx::query_as!(
@@ -147,6 +103,85 @@ WITH
             all_vessels
         WHERE
             call_sign = $3
+    ),
+    own_trips AS (
+        SELECT
+            trip_id,
+            start_timestamp,
+            stop_timestamp,
+            period,
+            period_precision,
+            benchmark_fuel_consumption_liter,
+            landing_total_living_weight,
+            distance,
+            landing_total_price_for_fisher,
+            haul_ids,
+            price_for_fisher_is_estimated,
+            benchmark_percentage_of_trip_covered_by_measurements
+        FROM
+            trips_detailed
+        WHERE
+            stop_timestamp >= $1
+            AND stop_timestamp <= $2
+            AND fiskeridir_vessel_id = (
+                SELECT
+                    fiskeridir_vessel_id
+                FROM
+                    logged_in_vessel_id
+            )
+            AND (
+                $4::INT[] IS NULL
+                OR landing_two_highest_species_group_quantum && $4
+            )
+    ),
+    per_trip AS (
+        SELECT
+            COALESCE(
+                JSONB_AGG(
+                    JSONB_BUILD_OBJECT(
+                        'tripId',
+                        trip_id,
+                        'startTimestamp',
+                        start_timestamp,
+                        'endTimestamp',
+                        stop_timestamp,
+                        'fuelConsumptionLiter',
+                        benchmark_fuel_consumption_liter,
+                        'weightPerHour',
+                        landing_total_living_weight / NULLIF(
+                            (
+                                EXTRACT(
+                                    EPOCH
+                                    FROM
+                                        UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
+                                ) / (60 * 60)
+                            ),
+                            0.0
+                        ),
+                        'weightPerDistance',
+                        landing_total_living_weight / NULLIF((distance * $6), 0.0),
+                        'weightPerFuelLiter',
+                        landing_total_living_weight / NULLIF(benchmark_fuel_consumption_liter, 0.0),
+                        'catchValuePerFuelLiter',
+                        landing_total_price_for_fisher / NULLIF(benchmark_fuel_consumption_liter, 0.0),
+                        'livingWeight',
+                        landing_total_living_weight,
+                        'valueNok',
+                        landing_total_price_for_fisher,
+                        'numHauls',
+                        CARDINALITY(haul_ids),
+                        'tripDurationSeconds',
+                        EXTRACT(
+                            EPOCH
+                            FROM
+                                UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
+                        )::BIGINT
+                    )
+                ),
+                '[]'
+            )::TEXT AS per_trip
+        FROM
+            own_trips
     ),
     logged_in_user_values AS (
         SELECT
@@ -181,6 +216,20 @@ WITH
                         UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
                 )
             )::BIGINT AS own_trip_duration_seconds,
+            CASE
+                WHEN SUM(landing_total_living_weight) > 0
+                AND SUM(distance) > $8 THEN (SUM(benchmark_fuel_consumption_liter) * $9)::DOUBLE PRECISION / (
+                    SUM(landing_total_living_weight)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+                )
+                ELSE NULL
+            END AS own_carbon_intensity,
+            CASE
+                WHEN SUM(landing_total_living_weight) > 0
+                AND SUM(distance) > $8 THEN (SUM(benchmark_fuel_consumption_liter) * $9)::DOUBLE PRECISION / (
+                    SUM(landing_total_living_weight * distance * $6)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+                )
+                ELSE NULL
+            END AS own_eeoi,
             (
                 SELECT
                     COALESCE(ARRAY_AGG(g.description), '{}')
@@ -193,20 +242,7 @@ WITH
                     v.year = ANY ($7::INT[])
             ) AS vessel_groupings
         FROM
-            trips_detailed
-        WHERE
-            stop_timestamp >= $1
-            AND stop_timestamp <= $2
-            AND fiskeridir_vessel_id = (
-                SELECT
-                    fiskeridir_vessel_id
-                FROM
-                    logged_in_vessel_id
-            )
-            AND (
-                $4::INT[] IS NULL
-                OR landing_two_highest_species_group_quantum && $4
-            )
+            own_trips
     ),
     other_vessel_trips AS (
         SELECT
@@ -273,7 +309,45 @@ WITH
                     FROM
                         UPPER(COALESCE(period_precision, period)) - LOWER(COALESCE(period_precision, period))
                 )::BIGINT
-            ) AS trip_duration_seconds
+            ) AS trip_duration_seconds,
+            CASE
+                WHEN SUM(landing_total_living_weight) > 0
+                AND SUM(distance) > $8 THEN (
+                    SUM(
+                        CASE
+                            WHEN fiskeridir_vessel_id = (
+                                SELECT
+                                    fiskeridir_vessel_id
+                                FROM
+                                    logged_in_vessel_id
+                            ) THEN benchmark_fuel_consumption_liter
+                            ELSE benchmark_fuel_consumption_liter_estimated_only
+                        END
+                    ) * $9
+                )::DOUBLE PRECISION / (
+                    SUM(landing_total_living_weight)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+                )
+                ELSE NULL
+            END AS carbon_intensity,
+            CASE
+                WHEN SUM(landing_total_living_weight) > 0
+                AND SUM(distance) > $8 THEN (
+                    SUM(
+                        CASE
+                            WHEN fiskeridir_vessel_id = (
+                                SELECT
+                                    fiskeridir_vessel_id
+                                FROM
+                                    logged_in_vessel_id
+                            ) THEN benchmark_fuel_consumption_liter
+                            ELSE benchmark_fuel_consumption_liter_estimated_only
+                        END
+                    ) * $9
+                )::DOUBLE PRECISION / (
+                    SUM(landing_total_living_weight * distance * $6)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
+                )
+                ELSE NULL
+            END AS eeoi
         FROM
             trips_detailed
         WHERE
@@ -307,6 +381,52 @@ WITH
             AVG(value_nok) AS average_value_nok
         FROM
             other_vessel_trips
+    ),
+    ranked_data AS (
+        SELECT
+            carbon_intensity,
+            eeoi,
+            percent_rank() OVER (
+                ORDER BY
+                    carbon_intensity
+            ) AS percent_carbon_intensity,
+            percent_rank() OVER (
+                ORDER BY
+                    eeoi
+            ) AS percent_eeoi
+        FROM
+            other_vessel_trips
+    ),
+    average_carbon_intensity_and_eeoi AS (
+        SELECT
+            (
+                SELECT
+                    AVG(carbon_intensity) AS average_carbon_intensity
+                FROM
+                    ranked_data
+                WHERE
+                    percent_carbon_intensity BETWEEN 0.05 AND 0.95
+                    OR (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            other_vessel_trips
+                    ) <= 2
+            ) AS average_carbon_intensity,
+            (
+                SELECT
+                    AVG(eeoi) AS average_eeoi
+                FROM
+                    ranked_data
+                WHERE
+                    percent_eeoi BETWEEN 0.05 AND 0.95
+                    OR (
+                        SELECT
+                            COUNT(*)
+                        FROM
+                            other_vessel_trips
+                    ) <= 2
+            ) AS average_eeoi
     ),
     other_vessel_stats AS (
         SELECT
@@ -348,6 +468,8 @@ FROM
     other_vessels o
     INNER JOIN logged_in_user_values l ON TRUE
     INNER JOIN other_vessel_stats v ON TRUE
+    INNER JOIN per_trip p ON TRUE
+    INNER JOIN average_carbon_intensity_and_eeoi c ON TRUE
             "#,
             query.range.start(),
             query.range.end(),
@@ -355,7 +477,9 @@ FROM
             &query.species_group_ids as &Option<Vec<SpeciesGroup>>,
             &vessels as &[FiskeridirVesselId],
             METERS_TO_NAUTICAL_MILES,
-            &years
+            &years,
+            MIN_EEOI_DISTANCE,
+            DIESEL_LITER_CARBON_FACTOR,
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -370,7 +494,18 @@ FROM
                 Ok(None)
             };
 
+        let own_trip_stats: std::result::Result<Option<Vec<PerTripStats>>, serde_json::Error> =
+            if let Some(a) = &out
+                && let Some(p) = &a.per_trip
+            {
+                let stats: Vec<PerTripStats> = serde_json::from_str(p)?;
+                Ok(Some(stats))
+            } else {
+                Ok(None)
+            };
+
         let per_vessel = per_vessel?.unwrap_or_default();
+        let own_trip_stats = own_trip_stats?.unwrap_or_default();
 
         Ok(out.map(|a| kyogre_core::AverageVesselsBenchmarks {
             lowest_fuel_consumption_liter: a.lowest_fuel_consumption_liter,
@@ -388,18 +523,22 @@ FROM
                 weight_per_fuel_liter: a.own_sum_weight_per_fuel_liter,
                 catch_value_per_fuel_liter: a.own_sum_catch_value_per_fuel_liter,
                 living_weight: a.own_sum_living_weight,
-                eeoi: own_eeoi,
-                carbon_intensity: own_carbon_intensity,
-                fui: own_carbon_intensity.map(|a| a / DIESEL_LITER_CARBON_FACTOR),
+                eeoi: a.own_eeoi,
+                carbon_intensity: a.own_carbon_intensity,
+                fui: a
+                    .own_carbon_intensity
+                    .map(|a| a / DIESEL_LITER_CARBON_FACTOR),
                 num_trips: a.own_num_trips.map(|t| t as u64),
                 num_hauls: a.own_num_hauls.map(|t| t as u64),
                 value_nok: a.own_value_nok,
                 trip_duration_seconds: a.own_trip_duration_seconds.map(|t| t as u64),
             },
             all: kyogre_core::Stats {
-                eeoi: average_eeoi,
-                carbon_intensity: average_carbon_intensity,
-                fui: average_carbon_intensity.map(|a| a / DIESEL_LITER_CARBON_FACTOR),
+                eeoi: a.average_eeoi,
+                carbon_intensity: a.average_carbon_intensity,
+                fui: a
+                    .average_carbon_intensity
+                    .map(|a| a / DIESEL_LITER_CARBON_FACTOR),
                 fuel_consumption_liter: a.average_fuel_consumption_liter,
                 weight_per_hour: a.average_weight_per_hour,
                 weight_per_distance: a.average_weight_per_distance,
@@ -413,6 +552,7 @@ FROM
             },
             per_vessel,
             vessel_groupings: a.vessel_groupings,
+            own_trip_stats,
         }))
     }
     pub(crate) async fn add_benchmark_output(

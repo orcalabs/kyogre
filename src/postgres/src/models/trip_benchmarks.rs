@@ -31,13 +31,18 @@ pub struct AverageVesselsBenchmarks {
     pub average_num_hauls: Option<i64>,
     pub average_value_nok: Option<f64>,
     pub average_trip_duration_seconds: Option<i64>,
+    pub average_eeoi: Option<f64>,
+    pub average_carbon_intensity: Option<f64>,
 
     pub own_num_trips: Option<i64>,
     pub own_num_hauls: Option<i64>,
     pub own_value_nok: Option<f64>,
     pub own_trip_duration_seconds: Option<i64>,
+    pub own_carbon_intensity: Option<f64>,
+    pub own_eeoi: Option<f64>,
 
     pub per_vessel: Option<String>,
+    pub per_trip: Option<String>,
 
     pub vessel_groupings: Option<Vec<String>>,
 }

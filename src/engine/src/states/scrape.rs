@@ -65,7 +65,8 @@ fn calculate_vessel_grouping(vessels: &[VesselCatchAggregate]) -> Vec<UpdateVess
         for year in &composition.years {
             let garn = composition.val(OrcaGearGroup::Garn, *year);
             let line = composition.val(OrcaGearGroup::Line, *year);
-            let not = composition.val(OrcaGearGroup::Not, *year);
+            let not_pelagisk = composition.val(OrcaGearGroup::NotPelagisk, *year);
+            let not_hvitfisk = composition.val(OrcaGearGroup::NotHvitfisk, *year);
             let traal_pelagisk = composition.val(OrcaGearGroup::TraalPelagisk, *year);
             let traal_hvitfisk = composition.val(OrcaGearGroup::TraalHvitfisk, *year);
             let traal_reke = composition.val(OrcaGearGroup::TraalReke, *year);
@@ -76,9 +77,11 @@ fn calculate_vessel_grouping(vessels: &[VesselCatchAggregate]) -> Vec<UpdateVess
                 VesselGrouping::LineOgGarn
             } else if traal_pelagisk >= 0.8 {
                 VesselGrouping::TraalPelagisk
-            } else if not >= 0.8 {
+            } else if not_pelagisk >= 0.8 {
                 VesselGrouping::NotPelagisk
-            } else if not + traal_pelagisk >= 0.8 {
+            } else if not_hvitfisk >= 0.5 {
+                VesselGrouping::NotHvitfisk
+            } else if not_pelagisk + traal_pelagisk >= 0.8 {
                 VesselGrouping::TraalNotPelagisk
             } else if traal_hvitfisk >= 0.85 && traal_reke <= 0.1 {
                 VesselGrouping::TraalHvitfisk
@@ -86,7 +89,7 @@ fn calculate_vessel_grouping(vessels: &[VesselCatchAggregate]) -> Vec<UpdateVess
                 VesselGrouping::TraalReke
             } else if traal_reke + traal_hvitfisk >= 0.75 {
                 VesselGrouping::TraalHvitfiskReke
-            } else if snurrevad + not >= 0.7 {
+            } else if snurrevad + not_hvitfisk >= 0.7 {
                 VesselGrouping::Snurrevad
             } else if teine >= 0.7 {
                 VesselGrouping::Teine
