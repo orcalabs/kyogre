@@ -26,6 +26,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-channel",
+ "async-trait",
  "azure_core",
  "azure_identity",
  "azure_storage_blob",
@@ -37,6 +38,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tokio",
+ "unnest_insert",
  "zip",
 ]
 
@@ -2647,6 +2649,30 @@ name = "unicode-properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "993ad287eb20e8ba755312801cfe1413e0f25d604075863acaddca10b04c1833"
+
+[[package]]
+name = "unnest_insert"
+version = "0.16.0"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
+checksum = "d4e6a7496c467c22aa13b0f906b73dec1650e23f4368adb4dee39dedfdca4d48"
+dependencies = [
+ "async-trait",
+ "futures",
+ "sqlx",
+ "unnest_insert_derive",
+]
+
+[[package]]
+name = "unnest_insert_derive"
+version = "0.14.0"
+source = "sparse+https://cargo.cloudsmith.io/orcalabs/orcastrator/"
+checksum = "2ab4b025712ca8a569320bf7fa6b0c96e92e6e9e26be93dbf7b76b35694b09aa"
+dependencies = [
+ "futures",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
 
 [[package]]
 name = "untrusted"
