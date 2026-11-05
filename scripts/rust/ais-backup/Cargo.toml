@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+unnest_insert = { version = "0.16.0", registry = "orcalabs-orcastrator", features = [
+    "derive",
+] }
+
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0.96"
 sqlx = { version = "0.9", features = [
@@ -25,3 +29,4 @@ serde_json = "1.0.154"
 md5 = "0.8.1"
 async-channel = "2.5.0"
 futures = "0.3.34"
+async-trait = "0.1.92"
