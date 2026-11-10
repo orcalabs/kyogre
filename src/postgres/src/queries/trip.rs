@@ -1,6 +1,6 @@
 use crate::{
     PostgresAdapter,
-    error::Result,
+    error::{ObjectNotFoundSnafu, Result},
     models::{
         CurrentTrip, NewTrip, NewTripAssemblerConflict, NewTripAssemblerLogEntry, NewTripReturning,
         Trip, TripAisVmsPosition, TripAndSucceedingEventsErs, TripAndSucceedingEventsLandings,
@@ -13,10 +13,10 @@ use fiskeridir_rs::{
 };
 use futures::{Stream, TryStreamExt};
 use kyogre_core::{
-    AisVmsPosition, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack, Ordering,
-    PrecisionOutcome, ProcessingStatus, TripAssemblerId, TripAssemblerProcessingId, TripId,
-    TripPositionLayerOutput, TripSearchTimestamp, TripSet, TripSorting, TripUpdate,
-    TripsConflictStrategy, TripsQuery, VesselEventType,
+    AisVmsPosition, BarentswatchUserId, DateRange, EarliestVmsUsedBy, FiskeridirVesselId, HasTrack,
+    Object, Ordering, PrecisionOutcome, ProcessingStatus, TripAssemblerId,
+    TripAssemblerProcessingId, TripId, TripPositionLayerOutput, TripSearchTimestamp, TripSet,
+    TripSorting, TripUpdate, TripsConflictStrategy, TripsQuery, VesselEventType,
 };
 use sqlx::postgres::types::PgRange;
 use std::collections::HashSet;
@@ -29,6 +29,165 @@ pub(crate) enum InvalidateTripPositionsTripId<'a> {
 }
 
 impl PostgresAdapter {
+    pub(crate) async fn try_to_connect_trip_fuel_to_trips_impl(&self) -> Result<()> {
+        sqlx::query!(
+            r#"
+WITH
+    updated AS (
+        UPDATE trip_fuel f
+        SET
+            trip_id = t.trip_id
+        FROM
+            trips t
+        WHERE
+            f.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+            AND f.trip_id IS NULL
+            AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (t.period, f.period) >= 0.8
+        RETURNING
+            f.trip_id,
+            fuel_liter_used
+    )
+UPDATE trips_detailed t
+SET
+    trip_fuel_liter_used = u.fuel_liter_used
+FROM
+    updated u
+WHERE
+    t.trip_id = u.trip_id
+            "#
+        )
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+    pub(crate) async fn update_trip_fuel_impl(
+        &self,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+        trip_id: TripId,
+        update: &kyogre_core::UpdateTrip,
+    ) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        let rows_affected = if let Some(fuel_liter_used) = update.fuel_liter_used {
+            let out = sqlx::query!(
+                r#"
+WITH
+    trip AS (
+        SELECT
+            trip_id,
+            fiskeridir_vessel_id,
+            "period"
+        FROM
+            trips
+        WHERE
+            fiskeridir_vessel_id = (
+                SELECT
+                    fiskeridir_vessel_id
+                FROM
+                    all_vessels
+                WHERE
+                    call_sign = $1
+            )
+            AND trip_id = $2
+    ),
+    updated AS (
+        INSERT INTO
+            trip_fuel (
+                trip_id,
+                period,
+                fiskeridir_vessel_id,
+                barentswatch_user_id,
+                fuel_liter_used
+            )
+        SELECT
+            trip_id,
+            period,
+            fiskeridir_vessel_id,
+            $3,
+            $4
+        FROM
+            trip
+        ON CONFLICT (trip_id) DO UPDATE
+        SET
+            fuel_liter_used = EXCLUDED.fuel_liter_used,
+            fiskeridir_vessel_id = EXCLUDED.fiskeridir_vessel_id,
+            barentswatch_user_id = EXCLUDED.barentswatch_user_id
+        RETURNING
+            trip_id,
+            fuel_liter_used
+    )
+UPDATE trips_detailed t
+SET
+    trip_fuel_liter_used = u.fuel_liter_used
+FROM
+    updated u
+WHERE
+    t.trip_id = u.trip_id
+            "#,
+                call_sign.as_ref(),
+                trip_id as TripId,
+                user_id as BarentswatchUserId,
+                fuel_liter_used
+            )
+            .execute(&mut *tx)
+            .await?;
+
+            out.rows_affected()
+        } else {
+            let out = sqlx::query!(
+                r#"
+WITH
+    trip AS (
+        SELECT
+            trip_id
+        FROM
+            trips
+        WHERE
+            fiskeridir_vessel_id = (
+                SELECT
+                    fiskeridir_vessel_id
+                FROM
+                    all_vessels
+                WHERE
+                    call_sign = $1
+            )
+            AND trip_id = $2
+    ),
+    deleted AS (
+        DELETE FROM trip_fuel f USING trip t
+        WHERE
+            t.trip_id = f.trip_id
+    )
+UPDATE trips_detailed t
+SET
+    trip_fuel_liter_used = NULL
+FROM
+    trip f
+WHERE
+    t.trip_id = f.trip_id
+            "#,
+                call_sign.as_ref(),
+                trip_id as TripId
+            )
+            .execute(&mut *tx)
+            .await?;
+
+            out.rows_affected()
+        };
+
+        if rows_affected == 0 {
+            tx.rollback().await?;
+            Err(ObjectNotFoundSnafu {
+                object: Object::Trip(trip_id),
+            }
+            .build())
+        } else {
+            tx.commit().await?;
+            Ok(())
+        }
+    }
     pub(crate) async fn new_trip_assembler_processing_id_impl(
         &self,
     ) -> Result<TripAssemblerProcessingId> {
@@ -906,7 +1065,8 @@ INSERT INTO
         tra,
         has_track,
         benchmark_status,
-        first_arrival
+        first_arrival,
+        trip_fuel_liter_used
     )
 SELECT
     t.trip_id,
@@ -1124,10 +1284,12 @@ SELECT
         ELSE 1
     END AS has_track,
     $2,
-    t.first_arrival
+    t.first_arrival,
+    ANY_VALUE (tf.fuel_liter_used)
 FROM
     trips t
     INNER JOIN fiskeridir_vessels fv ON fv.fiskeridir_vessel_id = t.fiskeridir_vessel_id
+    LEFT JOIN trip_fuel tf ON t.trip_id = tf.trip_id
     LEFT JOIN vessel_events v ON t.trip_id = v.trip_id
     LEFT JOIN landings l ON l.vessel_event_id = v.vessel_event_id
     LEFT JOIN hauls h ON h.vessel_event_id = v.vessel_event_id
@@ -1163,7 +1325,8 @@ SET
     haul_gear_ids = excluded.haul_gear_ids,
     tra = excluded.tra,
     benchmark_status = excluded.benchmark_status,
-    first_arrival = excluded.first_arrival
+    first_arrival = excluded.first_arrival,
+    trip_fuel_liter_used = excluded.trip_fuel_liter_used
             "#,
             VesselLengthGroup::ElevenToFifteen as i32,
             ProcessingStatus::Unprocessed as i32,
@@ -1626,7 +1789,8 @@ SELECT
     END AS percentage_of_trip_covered_by_measurements,
     t.track_coverage,
     t.has_track AS "has_track: HasTrack",
-    t.first_arrival
+    t.first_arrival,
+    t.trip_fuel_liter_used AS "fuel_consumption_full_trip_report"
 FROM
     trips_detailed AS t
     INNER JOIN fiskeridir_vessels f ON f.fiskeridir_vessel_id = t.fiskeridir_vessel_id

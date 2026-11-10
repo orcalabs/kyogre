@@ -111,7 +111,10 @@ WITH
             stop_timestamp,
             period,
             period_precision,
-            benchmark_fuel_consumption_liter,
+            COALESCE(
+                trip_fuel_liter_used,
+                benchmark_fuel_consumption_liter
+            ) AS fuel_consumption_liter,
             landing_total_living_weight,
             distance,
             landing_total_price_for_fisher,
@@ -146,7 +149,7 @@ WITH
                         'endTimestamp',
                         stop_timestamp,
                         'fuelConsumptionLiter',
-                        benchmark_fuel_consumption_liter,
+                        fuel_consumption_liter,
                         'weightPerHour',
                         landing_total_living_weight / NULLIF(
                             (
@@ -161,9 +164,9 @@ WITH
                         'weightPerDistance',
                         landing_total_living_weight / NULLIF((distance * $6), 0.0),
                         'weightPerFuelLiter',
-                        landing_total_living_weight / NULLIF(benchmark_fuel_consumption_liter, 0.0),
+                        landing_total_living_weight / NULLIF(fuel_consumption_liter, 0.0),
                         'catchValuePerFuelLiter',
-                        landing_total_price_for_fisher / NULLIF(benchmark_fuel_consumption_liter, 0.0),
+                        landing_total_price_for_fisher / NULLIF(fuel_consumption_liter, 0.0),
                         'livingWeight',
                         landing_total_living_weight,
                         'valueNok',
@@ -185,7 +188,7 @@ WITH
     ),
     logged_in_user_values AS (
         SELECT
-            SUM(benchmark_fuel_consumption_liter) AS own_sum_fuel_consumption_liter,
+            SUM(fuel_consumption_liter) AS own_sum_fuel_consumption_liter,
             SUM(landing_total_living_weight) / NULLIF(
                 (
                     SUM(
@@ -199,8 +202,8 @@ WITH
                 0.0
             ) AS own_sum_weight_per_hour,
             SUM(landing_total_living_weight) / NULLIF(SUM((distance * $6)), 0.0) AS own_sum_weight_per_distance,
-            SUM(landing_total_living_weight) / NULLIF(SUM(benchmark_fuel_consumption_liter), 0.0) AS own_sum_weight_per_fuel_liter,
-            SUM(landing_total_price_for_fisher) / NULLIF(SUM(benchmark_fuel_consumption_liter), 0.0) AS own_sum_catch_value_per_fuel_liter,
+            SUM(landing_total_living_weight) / NULLIF(SUM(fuel_consumption_liter), 0.0) AS own_sum_weight_per_fuel_liter,
+            SUM(landing_total_price_for_fisher) / NULLIF(SUM(fuel_consumption_liter), 0.0) AS own_sum_catch_value_per_fuel_liter,
             SUM(landing_total_living_weight) AS own_sum_living_weight,
             COUNT(*)::BIGINT AS own_num_trips,
             SUM(CARDINALITY(haul_ids))::BIGINT AS own_num_hauls,
@@ -218,14 +221,14 @@ WITH
             )::BIGINT AS own_trip_duration_seconds,
             CASE
                 WHEN SUM(landing_total_living_weight) > 0
-                AND SUM(distance) > $8 THEN (SUM(benchmark_fuel_consumption_liter) * $9)::DOUBLE PRECISION / (
+                AND SUM(distance) > $8 THEN (SUM(fuel_consumption_liter) * $9)::DOUBLE PRECISION / (
                     SUM(landing_total_living_weight)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
                 )
                 ELSE NULL
             END AS own_carbon_intensity,
             CASE
                 WHEN SUM(landing_total_living_weight) > 0
-                AND SUM(distance) > $8 THEN (SUM(benchmark_fuel_consumption_liter) * $9)::DOUBLE PRECISION / (
+                AND SUM(distance) > $8 THEN (SUM(fuel_consumption_liter) * $9)::DOUBLE PRECISION / (
                     SUM(landing_total_living_weight * distance * $6)::DOUBLE PRECISION / 1000::DOUBLE PRECISION
                 )
                 ELSE NULL
@@ -254,7 +257,10 @@ WITH
                             fiskeridir_vessel_id
                         FROM
                             logged_in_vessel_id
-                    ) THEN benchmark_fuel_consumption_liter
+                    ) THEN COALESCE(
+                        trip_fuel_liter_used,
+                        benchmark_fuel_consumption_liter
+                    )
                     ELSE benchmark_fuel_consumption_liter_estimated_only
                 END
             ) AS sum_fuel_consumption_liter,
@@ -279,7 +285,10 @@ WITH
                                 fiskeridir_vessel_id
                             FROM
                                 logged_in_vessel_id
-                        ) THEN benchmark_fuel_consumption_liter
+                        ) THEN COALESCE(
+                            trip_fuel_liter_used,
+                            benchmark_fuel_consumption_liter
+                        )
                         ELSE benchmark_fuel_consumption_liter_estimated_only
                     END
                 ),
@@ -293,7 +302,10 @@ WITH
                                 fiskeridir_vessel_id
                             FROM
                                 logged_in_vessel_id
-                        ) THEN benchmark_fuel_consumption_liter
+                        ) THEN COALESCE(
+                            trip_fuel_liter_used,
+                            benchmark_fuel_consumption_liter
+                        )
                         ELSE benchmark_fuel_consumption_liter_estimated_only
                     END
                 ),
@@ -320,7 +332,10 @@ WITH
                                     fiskeridir_vessel_id
                                 FROM
                                     logged_in_vessel_id
-                            ) THEN benchmark_fuel_consumption_liter
+                            ) THEN COALESCE(
+                                trip_fuel_liter_used,
+                                benchmark_fuel_consumption_liter
+                            )
                             ELSE benchmark_fuel_consumption_liter_estimated_only
                         END
                     ) * $9
@@ -339,7 +354,10 @@ WITH
                                     fiskeridir_vessel_id
                                 FROM
                                     logged_in_vessel_id
-                            ) THEN benchmark_fuel_consumption_liter
+                            ) THEN COALESCE(
+                                trip_fuel_liter_used,
+                                benchmark_fuel_consumption_liter
+                            )
                             ELSE benchmark_fuel_consumption_liter_estimated_only
                         END
                     ) * $9

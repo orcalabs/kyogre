@@ -960,6 +960,16 @@ impl WebApiOutboundPort for PostgresAdapter {
 
 #[async_trait]
 impl WebApiInboundPort for PostgresAdapter {
+    async fn update_trip(
+        &self,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+        trip_id: TripId,
+        update: &UpdateTrip,
+    ) -> WebApiResult<()> {
+        retry(|| self.update_trip_fuel_impl(call_sign, user_id, trip_id, update)).await?;
+        Ok(())
+    }
     async fn update_user_haul(
         &self,
         call_sign: &CallSign,
@@ -1476,6 +1486,10 @@ impl UserHaulsRefresher for PostgresAdapter {
 
 #[async_trait]
 impl TripPipelineInbound for PostgresAdapter {
+    async fn try_to_connect_trip_fuel_to_trips(&self) -> CoreResult<()> {
+        self.try_to_connect_trip_fuel_to_trips_impl().await?;
+        Ok(())
+    }
     async fn new_trip_assembler_processing_id(&self) -> CoreResult<TripAssemblerProcessingId> {
         let id = self.new_trip_assembler_processing_id_impl().await?;
         Ok(id)

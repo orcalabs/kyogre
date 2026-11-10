@@ -1,4 +1,4 @@
-use crate::{BunkeringId, FuelMeasurementId, IsTimeout, UserHaulId};
+use crate::{BunkeringId, FuelMeasurementId, IsTimeout, TripId, UserHaulId};
 use chrono::{DateTime, NaiveDate, Utc};
 use fiskeridir_rs::{CallSign, OrgId};
 use snafu::{Location, Snafu};
@@ -57,6 +57,8 @@ pub enum Object {
     Org(OrgId),
     #[strum(to_string = "The vessel with call_sign '{0}' was not found")]
     Vessel(CallSign),
+    #[strum(to_string = "The trip with id '{0}' was not found")]
+    Trip(TripId),
 }
 
 #[derive(Snafu, StackError)]

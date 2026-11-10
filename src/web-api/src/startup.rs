@@ -330,6 +330,12 @@ where
                         .to(routes::v1::trip::benchmarks::per_vessel_benchmarks_avg::<T>),
                 )
                 .route(
+                    "/trip/{trip_id}",
+                    put()
+                        .guard(guard.clone())
+                        .to(routes::v1::trip::update_trip::<T>),
+                )
+                .route(
                     "/bunkering",
                     post()
                         .guard(guard.clone())

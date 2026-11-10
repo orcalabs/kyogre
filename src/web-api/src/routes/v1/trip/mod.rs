@@ -1,7 +1,7 @@
 use super::fishing_facility::FishingFacility;
 use crate::{
     error::Result,
-    extractors::OptionBwProfile,
+    extractors::{BwProfile, OptionBwProfile},
     response::{Response, ResponseOrStream, StreamResponse, ais_unfold},
     routes::v1::{ais_vms::AisVmsPosition, haul::HaulCatch},
     stream_response, *,
@@ -15,7 +15,7 @@ use fiskeridir_rs::{
 use futures::TryStreamExt;
 use kyogre_core::{
     CatchLocationId, FiskeridirVesselId, HasTrack, HaulId, OptionalDateTimeRange, Ordering,
-    Pagination, Tra, TripAssemblerId, TripId, TripSorting, Trips, TripsQuery, UserHaul,
+    Pagination, Tra, TripAssemblerId, TripId, TripSorting, Trips, TripsQuery, UpdateTrip, UserHaul,
     VesselEventType,
 };
 use oasgen::{OaSchema, oasgen};
@@ -61,6 +61,32 @@ pub struct CurrentTripPath {
 #[derive(Debug, Deserialize, OaSchema)]
 pub struct CurrentTripPositionsPath {
     pub fiskeridir_vessel_id: FiskeridirVesselId,
+}
+
+#[derive(Debug, Deserialize, OaSchema)]
+pub struct UpdateTripPath {
+    pub trip_id: TripId,
+}
+
+#[oasgen(skip(db, meilisearch), tags("Trip"))]
+#[tracing::instrument(skip(db), fields(user_id = profile.tracing_id()))]
+pub async fn update_trip<T: Database + Send + Sync + 'static>(
+    db: web::Data<T>,
+    profile: BwProfile,
+    path: Path<UpdateTripPath>,
+    body: web::Json<UpdateTrip>,
+) -> Result<Response<()>> {
+    let call_sign = profile.call_sign(db.as_ref()).await?;
+
+    db.update_trip(
+        &call_sign,
+        profile.user.id,
+        path.trip_id,
+        &body.into_inner(),
+    )
+    .await?;
+
+    Ok(Response::new(()))
 }
 
 /// Returns all trips matching the provided parameters.
@@ -155,6 +181,7 @@ pub struct Trip {
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption: Option<f64>,
     pub fuel_consumption_estimated_only: Option<f64>,
+    pub fuel_consumption_full_trip_report: Option<f64>,
     pub percentage_of_trip_covered_by_measurements: Option<f64>,
     pub track_coverage: f64,
     pub distance: Option<f64>,
@@ -314,6 +341,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             first_arrival: _,
             fuel_consumption_liter_estimated_only,
             percentage_of_trip_covered_by_measurements,
+            fuel_consumption_full_trip_report,
         } = value;
 
         let period = period_precision.unwrap_or(period);
@@ -349,6 +377,7 @@ impl From<kyogre_core::TripDetailed> for Trip {
             has_track,
             fuel_consumption_estimated_only: fuel_consumption_liter_estimated_only,
             percentage_of_trip_covered_by_measurements,
+            fuel_consumption_full_trip_report,
         }
     }
 }
