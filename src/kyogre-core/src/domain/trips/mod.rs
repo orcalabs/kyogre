@@ -33,6 +33,13 @@ pub struct TripId(i64);
 #[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
 pub struct TripAssemblerProcessingId(i64);
 
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[cfg_attr(feature = "oasgen", derive(oasgen::OaSchema))]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTrip {
+    pub fuel_liter_used: Option<f64>,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Trip {
     pub trip_id: TripId,
@@ -281,6 +288,7 @@ pub struct TripDetailed {
     pub target_species_fao_id: Option<String>,
     pub fuel_consumption_liter: Option<f64>,
     pub fuel_consumption_liter_estimated_only: Option<f64>,
+    pub fuel_consumption_full_trip_report: Option<f64>,
     pub percentage_of_trip_covered_by_measurements: Option<f64>,
     pub track_coverage: f64,
     pub has_track: HasTrack,

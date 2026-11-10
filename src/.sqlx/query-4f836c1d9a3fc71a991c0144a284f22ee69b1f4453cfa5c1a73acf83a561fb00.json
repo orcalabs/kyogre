@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    updated AS (\n        UPDATE trip_fuel f\n        SET\n            trip_id = t.trip_id\n        FROM\n            trips t\n        WHERE\n            f.fiskeridir_vessel_id = t.fiskeridir_vessel_id\n            AND f.trip_id IS NULL\n            AND COMPUTE_TS_RANGE_PERCENT_OVERLAP (t.period, f.period) >= 0.8\n        RETURNING\n            f.trip_id,\n            fuel_liter_used\n    )\nUPDATE trips_detailed t\nSET\n    trip_fuel_liter_used = u.fuel_liter_used\nFROM\n    updated u\nWHERE\n    t.trip_id = u.trip_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "4f836c1d9a3fc71a991c0144a284f22ee69b1f4453cfa5c1a73acf83a561fb00"
+}

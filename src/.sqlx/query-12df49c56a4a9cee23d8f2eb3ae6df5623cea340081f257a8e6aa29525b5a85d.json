@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    trip AS (\n        SELECT\n            trip_id\n        FROM\n            trips\n        WHERE\n            fiskeridir_vessel_id = (\n                SELECT\n                    fiskeridir_vessel_id\n                FROM\n                    all_vessels\n                WHERE\n                    call_sign = $1\n            )\n            AND trip_id = $2\n    ),\n    deleted AS (\n        DELETE FROM trip_fuel f USING trip t\n        WHERE\n            t.trip_id = f.trip_id\n    )\nUPDATE trips_detailed t\nSET\n    trip_fuel_liter_used = NULL\nFROM\n    trip f\nWHERE\n    t.trip_id = f.trip_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "12df49c56a4a9cee23d8f2eb3ae6df5623cea340081f257a8e6aa29525b5a85d"
+}

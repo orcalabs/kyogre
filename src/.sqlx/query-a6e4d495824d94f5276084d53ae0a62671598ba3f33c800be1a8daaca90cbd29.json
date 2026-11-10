@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\nWITH\n    trip AS (\n        SELECT\n            trip_id,\n            fiskeridir_vessel_id,\n            \"period\"\n        FROM\n            trips\n        WHERE\n            fiskeridir_vessel_id = (\n                SELECT\n                    fiskeridir_vessel_id\n                FROM\n                    all_vessels\n                WHERE\n                    call_sign = $1\n            )\n            AND trip_id = $2\n    ),\n    updated AS (\n        INSERT INTO\n            trip_fuel (\n                trip_id,\n                period,\n                fiskeridir_vessel_id,\n                barentswatch_user_id,\n                fuel_liter_used\n            )\n        SELECT\n            trip_id,\n            period,\n            fiskeridir_vessel_id,\n            $3,\n            $4\n        FROM\n            trip\n        ON CONFLICT (trip_id) DO UPDATE\n        SET\n            fuel_liter_used = EXCLUDED.fuel_liter_used,\n            fiskeridir_vessel_id = EXCLUDED.fiskeridir_vessel_id,\n            barentswatch_user_id = EXCLUDED.barentswatch_user_id\n        RETURNING\n            trip_id,\n            fuel_liter_used\n    )\nUPDATE trips_detailed t\nSET\n    trip_fuel_liter_used = u.fuel_liter_used\nFROM\n    updated u\nWHERE\n    t.trip_id = u.trip_id\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Uuid",
+        "Float8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a6e4d495824d94f5276084d53ae0a62671598ba3f33c800be1a8daaca90cbd29"
+}

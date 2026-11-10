@@ -606,6 +606,12 @@ async fn run_state(shared_state: Arc<SharedState>) -> Result<TripsReport> {
         );
     }
 
+    master
+        .state
+        .trip_pipeline_inbound
+        .try_to_connect_trip_fuel_to_trips()
+        .await?;
+
     Ok(master.report)
 }
 

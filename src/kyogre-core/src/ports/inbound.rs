@@ -76,6 +76,13 @@ pub trait UserHaulsRefresher: Send + Sync {
 
 #[async_trait]
 pub trait WebApiInboundPort {
+    async fn update_trip(
+        &self,
+        call_sign: &CallSign,
+        user_id: BarentswatchUserId,
+        trip_id: TripId,
+        update: &UpdateTrip,
+    ) -> WebApiResult<()>;
     async fn start_user_haul(
         &self,
         call_sign: &CallSign,
@@ -200,6 +207,7 @@ pub trait HaulDistributorInbound: Send + Sync {
 
 #[async_trait]
 pub trait TripPipelineInbound: Send + Sync {
+    async fn try_to_connect_trip_fuel_to_trips(&self) -> CoreResult<()>;
     /// Sets the current trip for the given vessel, only relevant for ERS-based assemblers
     /// and depends on the latest departure message.
     async fn set_current_trip(&self, vessel_id: FiskeridirVesselId) -> CoreResult<()>;
