@@ -5,8 +5,7 @@ use jsonwebtoken::{
 };
 use kyogre_core::{BarentswatchUserId, TEST_SIGNED_IN_VESSEL_CALLSIGN};
 use rsa::{
-    RsaPrivateKey, RsaPublicKey, pkcs1::EncodeRsaPrivateKey, pkcs8::LineEnding,
-    traits::PublicKeyParts,
+    PrivateKey, PublicKey, pkcs1::EncodeRsaPrivateKey, pkcs8::LineEnding, traits::PublicKeyParts,
 };
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
@@ -18,7 +17,7 @@ use wiremock::{
 
 pub struct BarentswatchHelper {
     mock_server: MockServer,
-    private_key: RsaPrivateKey,
+    private_key: PrivateKey,
     pub audience: String,
 }
 
@@ -27,7 +26,7 @@ impl BarentswatchHelper {
         let (private_key, public_key) = {
             let s = include_str!("../test_private_key.json");
             let private_key = serde_json::from_str(s).unwrap();
-            let public_key = RsaPublicKey::from(&private_key);
+            let public_key = PublicKey::from(&private_key);
             (private_key, public_key)
         };
 
@@ -38,8 +37,8 @@ impl BarentswatchHelper {
                 ..Default::default()
             },
             algorithm: AlgorithmParameters::RSA(RSAKeyParameters {
-                n: URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be()),
-                e: URL_SAFE_NO_PAD.encode(public_key.e().to_bytes_be()),
+                n: URL_SAFE_NO_PAD.encode(public_key.n().to_be_bytes_trimmed_vartime()),
+                e: URL_SAFE_NO_PAD.encode(public_key.e().to_be_bytes_trimmed_vartime()),
                 ..Default::default()
             }),
         };

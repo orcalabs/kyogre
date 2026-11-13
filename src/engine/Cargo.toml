@@ -35,9 +35,7 @@ pyo3 = { workspace = true }
 num-traits = { workspace = true }
 geoutils = { workspace = true }
 async-channel = { workspace = true }
-itertools = { workspace = true }
 
-derivative = "2.2.0"
 humantime = "2.1.0"
 
 [dev-dependencies]
