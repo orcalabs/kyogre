@@ -464,7 +464,7 @@ where
             .wrap(TracingLogger::<OrcaRootSpanBuilder>::new())
             .service(server.into_service())
     })
-    .listen_auto_h2c(listener)
+    .listen(listener)
     .unwrap();
 
     if let Some(workers) = settings.api.num_workers {

@@ -495,7 +495,7 @@ fn handle_request_failure(error: http_client::Error) -> Error {
         }
         http_client::Error::FailedRequest {
             location: _,
-            url: _,
+            url,
             status,
             body,
         } => {
@@ -509,16 +509,28 @@ fn handle_request_failure(error: http_client::Error) -> Error {
                     status,
                     description: e.description,
                 },
-                Err(e) => {
-                    if status != StatusCode::NOT_FOUND && status != StatusCode::BAD_REQUEST {
-                        panic!("error response failed to deserialize, body: {body}, error: {e}");
-                    }
-                    Error {
+                Err(_) => match status {
+                    StatusCode::BAD_REQUEST => Error {
+                        error: ErrorDiscriminants::Unexpected,
                         status,
                         description: body.to_string(),
+                    },
+                    StatusCode::NOT_FOUND | StatusCode::METHOD_NOT_ALLOWED => Error {
                         error: ErrorDiscriminants::Unexpected,
+                        status: StatusCode::NOT_FOUND,
+                        description: body.to_string(),
+                    },
+                    _ => {
+                        panic!(
+                            r#"
+error response failed to deserialize
+url: {url}
+status: {status}
+body: {body}
+                            "#
+                        );
                     }
-                }
+                },
             }
         }
     }
